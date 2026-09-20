@@ -1,21 +1,67 @@
-import { CBT_75_QUESTIONS } from '../data/mock75Questions';
+import { getAllQuestions } from './questionService';
 
+// Extract available unique chapters dynamically from whatever is inside the Question Pool
+export function getAvailableChaptersFromPool() {
+  const all = getAllQuestions();
+  const map = { Physics: new Set(), Chemistry: new Set(), Math: new Set(), Mathematics: new Set() };
+
+  all.forEach((q) => {
+    const sub = q.subject === 'Mathematics' ? 'Math' : q.subject;
+    if (map[sub]) {
+      map[sub].add(q.chapter);
+    }
+  });
+
+  return {
+    Physics: Array.from(map.Physics),
+    Chemistry: Array.from(map.Chemistry),
+    Math: Array.from(new Set([...map.Math, ...map.Mathematics]))
+  };
+}
+
+// Draw test questions directly from Question Pool
 export function filterAndSampleQuestions({ subjects, selectedChapters, targetCount }) {
-  let pool = CBT_75_QUESTIONS.filter((q) => {
-    const subjectOk = subjects.length === 0 || subjects.includes(q.subject);
+  const all = getAllQuestions();
+
+  // Normalize questions so both legacy and pool formats work seamlessly
+  const normalized = all.map((q, idx) => ({
+    id: q.id || idx + 1,
+    subject: q.subject === 'Mathematics' ? 'Math' : q.subject,
+    chapter: q.chapter || 'General',
+    section: q.section || (idx >= 20 ? 'Section B' : 'Section A'),
+    meta: q.yearTag || q.meta || 'JEE Practice',
+    type: q.type || (Array.isArray(q.options) && q.options.length > 0 ? 'MCQ' : 'NUM'),
+    text: q.question || q.text,
+    options: Array.isArray(q.options)
+      ? q.options.map((opt, oIdx) =>
+          typeof opt === 'string'
+            ? { key: String.fromCharCode(65 + oIdx), text: opt }
+            : opt
+        )
+      : [],
+    correct:
+      typeof q.correctIndex === 'number'
+        ? String.fromCharCode(65 + q.correctIndex)
+        : String(q.correct || '').trim(),
+    solution: q.explanation || q.solution || 'No detailed explanation provided.',
+    graphicSvg: q.graphicSvg || null
+  }));
+
+  // Filter against active selections
+  let pool = normalized.filter((q) => {
+    const normSub = q.subject === 'Mathematics' ? 'Math' : q.subject;
+    const mappedSubjects = subjects.map((s) => (s === 'Mathematics' ? 'Math' : s));
+    const subjectOk = mappedSubjects.length === 0 || mappedSubjects.includes(normSub);
     const chapterOk = selectedChapters.length === 0 || selectedChapters.includes(q.chapter);
     return subjectOk && chapterOk;
   });
 
-  if (pool.length === 0) pool = CBT_75_QUESTIONS;
+  // Fallback to all if selected pool is empty
+  if (pool.length === 0) pool = normalized;
 
-  if (targetCount === 75 || pool.length <= targetCount) {
-    return [...pool].slice(0, targetCount);
-  }
-
-  // Shuffle sample if smaller count chosen
+  // Shuffle and sample
   const shuffled = [...pool].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, targetCount);
+  return shuffled.slice(0, Math.min(targetCount, shuffled.length));
 }
 
 export function computeExamStats(testQuestions, userAnswers) {
@@ -31,7 +77,8 @@ export function computeExamStats(testQuestions, userAnswers) {
 
   testQuestions.forEach((q) => {
     const given = userAnswers[q.id];
-    const s = subStats[q.subject] || subStats['Physics'];
+    const subKey = q.subject === 'Mathematics' ? 'Math' : q.subject;
+    const s = subStats[subKey] || subStats['Physics'];
 
     if (given === undefined || given === '') {
       s.unattempted++;

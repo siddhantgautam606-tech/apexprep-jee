@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { Play, Clock, BookOpen, CheckSquare, Square } from 'lucide-react';
-import { getAvailableChaptersBySubject } from '../../data/mock75Questions';
+import { getAvailableChaptersFromPool } from '../../services/testEngineService';
 
 export default function TestConfig({ onStart }) {
-  const chapterMap = useMemo(() => getAvailableChaptersBySubject(), []);
+  const chapterMap = useMemo(() => getAvailableChaptersFromPool(), []);
 
   const [selectedSubject, setSelectedSubject] = useState('All');
   const [selectedChapters, setSelectedChapters] = useState([]);
