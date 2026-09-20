@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { computeExamStats } from '../../services/testEngineService';
-import { AlertTriangle, ShieldAlert } from 'lucide-react';
+import { saveTestAttempt } from '../../services/analyticsService';
+import { ShieldAlert } from 'lucide-react';
 
 export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -12,18 +13,17 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
   const [showModal, setShowModal] = useState(false);
   const [examResults, setExamResults] = useState(null);
 
-  // Anti-Cheat & Hindrance State
+  // Anti-cheat state
   const [tabSwitchWarnings, setTabSwitchWarnings] = useState(0);
   const [showCheatWarning, setShowCheatWarning] = useState(false);
   const maxAllowedSwitches = 2;
 
   const q = testQuestions[currentIndex];
 
-  // Ref to hold current state inside event listeners
   const examSubmittedRef = useRef(examSubmitted);
   examSubmittedRef.current = examSubmitted;
 
-  // 1. Timer Countdown
+  // Countdown timer
   useEffect(() => {
     if (examSubmitted || timeLeft <= 0) return;
     const interval = setInterval(() => {
@@ -39,11 +39,10 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
     return () => clearInterval(interval);
   }, [examSubmitted, timeLeft]);
 
-  // 2. Tab-Switch Hindrance & Page Leave Prevention
+  // Tab-switch & page leave detection
   useEffect(() => {
     if (examSubmitted) return;
 
-    // Prevent accidental reload or close
     const handleBeforeUnload = (e) => {
       if (!examSubmittedRef.current) {
         e.preventDefault();
@@ -51,7 +50,6 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
       }
     };
 
-    // Detect browser tab switching or minimizing window
     const handleVisibilityChange = () => {
       if (document.hidden && !examSubmittedRef.current) {
         setTabSwitchWarnings((prev) => {
@@ -145,6 +143,13 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
     setExamResults(res);
     setExamSubmitted(true);
     setShowModal(true);
+
+    saveTestAttempt({
+      testQuestions,
+      userAnswers,
+      examResults: res,
+      durationMinutes
+    });
   };
 
   const answeredCount = Object.keys(userAnswers).length;
@@ -440,7 +445,7 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
         </aside>
       </main>
 
-      {/* Tab Switch Hindrance Warning Modal */}
+      {/* Tab Switch Warning Modal */}
       {showCheatWarning && !examSubmitted && (
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl border-2 border-rose-500 text-slate-800">

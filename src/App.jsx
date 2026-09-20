@@ -1,3 +1,4 @@
+import AnalyticsDashboard from './features/analytics/AnalyticsDashboard';
 import React, { useState } from 'react';
 import { Sparkles, BookOpen, Layers, BarChart3, Users, MessageSquare } from 'lucide-react';
 import QuestionPool from './features/question-pool/QuestionPool';
@@ -10,7 +11,7 @@ export default function App() {
   const navItems = [
     { id: 'pool', label: 'Question Pool', icon: BookOpen },
     { id: 'cbt', label: 'CBT Tests', icon: Layers },
-    { id: 'analytics', label: 'Growth', icon: BarChart3, badge: 'Next' },
+    { id: 'analytics', label: 'Growth', icon: BarChart3 },
     { id: 'circles', label: 'Friend Circles', icon: Users, badge: 'Next' },
     { id: 'chat', label: 'Chat', icon: MessageSquare, badge: 'Next' },
   ];
@@ -70,14 +71,15 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="w-full max-w-6xl flex justify-center">
-        {activeTab === 'pool' && <QuestionPool />}
-        {activeTab === 'cbt' && <TestOrganizer onExamActiveStateChange={setIsTestActive} />}
-        {activeTab !== 'pool' && activeTab !== 'cbt' && (
-          <div className="p-16 text-center text-slate-500 bg-slate-900/40 border border-slate-800 rounded-2xl text-sm w-full">
-            Module under construction. Coming in the next step!
-          </div>
-        )}
-      </main>
+  {activeTab === 'pool' && <QuestionPool />}
+  {activeTab === 'cbt' && <TestOrganizer onExamActiveStateChange={setIsTestActive} />}
+  {activeTab === 'analytics' && <AnalyticsDashboard />}
+  {activeTab !== 'pool' && activeTab !== 'cbt' && activeTab !== 'analytics' && (
+    <div className="p-16 text-center text-slate-500 bg-slate-900/40 border border-slate-800 rounded-2xl text-sm w-full">
+      Module under construction. Coming in the next step!
+    </div>
+  )}
+</main>
     </div>
   );
 }
