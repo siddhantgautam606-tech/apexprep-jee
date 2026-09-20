@@ -79,3 +79,4 @@ apexprep/
 
 - [x] 20/9/2026, 1:09:18 pm — Added Question Pool module with search and filters
 - [x] 20/9/2026, 1:21:34 pm — Decoupled questions to JSON bank and added UI question append capability
+- [x] 20/9/2026, 1:39:50 pm — Implemented NTA CBT test engine with presets and 75 PYQs
