@@ -1,349 +1,178 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  Users, Clock, BrainCircuit, BarChart2, 
-  ArrowRight, LogOut, User, Lock, Mail, Database, MessageSquare, AtSign 
+  BookOpen, 
+  CheckCircle2, 
+  Clock, 
+  HelpCircle, 
+  Trophy, 
+  ArrowRight, 
+  RotateCcw,
+  Sparkles
 } from 'lucide-react';
-import { QUESTIONS_POOL } from './data/questionsPool';
 
-// Standalone Feature Components
-import FriendCircleSection from './components/FriendCircleSection.jsx';
-import FriendChatSection from './components/FriendChatSection.jsx';
-import CbtTestSection from './components/CbtTestSection.jsx';
+const SAMPLE_QUESTIONS = [
+  {
+    id: 1,
+    subject: 'Physics',
+    topic: 'Kinematics',
+    question: 'A projectile is launched from ground level at an angle of 45° with an initial velocity of 20 m/s. Assuming g = 10 m/s², what is the horizontal range?',
+    options: ['20 m', '40 m', '60 m', '80 m'],
+    correctIndex: 1,
+    explanation: 'Horizontal Range R = (u² * sin(2θ)) / g. For θ = 45°, sin(2θ) = sin(90°) = 1. Therefore, R = (20² * 1) / 10 = 400 / 10 = 40 m.'
+  },
+  {
+    id: 2,
+    subject: 'Chemistry',
+    topic: 'Thermodynamics',
+    question: 'For an isolated system undergoing an irreversible spontaneous process, the change in entropy of the universe (ΔS_universe) is:',
+    options: ['Zero', 'Negative', 'Positive', 'Independent of temperature'],
+    correctIndex: 2,
+    explanation: 'By the Second Law of Thermodynamics, any spontaneous process increases the total entropy of an isolated system/universe, so ΔS_universe > 0.'
+  },
+  {
+    id: 3,
+    subject: 'Mathematics',
+    topic: 'Calculus',
+    question: 'What is the limit of (sin x) / x as x approaches 0?',
+    options: ['0', '1', 'Infinity', 'Undefined'],
+    correctIndex: 1,
+    explanation: 'This is a standard fundamental limit: lim(x -> 0) [sin(x) / x] = 1.'
+  }
+];
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem('apex_current_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [score, setScore] = useState(0);
 
-  const [authMode, setAuthMode] = useState('login');
-  const [authUsername, setAuthUsername] = useState('');
-  const [authEmail, setAuthEmail] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [authName, setAuthName] = useState('');
-  const [authExam, setAuthExam] = useState('JEE Main');
-  const [authClass, setAuthClass] = useState('Class 11');
-  const [authError, setAuthError] = useState('');
+  const currentQ = SAMPLE_QUESTIONS[currentIndex];
 
-  // Primary Navigation Tabs: 'circle' | 'chat' | 'test' | 'pool' | 'growth'
-  const [activeTab, setActiveTab] = useState('circle');
+  const handleSelect = (idx) => {
+    if (!isSubmitted) {
+      setSelectedOption(idx);
+    }
+  };
 
-  // Test History / Scorecards
-  const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('apex_drill_history');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const handleSubmit = () => {
+    if (selectedOption === null) return;
+    setIsSubmitted(true);
+    if (selectedOption === currentQ.correctIndex) {
+      setScore((prev) => prev + 1);
+    }
+  };
 
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('apex_current_user', JSON.stringify(currentUser));
+  const handleNext = () => {
+    setSelectedOption(null);
+    setIsSubmitted(false);
+    if (currentIndex + 1 < SAMPLE_QUESTIONS.length) {
+      setCurrentIndex((prev) => prev + 1);
     } else {
-      localStorage.removeItem('apex_current_user');
+      setCurrentIndex(0);
+      setScore(0);
     }
-  }, [currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem('apex_drill_history', JSON.stringify(history));
-  }, [history]);
-
-  const handleRecordScore = (record) => {
-    setHistory(prev => [record, ...prev]);
   };
 
-  const handleAuthSubmit = (e) => {
-    e.preventDefault();
-    setAuthError('');
-    if (!authUsername.trim()) {
-      setAuthError('Please enter your username.');
-      return;
-    }
-    if (!authPassword) {
-      setAuthError('Please enter your password.');
-      return;
-    }
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center p-4 md:p-8 font-sans">
+      {/* Header */}
+      <header className="w-full max-w-3xl flex items-center justify-between py-4 border-b border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="bg-indigo-600 p-2.5 rounded-xl shadow-lg shadow-indigo-600/30">
+            <Sparkles className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-white">ApexPrep</h1>
+            <p className="text-xs text-slate-400">JEE & NEET Prep Assistant</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 text-sm">
+          <Trophy className="w-4 h-4 text-amber-400" />
+          <span className="font-semibold text-slate-200">Score: {score}</span>
+        </div>
+      </header>
 
-    const cleanUsername = authUsername.trim().toLowerCase().replace(/\s+/g, '_');
-
-    setCurrentUser({
-      username: cleanUsername,
-      name: authMode === 'signup' && authName ? authName : cleanUsername,
-      email: authEmail || `${cleanUsername}@apexprep.io`,
-      targetExam: authExam,
-      targetClass: authClass,
-    });
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('apex_current_user');
-  };
-
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 text-slate-100 font-sans">
-        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-8 relative overflow-hidden">
-          <div className="flex flex-col items-center text-center mb-6">
-            <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-500/25 mb-3">
-              <BrainCircuit className="w-8 h-8" />
-            </div>
-            <h1 className="text-2xl font-black tracking-tight text-white">ApexPrep AI</h1>
-            <p className="text-xs text-slate-400 mt-1">JEE Social Study Network & CBT Testing</p>
+      {/* Main Content */}
+      <main className="w-full max-w-3xl mt-8 flex flex-col gap-6">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-xl">
+          {/* Metadata */}
+          <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800 text-xs">
+            <span className="bg-indigo-950 text-indigo-400 border border-indigo-800 px-2.5 py-1 rounded-md font-medium">
+              {currentQ.subject} • {currentQ.topic}
+            </span>
+            <span className="text-slate-400">
+              Question {currentIndex + 1} of {SAMPLE_QUESTIONS.length}
+            </span>
           </div>
 
-          <div className="flex bg-slate-800/80 p-1 rounded-xl mb-6 border border-slate-700/50">
-            <button
-              type="button"
-              onClick={() => { setAuthMode('login'); setAuthError(''); }}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
-                authMode === 'login' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Log In
-            </button>
-            <button
-              type="button"
-              onClick={() => { setAuthMode('signup'); setAuthError(''); }}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
-                authMode === 'signup' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Sign Up
-            </button>
+          {/* Question Text */}
+          <p className="text-lg md:text-xl font-medium text-slate-100 leading-relaxed mb-6">
+            {currentQ.question}
+          </p>
+
+          {/* Options */}
+          <div className="flex flex-col gap-3">
+            {currentQ.options.map((opt, idx) => {
+              const isSelected = selectedOption === idx;
+              const isCorrect = idx === currentQ.correctIndex;
+              
+              let btnClass = 'border-slate-800 bg-slate-800/40 hover:bg-slate-800 hover:border-slate-700 text-slate-300';
+              
+              if (isSubmitted) {
+                if (isCorrect) {
+                  btnClass = 'border-emerald-500 bg-emerald-500/10 text-emerald-300 font-semibold';
+                } else if (isSelected && !isCorrect) {
+                  btnClass = 'border-rose-500 bg-rose-500/10 text-rose-300';
+                }
+              } else if (isSelected) {
+                btnClass = 'border-indigo-500 bg-indigo-600/10 text-indigo-300 ring-2 ring-indigo-500/30';
+              }
+
+              return (
+                <button
+                  key={idx}
+                  onClick={() => handleSelect(idx)}
+                  className={`w-full text-left px-5 py-4 rounded-xl border transition-all flex items-center justify-between ${btnClass}`}
+                >
+                  <span>
+                    <strong className="mr-3 text-slate-500">{String.fromCharCode(65 + idx)}.</strong>
+                    {opt}
+                  </span>
+                  {isSubmitted && isCorrect && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
+                </button>
+              );
+            })}
           </div>
 
-          {authError && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl text-center">
-              {authError}
+          {/* Explanation Box */}
+          {isSubmitted && (
+            <div className="mt-6 p-4 rounded-xl bg-slate-950 border border-slate-800">
+              <h4 className="text-sm font-semibold text-indigo-400 mb-1">Explanation</h4>
+              <p className="text-sm text-slate-300 leading-relaxed">{currentQ.explanation}</p>
             </div>
           )}
 
-          <form onSubmit={handleAuthSubmit} className="space-y-4">
-            <div>
-              <label className="text-xs font-medium text-slate-300 block mb-1.5">Username (Used for Friend Circle & Chat)</label>
-              <div className="relative">
-                <AtSign className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. topper_ankit"
-                  value={authUsername}
-                  onChange={(e) => setAuthUsername(e.target.value)}
-                  className="w-full bg-slate-800/60 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            {authMode === 'signup' && (
-              <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1.5">Full Name</label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ankit Sharma"
-                    value={authName}
-                    onChange={(e) => setAuthName(e.target.value)}
-                    className="w-full bg-slate-800/60 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label className="text-xs font-medium text-slate-300 block mb-1.5">Password</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={authPassword}
-                  onChange={(e) => setAuthPassword(e.target.value)}
-                  className="w-full bg-slate-800/60 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1.5">Target Exam</label>
-                <select
-                  value={authExam}
-                  onChange={(e) => setAuthExam(e.target.value)}
-                  className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-                >
-                  <option value="JEE Main">JEE Main</option>
-                  <option value="JEE Advanced">JEE Advanced</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1.5">Target Class</label>
-                <select
-                  value={authClass}
-                  onChange={(e) => setAuthClass(e.target.value)}
-                  className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-                >
-                  <option value="Class 11">Class 11</option>
-                  <option value="Class 12">Class 12</option>
-                  <option value="Dropper">Dropper</option>
-                </select>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full mt-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition text-sm"
-            >
-              <span>{authMode === 'login' ? 'Sign In to Portal' : 'Create Profile'}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Top Navbar */}
-      <header className="border-b border-slate-800 bg-slate-900/80 sticky top-0 z-30 px-6 py-3.5 backdrop-blur flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-600 rounded-xl text-white shadow-md shadow-blue-600/30">
-            <BrainCircuit className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="font-bold text-base leading-tight text-white">ApexPrep JEE</h1>
-            <p className="text-xs text-slate-400">
-              @{currentUser.username} • <span className="text-blue-400 font-medium">{currentUser.name}</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Center Navigation: Friend Circle, Chat, CBT Tests, Pool, Scorecards */}
-        <div className="flex gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
-          <button
-            onClick={() => setActiveTab('circle')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-              activeTab === 'circle' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" /> Friend Circle
-          </button>
-          <button
-            onClick={() => setActiveTab('chat')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-              activeTab === 'chat' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <MessageSquare className="w-3.5 h-3.5" /> Chat
-          </button>
-          <button
-            onClick={() => setActiveTab('test')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-              activeTab === 'test' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5" /> CBT Tests
-          </button>
-          <button
-            onClick={() => setActiveTab('pool')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-              activeTab === 'pool' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Database className="w-3.5 h-3.5" /> Question Pool
-          </button>
-          <button
-            onClick={() => setActiveTab('growth')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-              activeTab === 'growth' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <BarChart2 className="w-3.5 h-3.5" /> Scorecards
-          </button>
-        </div>
-
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-rose-400 bg-slate-800/60 hover:bg-rose-500/10 border border-slate-700/80 px-3 py-2 rounded-xl transition"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Logout</span>
-        </button>
-      </header>
-
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl mx-auto w-full p-6">
-        {/* TAB 1: FRIEND CIRCLE (Tests & Rankings) */}
-        {activeTab === 'circle' && (
-          <FriendCircleSection 
-            currentUser={currentUser} 
-            onStartCircleTest={() => setActiveTab('test')} 
-          />
-        )}
-
-        {/* TAB 2: SEPARATE CHAT & FRIENDS */}
-        {activeTab === 'chat' && (
-          <FriendChatSection currentUser={currentUser} />
-        )}
-
-        {/* TAB 3: CBT TEST SECTION */}
-        {activeTab === 'test' && (
-          <CbtTestSection onRecordScore={handleRecordScore} />
-        )}
-
-        {/* TAB 4: QUESTION POOL */}
-        {activeTab === 'pool' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-            <h2 className="text-lg font-bold text-white mb-4">Question Pool Master Archive</h2>
-            <div className="space-y-3">
-              {QUESTIONS_POOL.map(q => (
-                <div key={q.id} className="bg-slate-800/40 border border-slate-800 p-4 rounded-2xl">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-semibold text-blue-400">{q.yearTag}</span>
-                    <span className="text-[11px] text-slate-500 uppercase">{q.subjectId}</span>
-                  </div>
-                  <p className="text-xs text-slate-200">{q.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 5: SCORECARDS / GROWTH */}
-        {activeTab === 'growth' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-            <h3 className="text-base font-bold text-white mb-4">Test History & Performance Log</h3>
-            {history.length === 0 ? (
-              <p className="text-center py-8 text-slate-500 text-xs">No CBT tests completed yet.</p>
+          {/* Footer Controls */}
+          <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-800">
+            {!isSubmitted ? (
+              <button
+                disabled={selectedOption === null}
+                onClick={handleSubmit}
+                className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-6 py-2.5 rounded-xl transition"
+              >
+                Submit Answer
+              </button>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="border-b border-slate-800 text-slate-400 uppercase">
-                    <tr>
-                      <th className="py-2.5">Topic / Mock</th>
-                      <th className="py-2.5">Score</th>
-                      <th className="py-2.5">Accuracy</th>
-                      <th className="py-2.5">Timestamp</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {history.map((h, i) => (
-                      <tr key={i}>
-                        <td className="py-3 font-medium text-white">{h.subtopicTitle}</td>
-                        <td className="py-3 font-mono">{h.score} / {h.totalPossible}</td>
-                        <td className="py-3 font-semibold text-blue-400">{h.accuracy}%</td>
-                        <td className="py-3 text-slate-500">{h.timestamp}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <button
+                onClick={handleNext}
+                className="bg-slate-100 hover:bg-white text-slate-950 font-medium px-6 py-2.5 rounded-xl transition flex items-center gap-2"
+              >
+                {currentIndex + 1 < SAMPLE_QUESTIONS.length ? 'Next Question' : 'Restart Quiz'}
+                <ArrowRight className="w-4 h-4" />
+              </button>
             )}
           </div>
-        )}
+        </div>
       </main>
     </div>
   );
