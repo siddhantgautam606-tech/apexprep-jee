@@ -132,7 +132,7 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="w-full max-w-6xl flex justify-center">
-        {activeTab === 'pool' && <QuestionPool />}
+        {activeTab === 'pool' && <QuestionPool currentUser={currentUser} />}
         {activeTab === 'cbt' && <TestOrganizer onExamActiveStateChange={setIsTestActive} />}
         {activeTab === 'analytics' && <AnalyticsDashboard />}
 
