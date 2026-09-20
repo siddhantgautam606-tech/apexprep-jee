@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { computeExamStats } from '../../services/testEngineService';
+import { AlertTriangle, ShieldAlert } from 'lucide-react';
 
 export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -11,8 +12,18 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
   const [showModal, setShowModal] = useState(false);
   const [examResults, setExamResults] = useState(null);
 
+  // Anti-Cheat & Hindrance State
+  const [tabSwitchWarnings, setTabSwitchWarnings] = useState(0);
+  const [showCheatWarning, setShowCheatWarning] = useState(false);
+  const maxAllowedSwitches = 2;
+
   const q = testQuestions[currentIndex];
 
+  // Ref to hold current state inside event listeners
+  const examSubmittedRef = useRef(examSubmitted);
+  examSubmittedRef.current = examSubmitted;
+
+  // 1. Timer Countdown
   useEffect(() => {
     if (examSubmitted || timeLeft <= 0) return;
     const interval = setInterval(() => {
@@ -27,6 +38,42 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
     }, 1000);
     return () => clearInterval(interval);
   }, [examSubmitted, timeLeft]);
+
+  // 2. Tab-Switch Hindrance & Page Leave Prevention
+  useEffect(() => {
+    if (examSubmitted) return;
+
+    // Prevent accidental reload or close
+    const handleBeforeUnload = (e) => {
+      if (!examSubmittedRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    // Detect browser tab switching or minimizing window
+    const handleVisibilityChange = () => {
+      if (document.hidden && !examSubmittedRef.current) {
+        setTabSwitchWarnings((prev) => {
+          const nextCount = prev + 1;
+          if (nextCount > maxAllowedSwitches) {
+            handleSubmitExam(false);
+          } else {
+            setShowCheatWarning(true);
+          }
+          return nextCount;
+        });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [examSubmitted]);
 
   const formatTimer = (seconds) => {
     const h = Math.floor(seconds / 3600);
@@ -106,7 +153,7 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
 
   return (
     <div className="w-full flex flex-col bg-slate-100 text-slate-800 min-h-screen">
-      {/* Header matching JEE Main Mock Exam */}
+      {/* Header */}
       <header className="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -115,7 +162,7 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
             </div>
             <div>
               <div className="text-sm md:text-base font-bold leading-tight">
-                JEE (Main) Mock Exam - High Difficulty PYQs
+                JEE (Main) Mock Exam - Proctored Session
               </div>
               <div className="text-xs text-slate-400">
                 Physics • Chemistry • Mathematics • {testQuestions.length} Questions • {testQuestions.length * 4} Marks
@@ -172,9 +219,8 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
 
       {/* Main Workspace */}
       <main className="max-w-7xl w-full mx-auto p-4 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left 8 Cols: Question Panel */}
+        {/* Left Question Panel */}
         <section className="lg:col-span-8 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-          {/* Panel Meta */}
           <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center justify-between flex-wrap gap-2 text-xs">
             <div className="flex items-center gap-2">
               <span className="bg-indigo-600 text-white font-bold px-2 py-0.5 rounded text-[11px]">
@@ -195,7 +241,6 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
             </div>
           </div>
 
-          {/* Question Body */}
           <div className="p-5 flex-1 overflow-y-auto flex flex-col">
             <div
               className="text-base font-medium text-slate-900 leading-relaxed mb-4"
@@ -209,7 +254,6 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
               />
             )}
 
-            {/* Answer Input */}
             {q.type === 'MCQ' ? (
               <div className="flex flex-col gap-2.5 my-2">
                 {q.options.map((opt) => {
@@ -271,7 +315,6 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
               </div>
             )}
 
-            {/* Solution Box after Submission */}
             {examSubmitted && (
               <div className="mt-5 bg-amber-50 border border-dashed border-amber-300 p-3.5 rounded-lg text-xs leading-relaxed text-amber-950">
                 <div className="font-bold uppercase text-[11px] text-amber-800 mb-1">
@@ -282,7 +325,6 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
             )}
           </div>
 
-          {/* Footer Navigation Controls */}
           <div className="bg-slate-50 border-t border-slate-200 px-4 py-3 flex items-center justify-between flex-wrap gap-2 text-xs">
             <div className="flex gap-2">
               <button
@@ -327,10 +369,9 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
           </div>
         </section>
 
-        {/* Right 4 Cols: Question Palette */}
+        {/* Right Question Palette */}
         <aside className="lg:col-span-4 flex flex-col gap-4">
           <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
-            {/* Legend */}
             <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 mb-3 pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
                 <span className="w-5 h-5 rounded bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center">
@@ -358,13 +399,11 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
               </div>
             </div>
 
-            {/* Subject Label */}
             <div className="text-xs font-bold uppercase text-slate-600 flex justify-between mb-2">
               <span>{q.subject === 'Math' ? 'Mathematics' : q.subject}</span>
               <span>{testQuestions.filter((item) => item.subject === q.subject).length} Questions</span>
             </div>
 
-            {/* Palette Grid */}
             <div className="grid grid-cols-5 gap-1.5 max-h-96 overflow-y-auto p-1">
               {testQuestions
                 .filter((item) => item.subject === q.subject)
@@ -401,7 +440,31 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
         </aside>
       </main>
 
-      {/* Result Modal matching your exact HTML score tile layout */}
+      {/* Tab Switch Hindrance Warning Modal */}
+      {showCheatWarning && !examSubmitted && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl border-2 border-rose-500 text-slate-800">
+            <div className="flex items-center gap-3 text-rose-600 mb-3">
+              <ShieldAlert className="w-7 h-7 shrink-0" />
+              <h3 className="text-lg font-bold">Tab Switch Detected!</h3>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed mb-4">
+              Switching tabs, windows, or opening external applications during the exam is strictly prohibited under exam conditions.
+            </p>
+            <div className="bg-rose-50 border border-rose-200 text-rose-900 p-3 rounded-lg text-xs font-semibold mb-4">
+              Warning {tabSwitchWarnings} of {maxAllowedSwitches}. If you switch tabs again, your examination will be <strong>automatically submitted</strong>.
+            </div>
+            <button
+              onClick={() => setShowCheatWarning(false)}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-lg text-xs transition cursor-pointer"
+            >
+              I Understand, Resume Test
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Result Modal */}
       {showModal && examResults && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto text-slate-800">

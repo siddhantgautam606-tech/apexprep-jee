@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TestConfig from './TestConfig';
 import TestRunner from './TestRunner';
 import { filterAndSampleQuestions } from '../../services/testEngineService';
 
-export default function TestOrganizer() {
+export default function TestOrganizer({ onExamActiveStateChange }) {
   const [activeTest, setActiveTest] = useState(null);
+
+  useEffect(() => {
+    if (onExamActiveStateChange) {
+      onExamActiveStateChange(Boolean(activeTest));
+    }
+  }, [activeTest, onExamActiveStateChange]);
 
   const handleStartExam = ({ subject, selectedChapters, questionCount, durationMinutes }) => {
     const subjects = subject === 'All' ? [] : [subject];

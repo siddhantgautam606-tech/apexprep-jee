@@ -82,3 +82,4 @@ apexprep/
 - [x] 20/9/2026, 1:39:50 pm — Implemented NTA CBT test engine with presets and 75 PYQs
 - [x] 20/9/2026, 1:46:08 pm — Wired CBT TestOrganizer into App.jsx shell router
 - [x] 20/9/2026, 1:55:06 pm — Connected CBT engine to dynamically draw questions from the shared Question Pool
+- [x] 20/9/2026, 2:03:21 pm — Added tab switch detection and exam proctoring hindrance safeguards

@@ -5,6 +5,7 @@ import TestOrganizer from './features/cbt/TestOrganizer';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('pool');
+  const [isTestActive, setIsTestActive] = useState(false);
 
   const navItems = [
     { id: 'pool', label: 'Question Pool', icon: BookOpen },
@@ -13,6 +14,17 @@ export default function App() {
     { id: 'circles', label: 'Friend Circles', icon: Users, badge: 'Next' },
     { id: 'chat', label: 'Chat', icon: MessageSquare, badge: 'Next' },
   ];
+
+  const handleTabChange = (targetTab) => {
+    if (isTestActive && targetTab !== 'cbt') {
+      const confirmLeave = window.confirm(
+        'An active examination is in progress. Leaving this tab will submit your test or forfeit your attempt. Do you wish to leave?'
+      );
+      if (!confirmLeave) return;
+      setIsTestActive(false);
+    }
+    setActiveTab(targetTab);
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center p-3 md:p-6 font-sans">
@@ -36,7 +48,7 @@ export default function App() {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => handleTabChange(item.id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer shrink-0 ${
                   isActive
                     ? 'bg-indigo-600 text-white shadow'
@@ -59,7 +71,7 @@ export default function App() {
       {/* Main Content Area */}
       <main className="w-full max-w-6xl flex justify-center">
         {activeTab === 'pool' && <QuestionPool />}
-        {activeTab === 'cbt' && <TestOrganizer />}
+        {activeTab === 'cbt' && <TestOrganizer onExamActiveStateChange={setIsTestActive} />}
         {activeTab !== 'pool' && activeTab !== 'cbt' && (
           <div className="p-16 text-center text-slate-500 bg-slate-900/40 border border-slate-800 rounded-2xl text-sm w-full">
             Module under construction. Coming in the next step!
