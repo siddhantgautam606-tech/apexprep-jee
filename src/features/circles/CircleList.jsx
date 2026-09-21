@@ -45,28 +45,28 @@ function generateStandardQuestionSet(subject, chapter, count) {
   const sampleBank = {
     Physics: [
       {
-        question: "A particle moves along the x-axis with velocity v = k√x. The displacement varies with time as:",
-        options: ["x ∝ t", "x ∝ t²", "x ∝ t^(1/2)", "x ∝ t³"],
+        question: "A particle moves along the x-axis with velocity v = kâˆšx. The displacement varies with time as:",
+        options: ["x âˆ t", "x âˆ tÂ²", "x âˆ t^(1/2)", "x âˆ tÂ³"],
         correctAnswer: 1,
-        explanation: "v = dx/dt = k√x => x^(-1/2) dx = k dt. Integrating gives 2√x = kt => x ∝ t²."
+        explanation: "v = dx/dt = kâˆšx => x^(-1/2) dx = k dt. Integrating gives 2âˆšx = kt => x âˆ tÂ²."
       },
       {
-        question: "A body of mass m is projected with velocity v at an angle θ with horizontal. The angular momentum about point of projection at max height is:",
-        options: ["(m v³ sin²θ cosθ)/(2g)", "(m v³ sinθ cos²θ)/(2g)", "(m v³ sin²θ)/(2g)", "Zero"],
+        question: "A body of mass m is projected with velocity v at an angle Î¸ with horizontal. The angular momentum about point of projection at max height is:",
+        options: ["(m vÂ³ sinÂ²Î¸ cosÎ¸)/(2g)", "(m vÂ³ sinÎ¸ cosÂ²Î¸)/(2g)", "(m vÂ³ sinÂ²Î¸)/(2g)", "Zero"],
         correctAnswer: 0,
-        explanation: "L = m * v_horizontal * H_max = m (v cosθ) * (v² sin²θ / 2g) = (m v³ sin²θ cosθ) / (2g)."
+        explanation: "L = m * v_horizontal * H_max = m (v cosÎ¸) * (vÂ² sinÂ²Î¸ / 2g) = (m vÂ³ sinÂ²Î¸ cosÎ¸) / (2g)."
       },
       {
-        question: "Two capacitors C₁ and C₂ are charged to V₁ and V₂ and connected in parallel. Loss in energy is:",
-        options: ["C₁C₂(V₁-V₂)² / (C₁+C₂)", "C₁C₂(V₁-V₂)² / 2(C₁+C₂)", "(C₁+C₂)(V₁-V₂)² / 2", "Zero"],
+        question: "Two capacitors Câ‚ and Câ‚‚ are charged to Vâ‚ and Vâ‚‚ and connected in parallel. Loss in energy is:",
+        options: ["Câ‚Câ‚‚(Vâ‚-Vâ‚‚)Â² / (Câ‚+Câ‚‚)", "Câ‚Câ‚‚(Vâ‚-Vâ‚‚)Â² / 2(Câ‚+Câ‚‚)", "(Câ‚+Câ‚‚)(Vâ‚-Vâ‚‚)Â² / 2", "Zero"],
         correctAnswer: 1,
-        explanation: "Energy loss in redistribution = 1/2 * (C₁C₂ / (C₁+C₂)) * (V₁ - V₂)²."
+        explanation: "Energy loss in redistribution = 1/2 * (Câ‚Câ‚‚ / (Câ‚+Câ‚‚)) * (Vâ‚ - Vâ‚‚)Â²."
       },
       {
         question: "In a Young's double-slit experiment, if the distance between slits is halved and screen distance doubled, fringe width becomes:",
         options: ["Halved", "Doubled", "Four times", "Unchanged"],
         correctAnswer: 2,
-        explanation: "β = λD/d. New β' = λ(2D)/(d/2) = 4(λD/d) = 4β."
+        explanation: "Î² = Î»D/d. New Î²' = Î»(2D)/(d/2) = 4(Î»D/d) = 4Î²."
       },
       {
         question: "Work done by static friction on a rolling sphere without slipping on a horizontal surface is:",
@@ -78,53 +78,53 @@ function generateStandardQuestionSet(subject, chapter, count) {
     Chemistry: [
       {
         question: "Which of the following molecules has the highest dipole moment?",
-        options: ["NH₃", "NF₃", "BF₃", "CH₄"],
+        options: ["NHâ‚ƒ", "NFâ‚ƒ", "BFâ‚ƒ", "CHâ‚„"],
         correctAnswer: 0,
-        explanation: "In NH₃, orbital dipole and N-H bond moments add up in the same direction, unlike NF₃ where lone pair moment opposes N-F moments."
+        explanation: "In NHâ‚ƒ, orbital dipole and N-H bond moments add up in the same direction, unlike NFâ‚ƒ where lone pair moment opposes N-F moments."
       },
       {
-        question: "The oxidation state of Fe in brown ring complex [Fe(H₂O)₅(NO)]SO₄ is:",
+        question: "The oxidation state of Fe in brown ring complex [Fe(Hâ‚‚O)â‚…(NO)]SOâ‚„ is:",
         options: ["+1", "+2", "+3", "0"],
         correctAnswer: 0,
-        explanation: "NO acts as NO⁺, so Fe is in +1 oxidation state."
+        explanation: "NO acts as NOâº, so Fe is in +1 oxidation state."
       },
       {
         question: "Which alkene gives only acetone on reductive ozonolysis?",
         options: ["2-Methylpropene", "2,3-Dimethylbut-2-ene", "But-2-ene", "2-Methylbut-2-ene"],
         correctAnswer: 1,
-        explanation: "2,3-Dimethylbut-2-ene (CH₃)₂C=C(CH₃)₂ cleaves into two molecules of acetone (CH₃)₂C=O."
+        explanation: "2,3-Dimethylbut-2-ene (CHâ‚ƒ)â‚‚C=C(CHâ‚ƒ)â‚‚ cleaves into two molecules of acetone (CHâ‚ƒ)â‚‚C=O."
       },
       {
         question: "The unit of rate constant for a second-order reaction is:",
-        options: ["s⁻¹", "mol L⁻¹ s⁻¹", "L mol⁻¹ s⁻¹", "L² mol⁻² s⁻¹"],
+        options: ["sâ»Â¹", "mol Lâ»Â¹ sâ»Â¹", "L molâ»Â¹ sâ»Â¹", "LÂ² molâ»Â² sâ»Â¹"],
         correctAnswer: 2,
-        explanation: "Unit = (mol/L)^(1-n) s⁻¹ = (mol/L)⁻¹ s⁻¹ = L mol⁻¹ s⁻¹."
+        explanation: "Unit = (mol/L)^(1-n) sâ»Â¹ = (mol/L)â»Â¹ sâ»Â¹ = L molâ»Â¹ sâ»Â¹."
       },
       {
         question: "Among the following, the strongest Bronsted base is:",
-        options: ["NH₂⁻", "OH⁻", "CH₃O⁻", "F⁻"],
+        options: ["NHâ‚‚â»", "OHâ»", "CHâ‚ƒOâ»", "Fâ»"],
         correctAnswer: 0,
-        explanation: "NH₃ is the weakest acid among NH₃, H₂O, CH₃OH, and HF; thus its conjugate base NH₂⁻ is the strongest base."
+        explanation: "NHâ‚ƒ is the weakest acid among NHâ‚ƒ, Hâ‚‚O, CHâ‚ƒOH, and HF; thus its conjugate base NHâ‚‚â» is the strongest base."
       }
     ],
     Mathematics: [
       {
-        question: "If A is a 3×3 non-singular matrix such that adj(2A) = k * adj(A), then k equals:",
+        question: "If A is a 3Ã—3 non-singular matrix such that adj(2A) = k * adj(A), then k equals:",
         options: ["2", "4", "8", "16"],
         correctAnswer: 1,
         explanation: "adj(cA) = c^(n-1) adj(A). Here n = 3, so adj(2A) = 2^(3-1) adj(A) = 4 adj(A) => k = 4."
       },
       {
-        question: "The value of ∫₀^(π/2) (sin x / (sin x + cos x)) dx is:",
-        options: ["π", "π/2", "π/4", "0"],
+        question: "The value of âˆ«â‚€^(Ï€/2) (sin x / (sin x + cos x)) dx is:",
+        options: ["Ï€", "Ï€/2", "Ï€/4", "0"],
         correctAnswer: 2,
-        explanation: "By property ∫₀ᵃ f(x)dx = ∫₀ᵃ f(a-x)dx, 2I = ∫₀^(π/2) 1 dx = π/2 => I = π/4."
+        explanation: "By property âˆ«â‚€áµƒ f(x)dx = âˆ«â‚€áµƒ f(a-x)dx, 2I = âˆ«â‚€^(Ï€/2) 1 dx = Ï€/2 => I = Ï€/4."
       },
       {
-        question: "The number of real roots of equation eˣ + x - 2 = 0 is:",
+        question: "The number of real roots of equation eË£ + x - 2 = 0 is:",
         options: ["0", "1", "2", "Infinitely many"],
         correctAnswer: 1,
-        explanation: "f'(x) = eˣ + 1 > 0 for all real x, so f(x) is strictly increasing. Thus it can cross the x-axis exactly once."
+        explanation: "f'(x) = eË£ + 1 > 0 for all real x, so f(x) is strictly increasing. Thus it can cross the x-axis exactly once."
       },
       {
         question: "If vectors a, b, c are coplanar, then the scalar triple product [a+b  b+c  c+a] is equal to:",
@@ -133,10 +133,10 @@ function generateStandardQuestionSet(subject, chapter, count) {
         explanation: "[a+b b+c c+a] = 2[a b c]. Since a, b, c are coplanar, [a b c] = 0, hence 2(0) = 0."
       },
       {
-        question: "The radius of the circle x² + y² - 4x + 6y - 12 = 0 is:",
-        options: ["3", "4", "5", "√13"],
+        question: "The radius of the circle xÂ² + yÂ² - 4x + 6y - 12 = 0 is:",
+        options: ["3", "4", "5", "âˆš13"],
         correctAnswer: 2,
-        explanation: "Center (2, -3). Radius r = √(g² + f² - c) = √(4 + 9 - (-12)) = √25 = 5."
+        explanation: "Center (2, -3). Radius r = âˆš(gÂ² + fÂ² - c) = âˆš(4 + 9 - (-12)) = âˆš25 = 5."
       }
     ]
   };
@@ -762,7 +762,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                                   </span>
                                   {start && end && (
                                     <span className="text-[11px] text-indigo-400 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-800/40">
-                                      Window: {start.toLocaleDateString()} {start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} – {end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                      Window: {start.toLocaleDateString()} {start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} â€“ {end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                     </span>
                                   )}
                                 </div>
@@ -882,7 +882,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                                       Admin
                                     </span>
                                     <span className="text-[10px] text-slate-500 ml-auto">
-                                      {dateStr} • {timeStr}
+                                      {dateStr} â€¢ {timeStr}
                                     </span>
                                   </div>
 
@@ -920,7 +920,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                         </form>
                       ) : (
                         <div className="p-3 text-center text-[11px] text-slate-500 border-t border-slate-800 bg-slate-950/80">
-                          🔒 Broadcasts are exclusive to the Circle Admin. Members receive notifications in read-only mode.
+                          ðŸ”’ Broadcasts are exclusive to the Circle Admin. Members receive notifications in read-only mode.
                         </div>
                       )}
                     </div>
@@ -972,7 +972,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                             {leaderboard.map((row, idx) => (
                               <tr key={row.userId} className="hover:bg-slate-800/40 transition">
                                 <td className="py-3 px-4 font-bold text-slate-300">
-                                  {idx === 0 ? '🥇 1' : idx === 1 ? '🥈 2' : idx === 2 ? '🥉 3' : `#${idx + 1}`}
+                                  {idx === 0 ? 'ðŸ¥‡ 1' : idx === 1 ? 'ðŸ¥ˆ 2' : idx === 2 ? 'ðŸ¥‰ 3' : `#${idx + 1}`}
                                 </td>
                                 <td className="py-3 px-4 font-medium text-white">@{row.username}</td>
                                 <td className="py-3 px-4 text-slate-400">{row.targetExam}</td>
@@ -1056,7 +1056,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
               <div>
                 <h3 className="text-base font-bold text-white">{activeExam.title}</h3>
                 <span className="text-[11px] text-slate-400">
-                  Standardized Exam • {activeExam.questions?.length || 0} Questions • Marking: +4, -1
+                  Standardized Exam â€¢ {activeExam.questions?.length || 0} Questions â€¢ Marking: +4, -1
                 </span>
               </div>
               <div className="flex items-center gap-3">
@@ -1079,7 +1079,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between text-xs text-indigo-400 font-semibold">
                     <span>Question {currentQIndex + 1} of {activeExam.questions.length}</span>
-                    <span className="text-slate-400">{activeExam.subject} • {activeExam.chapter}</span>
+                    <span className="text-slate-400">{activeExam.subject} â€¢ {activeExam.chapter}</span>
                   </div>
 
                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-sm text-slate-200 font-medium">
