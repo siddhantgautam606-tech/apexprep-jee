@@ -14,6 +14,7 @@ import QuestionPool from './features/question-pool/QuestionPool';
 import TestOrganizer from './features/cbt/TestOrganizer';
 import AnalyticsDashboard from './features/analytics/AnalyticsDashboard';
 import AuthModal from './features/auth/AuthModal';
+import CircleList from './features/circles/CircleList';
 import FriendList from './features/social/FriendList';
 import ChatWindow from './features/social/ChatWindow';
 import { getCurrentUserProfile, signOutUser } from './services/authService';
@@ -48,7 +49,7 @@ export default function App() {
     { id: 'pool', label: 'Question Pool', icon: BookOpen },
     { id: 'cbt', label: 'CBT Tests', icon: Layers },
     { id: 'analytics', label: 'Growth', icon: BarChart3 },
-    { id: 'circles', label: 'Friend Circles', icon: Users, badge: 'Next' },
+    { id: 'circles', label: 'Friend Circles', icon: Users },
     { id: 'chat', label: 'Chat', icon: MessageSquare },
   ];
 
@@ -181,9 +182,12 @@ export default function App() {
         )}
 
         {activeTab === 'circles' && (
-          <div className="p-16 text-center text-slate-500 bg-slate-900/40 border border-slate-800 rounded-2xl text-sm w-full">
-            Friend Circles & Leaderboards module under construction. Coming up next!
-          </div>
+          <CircleList
+            currentUser={currentUser}
+            onStartTest={(testConfig) => {
+              setActiveTab('cbt');
+            }}
+          />
         )}
       </main>
 
