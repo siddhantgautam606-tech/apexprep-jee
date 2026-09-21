@@ -82,7 +82,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     explanation: ''
   });
 
-  // Built-in Exam Interface Modal
+  // Exam Interface Modal
   const [activeExam, setActiveExam] = useState(null);
   const [examAnswers, setExamAnswers] = useState({});
   const [currentQIndex, setCurrentQIndex] = useState(0);

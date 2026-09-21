@@ -17,7 +17,7 @@ export function formatMathSymbols(text) {
     .replace(/\\?\^\{-1\}|\^-1/g, '⁻¹')
     .replace(/\\?\^\{-2\}|\^-2/g, '⁻²')
     .replace(/\\?\^\{([^}]+)\}/g, '^($1)')
-    // Subscripts: _0 -> ₀, _1 -> ₁, _2 -> ₂, _max -> _max
+    // Subscripts: _0 -> ₀, _1 -> ₁, _2 -> ₂, _max -> ₘₐₓ
     .replace(/_0|_\{0\}/g, '₀')
     .replace(/_1|_\{1\}/g, '₁')
     .replace(/_2|_\{2\}/g, '₂')
@@ -27,7 +27,7 @@ export function formatMathSymbols(text) {
     .replace(/_\{min\}|_min|\\min/g, 'ₘᵢₙ')
     .replace(/_\{s\}|_s/g, 'ₛ')
     .replace(/_\{([a-zA-Z0-9]+)\}/g, '_$1')
-    // Greek letters (handles both \nu and nu)
+    // Greek letters
     .replace(/\\nu\b|\bnu\b/g, 'ν')
     .replace(/\\theta\b|\btheta\b/g, 'θ')
     .replace(/\\lambda\b|\blambda\b/g, 'λ')
@@ -36,6 +36,7 @@ export function formatMathSymbols(text) {
     .replace(/\\pi\b|\bpi\b/g, 'π')
     .replace(/\\omega\b|\bomega\b/g, 'ω')
     .replace(/\\phi\b|\bphi\b/g, 'ϕ')
+    .replace(/\\mu\b|\bmu\b/g, 'μ')
     // Math operators & symbols
     .replace(/\\times/g, '×')
     .replace(/\\pm/g, '±')
@@ -45,14 +46,14 @@ export function formatMathSymbols(text) {
     .replace(/\\approx/g, '≈')
     .replace(/\\to|\\rightarrow/g, '→')
     .replace(/\\infty/g, '∞')
-    // Clean leftover LaTeX formatting commands
+    // Clean LaTeX commands
     .replace(/\\text\{([^}]+)\}/g, '$1')
     .replace(/\\mathrm\{([^}]+)\}/g, '$1')
     .replace(/\\mathbf\{([^}]+)\}/g, '$1')
     .replace(/\\/g, '');
 }
 
-// Master JEE Question Bank - Add new questions here anytime!
+// Master JEE Question Bank - Baseline questions across subjects
 export const JEE_QUESTION_BANK = {
   Physics: [
     {
@@ -60,6 +61,12 @@ export const JEE_QUESTION_BANK = {
       options: ['x proportional to t', 'x proportional to t^2', 'x proportional to t^(1/2)', 'x proportional to t^3'],
       correctAnswer: 1,
       explanation: 'v = dx/dt = k*sqrt(x) => x^(-1/2) dx = k dt. Integrating gives 2*sqrt(x) = kt => x proportional to t^2.'
+    },
+    {
+      question: 'A body of mass m is projected with velocity v at an angle theta with horizontal. Angular momentum about projection point at max height is:',
+      options: ['(m*v^3*sin^2(theta)*cos(theta))/(2g)', '(m*v^3*sin(theta)*cos^2(theta))/(2g)', '(m*v^3*sin^2(theta))/(2g)', 'Zero'],
+      correctAnswer: 0,
+      explanation: 'L = m * v_horiz * H_max = m(v*cos(theta)) * (v^2*sin^2(theta)/(2g)).'
     },
     {
       question: 'Two capacitors C_1 and C_2 charged to V_1 and V_2 are connected in parallel. Loss in energy is:',
@@ -77,7 +84,7 @@ export const JEE_QUESTION_BANK = {
       question: 'Work done by static friction on a rolling sphere without slipping on a horizontal surface is:',
       options: ['Always positive', 'Always negative', 'Zero', 'Depends on radius'],
       correctAnswer: 2,
-      explanation: 'In pure rolling, instantaneous velocity of contact point is zero, so power and work done are zero.'
+      explanation: 'In pure rolling, instantaneous velocity of the contact point is zero, so power and work done are zero.'
     },
     {
       question: 'An LC circuit contains a 20 mH inductor and a 50 micro-F capacitor. The angular frequency of free oscillations is:',
@@ -170,14 +177,15 @@ export const JEE_QUESTION_BANK = {
   ]
 };
 
-// Clean functional call to fetch and format questions for circle tests
+// Shuffled standard questions provider
 export function getStandardQuestions(subject = 'Physics', chapter = 'All', count = 5) {
   const pool = JEE_QUESTION_BANK[subject] || JEE_QUESTION_BANK['Physics'];
-  const selected = [];
   const target = Math.max(1, count || 5);
+  const shuffled = [...pool].sort(() => 0.5 - Math.random());
+  const selected = [];
 
   for (let i = 0; i < target; i++) {
-    const base = pool[i % pool.length];
+    const base = shuffled[i % shuffled.length];
     selected.push({
       id: i + 1,
       question: formatMathSymbols(`[${chapter || subject}] Q${i + 1}: ${base.question}`),
