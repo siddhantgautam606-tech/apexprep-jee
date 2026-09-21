@@ -181,13 +181,14 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'circles' && (
-          <CircleList
-            currentUser={currentUser}
-            onStartTest={(testConfig) => {
-              setActiveTab('cbt');
-            }}
-          />
+        {activeTab === 'social' && (
+          <div className="w-full flex-1 flex flex-col min-h-[calc(100vh-100px)]">
+            <ChatWindow currentUser={currentUser || user} />
+          </div>
+        )}
+        <CircleList
+  currentUser={user}
+/>
         )}
       </main>
 
