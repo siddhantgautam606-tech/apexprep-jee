@@ -144,8 +144,7 @@ export async function getCircleTests(circleId) {
     .eq('circle_id', circleId)
     .order('scheduled_at', { ascending: true });
 
-  if (error) {
-    console.eimport { supabase } from './supabaseClient';
+  
 
 // 1. Fetch all circles with member counts
 export async function getAllCircles() {
