@@ -179,12 +179,13 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [announcementMsg, setAnnouncementMsg] = useState('');
 
-  // Built-in Exam Interface Modal (Ensures same paper is attempted)
+  // Built-in Exam Interface Modal
   const [activeExam, setActiveExam] = useState(null);
   const [examAnswers, setExamAnswers] = useState({});
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [examSubmitted, setExamSubmitted] = useState(false);
   const [examScoreResult, setExamScoreResult] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(0);
 
   const announcementsEndRef = useRef(null);
 
@@ -224,6 +225,24 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
       announcementsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [announcements, circleTab]);
+
+  // Exam timer countdown
+  useEffect(() => {
+    if (!activeExam || examSubmitted || timeLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleExamSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [activeExam, examSubmitted, timeLeft]);
 
   const handleSelectCircle = async (circle) => {
     setSelectedCircle(circle);
@@ -332,7 +351,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     }
   };
 
-  // Admin schedules test: Generates once and saves questions JSON directly into DB
+  // Admin schedules test: Generates once and saves questions JSON directly into Supabase
   const handleScheduleTest = async (e) => {
     e.preventDefault();
     if (!selectedCircle || !currentUser?.id) return;
@@ -352,7 +371,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
       }
     }
 
-    // If external generator not provided, use standardized generator
     if (!Array.isArray(questions) || questions.length === 0) {
       questions = generateStandardQuestionSet(
         newTest.subject,
@@ -400,9 +418,9 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     }
   };
 
-  // Launch the standardized test for any member
+  // Launch test directly inside circle so every member answers the exact same questions
   const handleAttemptTest = (test) => {
-    let questions = Array.isArray(test.questions) && test.questions.length > 0
+    const questions = Array.isArray(test.questions) && test.questions.length > 0
       ? test.questions
       : generateStandardQuestionSet(test.subject, test.chapter, 5);
 
@@ -411,19 +429,15 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
       questions
     };
 
-    if (typeof onStartTest === 'function') {
-      onStartTest(standardizedTest);
-    }
-
-    // Launch self-contained test interface
     setActiveExam(standardizedTest);
     setExamAnswers({});
     setCurrentQIndex(0);
     setExamSubmitted(false);
     setExamScoreResult(null);
+    setTimeLeft((Number(test.duration_minutes) || 60) * 60);
   };
 
-  // Handle Exam submission & live leaderboard sync
+  // Submit and write scores directly to database
   const handleExamSubmit = async () => {
     if (!activeExam || !currentUser?.id) return;
 
@@ -436,11 +450,12 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
       }
     });
 
-    const score = correctCount * 4 - (Object.keys(examAnswers).length - correctCount) * 1;
+    const attemptedCount = Object.keys(examAnswers).length;
+    const incorrectCount = attemptedCount - correctCount;
+    const score = correctCount * 4 - incorrectCount * 1;
     const finalScore = Math.max(0, score);
-    const accuracy = questions.length > 0 ? ((correctCount / questions.length) * 100).toFixed(1) : 0;
+    const accuracy = attemptedCount > 0 ? ((correctCount / attemptedCount) * 100).toFixed(1) : 0;
 
-    // Record submission into Supabase circle_test_submissions
     try {
       await supabase
         .from('circle_test_submissions')
@@ -452,7 +467,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
               user_id: currentUser.id,
               score: finalScore,
               total_marks: questions.length * 4,
-              accuracy_pct: accuracy,
+              accuracy_pct: Number(accuracy),
               submitted_at: new Date().toISOString()
             }
           ],
@@ -462,12 +477,13 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
       const refreshedRanks = await getCircleLeaderboard(selectedCircle.id);
       setLeaderboard(refreshedRanks);
     } catch (err) {
-      console.error('Error submitting exam result to leaderboard:', err);
+      console.error('Error submitting exam to leaderboard:', err);
     }
 
     setExamScoreResult({
       correct: correctCount,
       total: questions.length,
+      attempted: attemptedCount,
       score: finalScore,
       accuracy
     });
@@ -486,6 +502,12 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
       const ann = await getCircleAnnouncements(selectedCircle.id);
       setAnnouncements(ann);
     }
+  };
+
+  const formatTimer = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   const isCircleAdmin =
@@ -606,7 +628,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Admin Test Scheduling Button */}
                     {isCircleAdmin && (
                       <button
                         onClick={() => setShowScheduleModal(true)}
@@ -616,7 +637,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                       </button>
                     )}
 
-                    {/* Exit Circle Button (Non-creator approved member) */}
                     {isApprovedMember && !isCircleCreator && (
                       <button
                         onClick={handleLeaveCircle}
@@ -627,7 +647,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                       </button>
                     )}
 
-                    {/* Delete Circle Button (Creator only) */}
                     {isCircleCreator && (
                       <button
                         onClick={handleDeleteCircle}
@@ -717,7 +736,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                           const end = test.window_end ? new Date(test.window_end) : null;
 
                           const isUpcoming = start && now < start;
-                          const isExpired = end && now > end;
                           const isOpen = (!start || now >= start) && (!end || now <= end);
 
                           return (
@@ -929,9 +947,9 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
         </div>
       </div>
 
-      {/* Built-in Exam Runner Modal (Guarantees all members take identical paper) */}
+      {/* Standardized Exam Attempt Modal */}
       {activeExam && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl p-6 shadow-2xl flex flex-col gap-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div>
@@ -940,90 +958,91 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                   Standardized Exam • {activeExam.questions?.length || 0} Questions • Marking: +4, -1
                 </span>
               </div>
-              <button
-                onClick={() => setActiveExam(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-3">
+                {!examSubmitted && (
+                  <div className="flex items-center gap-1.5 bg-slate-800 text-amber-400 font-mono text-xs px-3 py-1 rounded-lg border border-slate-700">
+                    <Clock className="w-3.5 h-3.5" /> {formatTimer(timeLeft)}
+                  </div>
+                )}
+                <button
+                  onClick={() => setActiveExam(null)}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {!examSubmitted ? (
-              <>
-                {/* Question Box */}
-                {activeExam.questions && activeExam.questions.length > 0 && (
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center justify-between text-xs text-indigo-400 font-semibold">
-                      <span>Question {currentQIndex + 1} of {activeExam.questions.length}</span>
-                      <span className="text-slate-400">{activeExam.subject} • {activeExam.chapter}</span>
-                    </div>
+              activeExam.questions && activeExam.questions.length > 0 && (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between text-xs text-indigo-400 font-semibold">
+                    <span>Question {currentQIndex + 1} of {activeExam.questions.length}</span>
+                    <span className="text-slate-400">{activeExam.subject} • {activeExam.chapter}</span>
+                  </div>
 
-                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-sm text-slate-200 font-medium">
-                      {activeExam.questions[currentQIndex].question}
-                    </div>
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-sm text-slate-200 font-medium">
+                    {activeExam.questions[currentQIndex].question}
+                  </div>
 
-                    {/* Options A, B, C, D */}
-                    <div className="grid grid-cols-1 gap-2.5">
-                      {activeExam.questions[currentQIndex].options.map((opt, optIdx) => {
-                        const isChosen = examAnswers[currentQIndex] === optIdx;
-                        return (
-                          <button
-                            key={optIdx}
-                            onClick={() =>
-                              setExamAnswers((prev) => ({ ...prev, [currentQIndex]: optIdx }))
-                            }
-                            className={`p-3 rounded-xl border text-left text-xs transition flex items-center gap-3 ${
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {activeExam.questions[currentQIndex].options.map((opt, optIdx) => {
+                      const isChosen = examAnswers[currentQIndex] === optIdx;
+                      return (
+                        <button
+                          key={optIdx}
+                          onClick={() =>
+                            setExamAnswers((prev) => ({ ...prev, [currentQIndex]: optIdx }))
+                          }
+                          className={`p-3 rounded-xl border text-left text-xs transition flex items-center gap-3 ${
+                            isChosen
+                              ? 'bg-indigo-600/20 border-indigo-500 text-white font-semibold'
+                              : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'
+                          }`}
+                        >
+                          <span
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold border ${
                               isChosen
-                                ? 'bg-indigo-600/20 border-indigo-500 text-white font-semibold'
-                                : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'
+                                ? 'bg-indigo-600 border-indigo-400 text-white'
+                                : 'bg-slate-900 border-slate-700 text-slate-400'
                             }`}
                           >
-                            <span
-                              className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold border ${
-                                isChosen
-                                  ? 'bg-indigo-600 border-indigo-400 text-white'
-                                  : 'bg-slate-900 border-slate-700 text-slate-400'
-                              }`}
-                            >
-                              {String.fromCharCode(65 + optIdx)}
-                            </span>
-                            <span>{opt}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Navigation Buttons */}
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-                      <button
-                        disabled={currentQIndex === 0}
-                        onClick={() => setCurrentQIndex((prev) => prev - 1)}
-                        className="flex items-center gap-1 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs disabled:opacity-40 transition"
-                      >
-                        <ArrowLeft className="w-3.5 h-3.5" /> Previous
-                      </button>
-
-                      {currentQIndex < activeExam.questions.length - 1 ? (
-                        <button
-                          onClick={() => setCurrentQIndex((prev) => prev + 1)}
-                          className="flex items-center gap-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition"
-                        >
-                          Next <ArrowRight className="w-3.5 h-3.5" />
+                            {String.fromCharCode(65 + optIdx)}
+                          </span>
+                          <span>{opt}</span>
                         </button>
-                      ) : (
-                        <button
-                          onClick={handleExamSubmit}
-                          className="flex items-center gap-1 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow"
-                        >
-                          Submit Test Paper
-                        </button>
-                      )}
-                    </div>
+                      );
+                    })}
                   </div>
-                )}
-              </>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                    <button
+                      disabled={currentQIndex === 0}
+                      onClick={() => setCurrentQIndex((prev) => prev - 1)}
+                      className="flex items-center gap-1 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs disabled:opacity-40 transition"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" /> Previous
+                    </button>
+
+                    {currentQIndex < activeExam.questions.length - 1 ? (
+                      <button
+                        onClick={() => setCurrentQIndex((prev) => prev + 1)}
+                        className="flex items-center gap-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition"
+                      >
+                        Next <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleExamSubmit}
+                        className="flex items-center gap-1 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow"
+                      >
+                        Submit Test Paper
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
             ) : (
-              /* Score & Result Summary */
               <div className="flex flex-col items-center justify-center gap-4 py-6 text-center">
                 <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
                   <CheckCircle className="w-6 h-6" />
@@ -1163,7 +1182,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                   <label className="text-slate-400 block mb-1">Duration (Mins)</label>
                   <input
                     type="number"
-                    min="15"
+                    min="1"
                     max="180"
                     value={newTest.durationMinutes}
                     onChange={(e) => setNewTest({ ...newTest, durationMinutes: e.target.value })}
