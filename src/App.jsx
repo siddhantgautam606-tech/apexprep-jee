@@ -15,7 +15,6 @@ import TestOrganizer from './features/cbt/TestOrganizer';
 import AnalyticsDashboard from './features/analytics/AnalyticsDashboard';
 import AuthModal from './features/auth/AuthModal';
 import CircleList from './features/circles/CircleList';
-import FriendList from './features/social/FriendList';
 import ChatWindow from './features/social/ChatWindow';
 import { getCurrentUserProfile, signOutUser } from './services/authService';
 
@@ -24,7 +23,6 @@ export default function App() {
   const [isTestActive, setIsTestActive] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [activeChatFriend, setActiveChatFriend] = useState(null);
 
   const fetchUser = async () => {
     try {
@@ -42,7 +40,6 @@ export default function App() {
   const handleLogout = async () => {
     await signOutUser();
     setCurrentUser(null);
-    setActiveChatFriend(null);
   };
 
   const navItems = [
@@ -95,11 +92,6 @@ export default function App() {
               >
                 <Icon className="w-3.5 h-3.5" />
                 <span>{item.label}</span>
-                {item.badge && (
-                  <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded ml-1">
-                    {item.badge}
-                  </span>
-                )}
               </button>
             );
           })}
@@ -138,9 +130,9 @@ export default function App() {
         {activeTab === 'analytics' && <AnalyticsDashboard />}
 
         {activeTab === 'chat' && (
-          <div className="w-full h-[650px] grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="w-full flex-1 flex flex-col">
             {!currentUser ? (
-              <div className="md:col-span-3 flex flex-col items-center justify-center p-12 bg-slate-900/40 border border-slate-800 rounded-2xl text-center">
+              <div className="flex flex-col items-center justify-center p-12 bg-slate-900/40 border border-slate-800 rounded-2xl text-center">
                 <MessageSquare className="w-12 h-12 text-slate-600 mb-3" />
                 <h3 className="text-base font-semibold text-slate-200">Log In to Chat</h3>
                 <p className="text-xs text-slate-400 max-w-xs mt-1 mb-4">
@@ -154,30 +146,16 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <>
-                <div className="md:col-span-1 h-full">
-                  <FriendList
-                    currentUser={currentUser}
-                    onSelectFriend={(friend) => setActiveChatFriend(friend)}
-                    activeFriendId={activeChatFriend?.id}
-                  />
-                </div>
-                <div className="md:col-span-2 h-full">
-                  {activeChatFriend ? (
-                    <ChatWindow
-                      currentUser={currentUser}
-                      activeFriend={activeChatFriend}
-                      onClose={() => setActiveChatFriend(null)}
-                    {activeTab === 'social' && (
-          <div className="w-full flex-1 flex flex-col min-h-[calc(100vh-100px)]">
-            <ChatWindow currentUser={currentUser || user} />
+              <ChatWindow currentUser={currentUser} />
+            )}
           </div>
         )}
 
         {activeTab === 'circles' && (
-          <CircleList currentUser={currentUser || user} />
+          <CircleList currentUser={currentUser} />
         )}
       </main>
+
       {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthOpen}
