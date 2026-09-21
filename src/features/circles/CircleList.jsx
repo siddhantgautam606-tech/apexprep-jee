@@ -22,7 +22,7 @@ import {
   ArrowRight,
   ArrowLeft
 } from 'lucide-react';
-import { getStandardQuestions } from '../../data/jeeQuestionBank';
+import { getStandardQuestions, formatMathSymbols } from '../../data/jeeQuestionBank';
 import {
   getAllCircles,
   getUserCircleMemberships,
@@ -37,7 +37,9 @@ import {
   deleteCircleTest,
   getCircleAnnouncements,
   postAnnouncement,
-  getCircleLeaderboard
+  getCircleLeaderboard,
+  addCustomQuestionToDB,
+  fetchQuestionsForTest
 } from '../../services/circleService';
 import { supabase } from '../../services/supabaseClient';
 
@@ -64,7 +66,21 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showAddQuestionModal, setShowAddQuestionModal] = useState(false);
   const [announcementMsg, setAnnouncementMsg] = useState('');
+
+  // Add Question State
+  const [newQuestionData, setNewQuestionData] = useState({
+    subject: 'Physics',
+    chapter: 'All',
+    question: '',
+    optionA: '',
+    optionB: '',
+    optionC: '',
+    optionD: '',
+    correctAnswer: 0,
+    explanation: ''
+  });
 
   // Built-in Exam Interface Modal
   const [activeExam, setActiveExam] = useState(null);
@@ -261,11 +277,19 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     }
 
     if (!Array.isArray(questions) || questions.length === 0) {
-      questions = generateStandardQuestionSet(
-        newTest.subject,
-        newTest.chapter,
-        Number(newTest.questionCount) || 5
-      );
+      if (typeof fetchQuestionsForTest === 'function') {
+        questions = await fetchQuestionsForTest(
+          newTest.subject,
+          newTest.chapter,
+          Number(newTest.questionCount) || 5
+        );
+      } else {
+        questions = generateStandardQuestionSet(
+          newTest.subject,
+          newTest.chapter,
+          Number(newTest.questionCount) || 5
+        );
+      }
     }
 
     const res = await scheduleCircleTest(
@@ -294,6 +318,49 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     }
   };
 
+  const handleCreateQuestionSubmit = async (e) => {
+    e.preventDefault();
+    if (!currentUser?.id) return alert('Please sign in first.');
+    if (!newQuestionData.question.trim()) return alert('Question text is required.');
+
+    const payload = {
+      subject: newQuestionData.subject,
+      chapter: newQuestionData.chapter,
+      question: newQuestionData.question,
+      options: [
+        newQuestionData.optionA,
+        newQuestionData.optionB,
+        newQuestionData.optionC,
+        newQuestionData.optionD
+      ],
+      correctAnswer: Number(newQuestionData.correctAnswer),
+      explanation: newQuestionData.explanation
+    };
+
+    if (typeof addCustomQuestionToDB === 'function') {
+      const res = await addCustomQuestionToDB(payload, currentUser.id);
+      if (res.error) {
+        alert('Failed to save question: ' + res.error);
+      } else {
+        alert('Question added successfully to the website question pool!');
+        setShowAddQuestionModal(false);
+        setNewQuestionData({
+          subject: 'Physics',
+          chapter: 'All',
+          question: '',
+          optionA: '',
+          optionB: '',
+          optionC: '',
+          optionD: '',
+          correctAnswer: 0,
+          explanation: ''
+        });
+      }
+    } else {
+      alert('Database addition is not configured in circleService.');
+    }
+  };
+
   const handleDeleteTest = async (testId, e) => {
     e?.stopPropagation();
     const confirm = window.confirm('Are you sure you want to delete this test?');
@@ -308,9 +375,22 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
   };
 
   const handleAttemptTest = (test) => {
-    const questions = Array.isArray(test.questions) && test.questions.length > 0
-      ? test.questions
-      : generateStandardQuestionSet(test.subject, test.chapter, 5);
+    let questions = [];
+
+    if (Array.isArray(test.questions) && test.questions.length > 0) {
+      questions = test.questions.map((q) => ({
+        ...q,
+        question: formatMathSymbols(q.question),
+        options: Array.isArray(q.options) ? q.options.map((opt) => formatMathSymbols(opt)) : [],
+        explanation: formatMathSymbols(q.explanation || '')
+      }));
+    } else {
+      questions = generateStandardQuestionSet(
+        test.subject,
+        test.chapter,
+        Number(test.question_count) || 5
+      );
+    }
 
     const standardizedTest = {
       ...test,
@@ -423,12 +503,21 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
           </div>
         </div>
 
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition shrink-0"
-        >
-          <Plus className="w-4 h-4" /> Create Circle
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAddQuestionModal(true)}
+            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-slate-700 transition shrink-0"
+          >
+            <Plus className="w-4 h-4 text-emerald-400" /> Add to Question Pool
+          </button>
+
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition shrink-0"
+          >
+            <Plus className="w-4 h-4" /> Create Circle
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1035,6 +1124,149 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showAddQuestionModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+              <div>
+                <h3 className="text-base font-bold text-white">Add Question to Pool</h3>
+                <p className="text-[11px] text-slate-400">Questions added here automatically populate both test modes</p>
+              </div>
+              <button onClick={() => setShowAddQuestionModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateQuestionSubmit} className="flex flex-col gap-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-400 block mb-1">Subject</label>
+                  <select
+                    value={newQuestionData.subject}
+                    onChange={(e) => setNewQuestionData({ ...newQuestionData, subject: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
+                  >
+                    <option value="Physics">Physics</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Mathematics">Mathematics</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">Chapter</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Thermodynamics or All"
+                    value={newQuestionData.chapter}
+                    onChange={(e) => setNewQuestionData({ ...newQuestionData, chapter: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-400 block mb-1">Question Prompt</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="e.g. A particle moves with velocity v = k*sqrt(x)..."
+                  value={newQuestionData.question}
+                  onChange={(e) => setNewQuestionData({ ...newQuestionData, question: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 font-mono text-[11px]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-slate-400 block mb-1">Option A</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Option A"
+                    value={newQuestionData.optionA}
+                    onChange={(e) => setNewQuestionData({ ...newQuestionData, optionA: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">Option B</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Option B"
+                    value={newQuestionData.optionB}
+                    onChange={(e) => setNewQuestionData({ ...newQuestionData, optionB: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">Option C</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Option C"
+                    value={newQuestionData.optionC}
+                    onChange={(e) => setNewQuestionData({ ...newQuestionData, optionC: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">Option D</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Option D"
+                    value={newQuestionData.optionD}
+                    onChange={(e) => setNewQuestionData({ ...newQuestionData, optionD: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-400 block mb-1">Correct Answer</label>
+                <select
+                  value={newQuestionData.correctAnswer}
+                  onChange={(e) => setNewQuestionData({ ...newQuestionData, correctAnswer: Number(e.target.value) })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
+                >
+                  <option value={0}>Option A</option>
+                  <option value={1}>Option B</option>
+                  <option value={2}>Option C</option>
+                  <option value={3}>Option D</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-slate-400 block mb-1">Explanation (Optional)</label>
+                <textarea
+                  rows={2}
+                  placeholder="Solution steps or key formula..."
+                  value={newQuestionData.explanation}
+                  onChange={(e) => setNewQuestionData({ ...newQuestionData, explanation: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 text-[11px]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAddQuestionModal(false)}
+                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow"
+                >
+                  Save to Pool
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
