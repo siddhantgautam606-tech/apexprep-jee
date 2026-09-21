@@ -124,30 +124,39 @@ export async function getCircleMembers(circleId) {
 
 // 7. Admin: Accept or Reject a join request
 export async function handleJoinRequest(memberRecordId, accept = true) {
-  if (accept) {
-    const { data, error } = await supabase
-      .from('circle_members')
-      .update({ status: 'approved' })
-      .eq('id', memberRecordId)
-      .select()
-      .single();
+  try {
+    if (accept) {
+      const { data, error } = await supabase
+        .from('circle_members')
+        .update({ status: 'approved' })
+        .eq('id', memberRecordId)
+        .select();
 
-    if (error) return { error: error.message };
-    return { data };
-  } else {
-    const { error } = await supabase
-      .from('circle_members')
-      .delete()
-      .eq('id', memberRecordId);
+      if (error) {
+        console.error('Error accepting member:', error);
+        return { error: error.message };
+      }
+      return { data };
+    } else {
+      const { error } = await supabase
+        .from('circle_members')
+        .delete()
+        .eq('id', memberRecordId);
 
-    if (error) return { error: error.message };
-    return { success: true };
+      if (error) {
+        console.error('Error rejecting member:', error);
+        return { error: error.message };
+      }
+      return { success: true };
+    }
+  } catch (err) {
+    return { error: err.message };
   }
 }
 
-// 8. Schedule a circle test (Admin only enforced)
+// 8. Schedule a circle test with fixed availability window (Admin only)
 export async function scheduleCircleTest(circleId, testData, userId) {
-  const { title, subject, chapter, durationMinutes, scheduledAt } = testData;
+  const { title, subject, chapter, durationMinutes, windowStart, windowEnd } = testData;
 
   const { data, error } = await supabase
     .from('circle_tests')
@@ -158,7 +167,8 @@ export async function scheduleCircleTest(circleId, testData, userId) {
         subject,
         chapter: chapter || 'All',
         duration_minutes: Number(durationMinutes) || 60,
-        scheduled_at: scheduledAt || new Date().toISOString(),
+        window_start: windowStart ? new Date(windowStart).toISOString() : new Date().toISOString(),
+        window_end: windowEnd ? new Date(windowEnd).toISOString() : new Date(Date.now() + 86400000).toISOString(),
         created_by: userId,
       },
     ])
@@ -202,7 +212,7 @@ export async function getCircleAnnouncements(circleId) {
       author:created_by ( username )
     `)
     .eq('circle_id', circleId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: true });
 
   if (error) {
     console.error('Error fetching announcements:', error);
@@ -252,7 +262,6 @@ export async function getCircleLeaderboard(circleId) {
     return [];
   }
 
-  // Aggregate stats per user
   const userMap = {};
   (data || []).forEach((sub) => {
     const uid = sub.user_id;
@@ -277,8 +286,6 @@ export async function getCircleLeaderboard(circleId) {
     avgAccuracy: (entry.accuracySum / entry.testsTaken).toFixed(1),
   }));
 
-  // Sort descending by total score, tie-break on accuracy
   ranked.sort((a, b) => b.totalScore - a.totalScore || b.avgAccuracy - a.avgAccuracy);
-
   return ranked;
 }

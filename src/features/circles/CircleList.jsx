@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Users,
   Plus,
@@ -15,7 +15,8 @@ import {
   Send,
   UserCheck,
   UserX,
-  Hourglass
+  Hourglass,
+  Lock
 } from 'lucide-react';
 import {
   getAllCircles,
@@ -34,31 +35,32 @@ import {
 
 export default function CircleList({ currentUser, onStartTest }) {
   const [circles, setCircles] = useState([]);
-  const [membershipMap, setMembershipMap] = useState({}); // { [circleId]: { status, role } }
+  const [membershipMap, setMembershipMap] = useState({});
   const [selectedCircle, setSelectedCircle] = useState(null);
 
-  // Circle sub-data
   const [circleMembers, setCircleMembers] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [circleTests, setCircleTests] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
 
-  // Active sub-tab inside a circle
-  const [circleTab, setCircleTab] = useState('tests'); // 'tests' | 'announcements' | 'leaderboard' | 'admin'
+  const [circleTab, setCircleTab] = useState('tests');
   const [loading, setLoading] = useState(true);
 
-  // Modals & Inputs
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [announcementMsg, setAnnouncementMsg] = useState('');
+
+  const announcementsEndRef = useRef(null);
 
   const [newCircle, setNewCircle] = useState({ name: '', description: '' });
   const [newTest, setNewTest] = useState({
     title: '',
     subject: 'Physics',
     chapter: 'All',
-    durationMinutes: 60
+    durationMinutes: 60,
+    windowStart: '',
+    windowEnd: ''
   });
 
   const loadData = async () => {
@@ -80,6 +82,12 @@ export default function CircleList({ currentUser, onStartTest }) {
   useEffect(() => {
     loadData();
   }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (circleTab === 'announcements') {
+      announcementsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [announcements, circleTab]);
 
   const handleSelectCircle = async (circle) => {
     setSelectedCircle(circle);
@@ -156,6 +164,7 @@ export default function CircleList({ currentUser, onStartTest }) {
       const refreshed = await getCircleMembers(selectedCircle.id);
       setCircleMembers(refreshed.approved);
       setPendingRequests(refreshed.pending);
+      await loadData();
     }
   };
 
@@ -168,7 +177,14 @@ export default function CircleList({ currentUser, onStartTest }) {
       alert(res.error);
     } else {
       setShowScheduleModal(false);
-      setNewTest({ title: '', subject: 'Physics', chapter: 'All', durationMinutes: 60 });
+      setNewTest({
+        title: '',
+        subject: 'Physics',
+        chapter: 'All',
+        durationMinutes: 60,
+        windowStart: '',
+        windowEnd: ''
+      });
       const tests = await getCircleTests(selectedCircle.id);
       setCircleTests(tests);
     }
@@ -199,7 +215,7 @@ export default function CircleList({ currentUser, onStartTest }) {
 
   return (
     <div className="w-full max-w-5xl flex flex-col gap-6">
-      {/* Circle Hub Top Banner */}
+      {/* Top Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-sm">
         <div className="flex items-center gap-3">
           <div className="bg-indigo-600/20 text-indigo-400 p-2.5 rounded-xl border border-indigo-600/30">
@@ -207,7 +223,7 @@ export default function CircleList({ currentUser, onStartTest }) {
           </div>
           <div>
             <h2 className="text-lg font-bold text-white">Friend Circles & Cohorts</h2>
-            <p className="text-xs text-slate-400">Collaborative study circles with gated entry, scheduled tests & rank boards</p>
+            <p className="text-xs text-slate-400">Admin-gated study circles with timed examinations, notices & rank boards</p>
           </div>
         </div>
 
@@ -220,7 +236,7 @@ export default function CircleList({ currentUser, onStartTest }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Circles Directory */}
+        {/* Left: Circle Directory */}
         <div className="flex flex-col gap-3">
           <h3 className="text-sm font-semibold text-slate-300">Available Circles</h3>
 
@@ -283,11 +299,11 @@ export default function CircleList({ currentUser, onStartTest }) {
           )}
         </div>
 
-        {/* Right Column: Selected Circle Workspace */}
+        {/* Right: Selected Circle Content */}
         <div className="lg:col-span-2 flex flex-col gap-5">
           {selectedCircle ? (
             <>
-              {/* Header Box */}
+              {/* Circle Head Info */}
               <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div>
@@ -305,7 +321,7 @@ export default function CircleList({ currentUser, onStartTest }) {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Admin Test Scheduling Button */}
+                    {/* Admin Test Scheduling */}
                     {isCircleAdmin && (
                       <button
                         onClick={() => setShowScheduleModal(true)}
@@ -315,7 +331,7 @@ export default function CircleList({ currentUser, onStartTest }) {
                       </button>
                     )}
 
-                    {/* Exit Circle Button (for non-creator approved members) */}
+                    {/* Exit Circle Button */}
                     {isApprovedMember && selectedCircle.created_by !== currentUser?.id && (
                       <button
                         onClick={handleLeaveCircle}
@@ -328,7 +344,7 @@ export default function CircleList({ currentUser, onStartTest }) {
                   </div>
                 </div>
 
-                {/* Sub-Tabs Navigation */}
+                {/* Sub-Tabs */}
                 <div className="flex items-center gap-1 border-b border-slate-800 pb-2 text-xs">
                   <button
                     onClick={() => setCircleTab('tests')}
@@ -363,13 +379,12 @@ export default function CircleList({ currentUser, onStartTest }) {
                     <Trophy className="w-3.5 h-3.5" /> Leaderboard
                   </button>
 
-                  {/* Admin Requests Tab */}
                   {isCircleAdmin && (
                     <button
                       onClick={() => setCircleTab('admin')}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition ml-auto ${
                         circleTab === 'admin'
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold'
                           : 'text-amber-400/80 hover:text-amber-300'
                       }`}
                     >
@@ -379,14 +394,14 @@ export default function CircleList({ currentUser, onStartTest }) {
                 </div>
               </div>
 
-              {/* Sub-Tab View Switcher */}
+              {/* Gated Access Guard */}
               {!isApprovedMember ? (
                 <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-2xl text-center flex flex-col items-center justify-center gap-2">
-                  <Hourglass className="w-8 h-8 text-amber-400/60 mb-1" />
+                  <Lock className="w-8 h-8 text-amber-400/60 mb-1" />
                   <h4 className="text-sm font-semibold text-slate-200">Gated Circle</h4>
                   <p className="text-xs text-slate-400 max-w-sm">
                     {userStatus === 'pending'
-                      ? 'Your join request is awaiting circle admin authorization. You will get access once accepted.'
+                      ? 'Your join request is awaiting circle admin authorization. You will gain full access as soon as it is approved.'
                       : 'You must request and be granted admission by the circle admin to view tests, announcements, and ranks.'}
                   </p>
                 </div>
@@ -397,92 +412,117 @@ export default function CircleList({ currentUser, onStartTest }) {
                     <div className="flex flex-col gap-3">
                       {circleTests.length === 0 ? (
                         <div className="p-8 text-center text-slate-500 text-xs bg-slate-900/50 border border-slate-800 rounded-xl">
-                          No tests scheduled yet. {isCircleAdmin ? 'Use "Schedule Test" above to set one.' : 'Circle admin will post scheduled tests soon.'}
+                          No tests scheduled yet. {isCircleAdmin ? 'Click "Schedule Test" above to configure an exam window.' : 'Circle admin has not scheduled any exams yet.'}
                         </div>
                       ) : (
-                        circleTests.map((test) => (
-                          <div
-                            key={test.id}
-                            className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4"
-                          >
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-2">
-                                <h5 className="font-semibold text-white text-sm">{test.title}</h5>
-                                <span className="text-[10px] font-semibold uppercase tracking-wider bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
-                                  {test.subject}
-                                </span>
+                        circleTests.map((test) => {
+                          const now = new Date();
+                          const start = test.window_start ? new Date(test.window_start) : null;
+                          const end = test.window_end ? new Date(test.window_end) : null;
+
+                          const isUpcoming = start && now < start;
+                          const isExpired = end && now > end;
+                          const isOpen = (!start || now >= start) && (!end || now <= end);
+
+                          return (
+                            <div
+                              key={test.id}
+                              className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4"
+                            >
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <h5 className="font-semibold text-white text-sm">{test.title}</h5>
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
+                                    {test.subject}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
+                                  <span className="flex items-center gap-1">
+                                    <BookOpen className="w-3.5 h-3.5 text-slate-500" /> {test.chapter}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3.5 h-3.5 text-slate-500" /> {test.duration_minutes} mins
+                                  </span>
+                                  {start && end && (
+                                    <span className="text-[11px] text-indigo-400 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-800/40">
+                                      Window: {start.toLocaleDateString()} {start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} – {end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-center gap-4 text-xs text-slate-400 mt-1">
-                                <span className="flex items-center gap-1">
-                                  <BookOpen className="w-3.5 h-3.5 text-slate-500" /> {test.chapter}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Clock className="w-3.5 h-3.5 text-slate-500" /> {test.duration_minutes} mins
-                                </span>
+
+                              <div>
+                                {isOpen ? (
+                                  <button
+                                    onClick={() => onStartTest && onStartTest(test)}
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow"
+                                  >
+                                    Attempt Test
+                                  </button>
+                                ) : isUpcoming ? (
+                                  <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg">
+                                    Opens at {start?.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-lg">
+                                    Window Closed
+                                  </span>
+                                )}
                               </div>
                             </div>
-
-                            <button
-                              onClick={() => onStartTest && onStartTest(test)}
-                              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shrink-0"
-                            >
-                              Attempt Test
-                            </button>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   )}
 
-                  {/* 2. Admin Broadcast Announcements Tab */}
+                  {/* 2. Admin Announcements Channel (Fixed viewport) */}
                   {circleTab === 'announcements' && (
-                    <div className="flex flex-col gap-4">
-                      {/* Admin Message Poster Form */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl flex flex-col h-[520px] overflow-hidden">
+                      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                        {announcements.length === 0 ? (
+                          <div className="m-auto text-center text-slate-500 text-xs">
+                            No announcements posted yet.
+                          </div>
+                        ) : (
+                          announcements.map((a) => (
+                            <div key={a.id} className="bg-slate-950 border border-slate-800/80 p-3 rounded-xl max-w-xl self-start">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-bold text-indigo-400">@{a.author?.username || 'Admin'}</span>
+                                <span className="text-[10px] text-slate-500">
+                                  {new Date(a.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-200 whitespace-pre-wrap">{a.message}</p>
+                            </div>
+                          ))
+                        )}
+                        <div ref={announcementsEndRef} />
+                      </div>
+
+                      {/* Admin Input pinned at bottom */}
                       {isCircleAdmin ? (
-                        <form
-                          onSubmit={handleSendAnnouncement}
-                          className="bg-slate-900 border border-slate-800 p-3 rounded-xl flex items-center gap-2"
-                        >
+                        <form onSubmit={handleSendAnnouncement} className="p-3 border-t border-slate-800 bg-slate-950 flex items-center gap-2">
                           <input
                             type="text"
-                            placeholder="Broadcast an announcement to your circle members..."
+                            placeholder="Broadcast an announcement to your circle..."
                             value={announcementMsg}
                             onChange={(e) => setAnnouncementMsg(e.target.value)}
-                            className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 outline-none"
+                            className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500"
                           />
-                          <button
-                            type="submit"
-                            className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-1 transition"
-                          >
-                            <Send className="w-3.5 h-3.5" /> Post
+                          <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-medium flex items-center gap-1 transition">
+                            <Send className="w-3.5 h-3.5" /> Send
                           </button>
                         </form>
                       ) : (
-                        <div className="text-[11px] text-slate-500 bg-slate-900/40 p-2.5 rounded-lg border border-slate-800/80">
+                        <div className="p-2.5 text-center text-[11px] text-slate-500 border-t border-slate-800 bg-slate-950">
                           Announcements are broadcast exclusively by the Circle Admin.
                         </div>
-                      )}
-
-                      {/* Feed */}
-                      {announcements.length === 0 ? (
-                        <div className="p-8 text-center text-slate-500 text-xs bg-slate-900/50 border border-slate-800 rounded-xl">
-                          No announcements posted yet.
-                        </div>
-                      ) : (
-                        announcements.map((a) => (
-                          <div key={a.id} className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl flex flex-col gap-1">
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="font-semibold text-indigo-400">@{a.author?.username || 'Admin'}</span>
-                              <span className="text-slate-500">{new Date(a.created_at).toLocaleDateString()}</span>
-                            </div>
-                            <p className="text-xs text-slate-200">{a.message}</p>
-                          </div>
-                        ))
                       )}
                     </div>
                   )}
 
-                  {/* 3. Circle Leaderboard Tab */}
+                  {/* 3. Circle Leaderboard */}
                   {circleTab === 'leaderboard' && (
                     <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                       {leaderboard.length === 0 ? (
@@ -603,7 +643,7 @@ export default function CircleList({ currentUser, onStartTest }) {
                 <label className="text-slate-400 block mb-1">Target / Focus Description</label>
                 <textarea
                   rows={2}
-                  placeholder="e.g. Focused on daily chapterwise problem tests..."
+                  placeholder="e.g. Daily chapterwise problem tests & rank analysis..."
                   value={newCircle.description}
                   onChange={(e) => setNewCircle({ ...newCircle, description: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
@@ -630,12 +670,12 @@ export default function CircleList({ currentUser, onStartTest }) {
         </div>
       )}
 
-      {/* Modal: Admin Schedule Test */}
+      {/* Modal: Schedule Test with Date/Time Window */}
       {showScheduleModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-              <h3 className="text-base font-bold text-white">Schedule Circle Test</h3>
+              <h3 className="text-base font-bold text-white">Schedule Circle Mock Test</h3>
               <button onClick={() => setShowScheduleModal(false)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
@@ -647,7 +687,7 @@ export default function CircleList({ currentUser, onStartTest }) {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Mechanics Full Mock 01"
+                  placeholder="e.g. Electrostatics Full Sprint"
                   value={newTest.title}
                   onChange={(e) => setNewTest({ ...newTest, title: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
@@ -684,11 +724,32 @@ export default function CircleList({ currentUser, onStartTest }) {
                 <label className="text-slate-400 block mb-1">Chapter Focus</label>
                 <input
                   type="text"
-                  placeholder="e.g. Work Power Energy (or 'All')"
+                  placeholder="e.g. Current Electricity (or 'All')"
                   value={newTest.chapter}
                   onChange={(e) => setNewTest({ ...newTest, chapter: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-400 block mb-1">Window Starts</label>
+                  <input
+                    type="datetime-local"
+                    value={newTest.windowStart}
+                    onChange={(e) => setNewTest({ ...newTest, windowStart: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">Window Ends</label>
+                  <input
+                    type="datetime-local"
+                    value={newTest.windowEnd}
+                    onChange={(e) => setNewTest({ ...newTest, windowEnd: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">

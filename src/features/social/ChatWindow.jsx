@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, X, Loader2, User } from 'lucide-react';
-import { fetchConversation, sendMessage, subscribeToMessages } from '../../services/chatService';
+import { Send, X, User } from 'lucide-react';
+import { getDirectMessages, sendDirectMessage, subscribeToDirectMessages } from '../../services/socialService';
 
 export default function ChatWindow({ currentUser, activeFriend, onClose }) {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
-  const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -13,34 +12,26 @@ export default function ChatWindow({ currentUser, activeFriend, onClose }) {
   };
 
   useEffect(() => {
-    if (!currentUser || !activeFriend) return;
+    if (!currentUser?.id || !activeFriend?.id) return;
 
-    let unsubscribe = () => {};
-
-    const loadHistoryAndSubscribe = async () => {
-      setLoading(true);
-      try {
-        const history = await fetchConversation(currentUser.id, activeFriend.id);
-        setMessages(history);
-
-        unsubscribe = subscribeToMessages(currentUser.id, (newMsg) => {
-          if (newMsg.sender_id === activeFriend.id) {
-            setMessages((prev) => [...prev, newMsg]);
-          }
-        });
-      } catch (err) {
-        console.error('Failed to load chat conversation:', err);
-      } finally {
-        setLoading(false);
-      }
+    // 1. Initial history fetch
+    const loadMessages = async () => {
+      const history = await getDirectMessages(currentUser.id, activeFriend.id);
+      setMessages(history);
+      scrollToBottom();
     };
+    loadMessages();
 
-    loadHistoryAndSubscribe();
+    // 2. Realtime listener
+    const subscription = subscribeToDirectMessages(currentUser.id, activeFriend.id, (newMsg) => {
+      setMessages((prev) => [...prev, newMsg]);
+      scrollToBottom();
+    });
 
     return () => {
-      unsubscribe();
+      subscription.unsubscribe();
     };
-  }, [currentUser, activeFriend]);
+  }, [currentUser?.id, activeFriend?.id]);
 
   useEffect(() => {
     scrollToBottom();
@@ -48,74 +39,67 @@ export default function ChatWindow({ currentUser, activeFriend, onClose }) {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || !currentUser?.id || !activeFriend?.id) return;
 
-    const messageContent = inputText;
+    const text = inputText.trim();
     setInputText('');
 
-    try {
-      const sentMsg = await sendMessage({
-        senderId: currentUser.id,
-        receiverId: activeFriend.id,
-        content: messageContent,
-      });
-      setMessages((prev) => [...prev, sentMsg]);
-    } catch (err) {
-      console.error('Failed to send message:', err);
+    const res = await sendDirectMessage(currentUser.id, activeFriend.id, text);
+    if (res.error) {
+      alert('Failed to send message: ' + res.error);
     }
   };
 
-  if (!activeFriend) return null;
-
   return (
-    <div className="flex h-full flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 font-semibold">
-            {activeFriend.username?.charAt(0).toUpperCase() || <User className="h-4 w-4" />}
+    <div className="flex flex-col h-[600px] w-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+      {/* Top Header */}
+      <div className="p-3.5 px-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+            <User className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="font-semibold text-sm text-slate-800 dark:text-white">@{activeFriend.username}</h3>
-            <span className="text-xs text-slate-500 dark:text-slate-400">{activeFriend.target_exam || 'JEE Main'}</span>
+            <h4 className="font-semibold text-white text-xs">@{activeFriend.username}</h4>
+            <span className="text-[10px] text-slate-400 block">{activeFriend.target_exam || 'JEE Main'}</span>
           </div>
         </div>
-        <button onClick={onClose} className="rounded-lg p-1 hover:bg-slate-200 dark:hover:bg-slate-700">
-          <X className="h-5 w-5 text-slate-500" />
+
+        <button
+          onClick={onClose}
+          className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+        >
+          <X className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Message List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {loading ? (
-          <div className="flex h-full items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-xs text-slate-400">
-            No messages yet. Say hi to @{activeFriend.username}!
+      {/* Messages Scroll Area */}
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5">
+        {messages.length === 0 ? (
+          <div className="m-auto text-center text-slate-500 text-xs">
+            Start a conversation with @{activeFriend.username}!
           </div>
         ) : (
-          messages.map((msg) => {
-            const isMe = msg.sender_id === currentUser.id;
+          messages.map((m) => {
+            const isMe = m.sender_id === currentUser.id;
             return (
-              <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+              <div
+                key={m.id}
+                className={`flex flex-col max-w-[75%] ${
+                  isMe ? 'self-end items-end' : 'self-start items-start'
+                }`}
+              >
                 <div
-                  className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm shadow-xs ${
+                  className={`p-2.5 px-3 rounded-2xl text-xs ${
                     isMe
-                      ? 'bg-blue-600 text-white rounded-br-none'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-none'
+                      ? 'bg-indigo-600 text-white rounded-br-xs'
+                      : 'bg-slate-800 text-slate-200 border border-slate-700/60 rounded-bl-xs'
                   }`}
                 >
-                  <p className="break-words">{msg.content}</p>
-                  <span
-                    className={`block text-[10px] mt-1 text-right ${
-                      isMe ? 'text-blue-200' : 'text-slate-400'
-                    }`}
-                  >
-                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
                 </div>
+                <span className="text-[9px] text-slate-500 mt-1 px-1">
+                  {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
             );
           })
@@ -123,21 +107,20 @@ export default function ChatWindow({ currentUser, activeFriend, onClose }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Form */}
-      <form onSubmit={handleSend} className="p-3 border-t border-slate-200 dark:border-slate-800 flex gap-2">
+      {/* Bottom Pinned Input Bar */}
+      <form onSubmit={handleSend} className="p-3 border-t border-slate-800 bg-slate-950 flex items-center gap-2 shrink-0">
         <input
           type="text"
           placeholder={`Message @${activeFriend.username}...`}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          className="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-2 text-sm focus:outline-hidden focus:border-blue-500 dark:text-white"
+          className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500"
         />
         <button
           type="submit"
-          disabled={!inputText.trim()}
-          className="rounded-xl bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50 transition"
+          className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-xl transition flex items-center justify-center shrink-0"
         >
-          <Send className="h-4 w-4" />
+          <Send className="w-4 h-4" />
         </button>
       </form>
     </div>
