@@ -168,30 +168,16 @@ export default function App() {
                       currentUser={currentUser}
                       activeFriend={activeChatFriend}
                       onClose={() => setActiveChatFriend(null)}
-                    />
-                  ) : (
-                    <div className="flex h-full flex-col items-center justify-center bg-slate-900/40 border border-slate-800 rounded-2xl p-6 text-center text-slate-500 text-sm">
-                      <MessageSquare className="w-10 h-10 text-slate-600 mb-2" />
-                      Select a friend from your Study Network to start chatting
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'social' && (
+                    {activeTab === 'social' && (
           <div className="w-full flex-1 flex flex-col min-h-[calc(100vh-100px)]">
             <ChatWindow currentUser={currentUser || user} />
           </div>
         )}
-        <CircleList
-  currentUser={user}
-/>
+
+        {activeTab === 'circles' && (
+          <CircleList currentUser={currentUser || user} />
         )}
       </main>
-
       {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthOpen}
