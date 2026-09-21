@@ -18,32 +18,26 @@ export async function getAllCircles() {
   return data || [];
 }
 
-// 2. Fetch circles that the current user has joined
-export async function getUserCircles(userId) {
+// 2. Fetch circles for current user with their approval status
+export async function getUserCircleMemberships(userId) {
   if (!userId) return [];
   const { data, error } = await supabase
     .from('circle_members')
     .select(`
       circle_id,
       role,
-      circles:circle_id (
-        id,
-        name,
-        description,
-        created_by,
-        created_at
-      )
+      status
     `)
     .eq('user_id', userId);
 
   if (error) {
-    console.error('Error fetching user circles:', error);
+    console.error('Error fetching user memberships:', error);
     return [];
   }
-  return data ? data.map((item) => ({ ...item.circles, userRole: item.role })) : [];
+  return data || [];
 }
 
-// 3. Create a new circle and make creator the admin
+// 3. Create a circle and automatically add creator as approved admin
 export async function createCircle(name, description, userId) {
   if (!name.trim() || !userId) return { error: 'Name and user are required.' };
 
@@ -58,43 +52,61 @@ export async function createCircle(name, description, userId) {
     return { error: circleError.message };
   }
 
-  // Add creator as circle admin member
   const { error: memberError } = await supabase
     .from('circle_members')
-    .insert([{ circle_id: circle.id, user_id: userId, role: 'admin' }]);
+    .insert([{ circle_id: circle.id, user_id: userId, role: 'admin', status: 'approved' }]);
 
   if (memberError) {
-    console.error('Error adding creator to circle:', memberError);
+    console.error('Error attaching creator to circle:', memberError);
   }
 
   return { data: circle };
 }
 
-// 4. Join a circle
-export async function joinCircle(circleId, userId) {
+// 4. Request to join a circle (status: 'pending')
+export async function requestJoinCircle(circleId, userId) {
   if (!circleId || !userId) return { error: 'Invalid parameters.' };
 
   const { data, error } = await supabase
     .from('circle_members')
-    .insert([{ circle_id: circleId, user_id: userId, role: 'member' }])
+    .insert([{ circle_id: circleId, user_id: userId, role: 'member', status: 'pending' }])
     .select()
     .single();
 
   if (error) {
-    console.error('Error joining circle:', error);
+    console.error('Error requesting to join circle:', error);
     return { error: error.message };
   }
   return { data };
 }
 
-// 5. Fetch members of a specific circle
+// 5. Leave a circle
+export async function leaveCircle(circleId, userId) {
+  if (!circleId || !userId) return { error: 'Invalid parameters.' };
+
+  const { error } = await supabase
+    .from('circle_members')
+    .delete()
+    .eq('circle_id', circleId)
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error leaving circle:', error);
+    return { error: error.message };
+  }
+  return { success: true };
+}
+
+// 6. Fetch members (approved and pending)
 export async function getCircleMembers(circleId) {
-  if (!circleId) return [];
+  if (!circleId) return { approved: [], pending: [] };
 
   const { data, error } = await supabase
     .from('circle_members')
     .select(`
+      id,
       role,
+      status,
       joined_at,
       user:user_id ( id, username, target_exam )
     `)
@@ -102,12 +114,38 @@ export async function getCircleMembers(circleId) {
 
   if (error) {
     console.error('Error fetching circle members:', error);
-    return [];
+    return { approved: [], pending: [] };
   }
-  return data || [];
+
+  const approved = (data || []).filter((m) => m.status === 'approved');
+  const pending = (data || []).filter((m) => m.status === 'pending');
+  return { approved, pending };
 }
 
-// 6. Schedule a test inside a circle
+// 7. Admin: Accept or Reject a join request
+export async function handleJoinRequest(memberRecordId, accept = true) {
+  if (accept) {
+    const { data, error } = await supabase
+      .from('circle_members')
+      .update({ status: 'approved' })
+      .eq('id', memberRecordId)
+      .select()
+      .single();
+
+    if (error) return { error: error.message };
+    return { data };
+  } else {
+    const { error } = await supabase
+      .from('circle_members')
+      .delete()
+      .eq('id', memberRecordId);
+
+    if (error) return { error: error.message };
+    return { success: true };
+  }
+}
+
+// 8. Schedule a circle test (Admin only enforced)
 export async function scheduleCircleTest(circleId, testData, userId) {
   const { title, subject, chapter, durationMinutes, scheduledAt } = testData;
 
@@ -121,8 +159,8 @@ export async function scheduleCircleTest(circleId, testData, userId) {
         chapter: chapter || 'All',
         duration_minutes: Number(durationMinutes) || 60,
         scheduled_at: scheduledAt || new Date().toISOString(),
-        created_by: userId
-      }
+        created_by: userId,
+      },
     ])
     .select()
     .single();
@@ -134,7 +172,7 @@ export async function scheduleCircleTest(circleId, testData, userId) {
   return { data };
 }
 
-// 7. Get scheduled tests for a circle
+// 9. Fetch scheduled tests
 export async function getCircleTests(circleId) {
   if (!circleId) return [];
 
@@ -149,4 +187,98 @@ export async function getCircleTests(circleId) {
     return [];
   }
   return data || [];
+}
+
+// 10. Admin Announcements (Broadcast)
+export async function getCircleAnnouncements(circleId) {
+  if (!circleId) return [];
+
+  const { data, error } = await supabase
+    .from('circle_announcements')
+    .select(`
+      id,
+      message,
+      created_at,
+      author:created_by ( username )
+    `)
+    .eq('circle_id', circleId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching announcements:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function postAnnouncement(circleId, message, userId) {
+  if (!circleId || !message.trim() || !userId) return { error: 'Invalid parameters.' };
+
+  const { data, error } = await supabase
+    .from('circle_announcements')
+    .insert([{ circle_id: circleId, message: message.trim(), created_by: userId }])
+    .select(`
+      id,
+      message,
+      created_at,
+      author:created_by ( username )
+    `)
+    .single();
+
+  if (error) {
+    console.error('Error posting announcement:', error);
+    return { error: error.message };
+  }
+  return { data };
+}
+
+// 11. Circle Leaderboard Computation
+export async function getCircleLeaderboard(circleId) {
+  if (!circleId) return [];
+
+  const { data, error } = await supabase
+    .from('circle_test_submissions')
+    .select(`
+      user_id,
+      score,
+      total_marks,
+      accuracy_pct,
+      user:user_id ( username, target_exam )
+    `)
+    .eq('circle_id', circleId);
+
+  if (error) {
+    console.error('Error fetching circle submissions:', error);
+    return [];
+  }
+
+  // Aggregate stats per user
+  const userMap = {};
+  (data || []).forEach((sub) => {
+    const uid = sub.user_id;
+    if (!userMap[uid]) {
+      userMap[uid] = {
+        userId: uid,
+        username: sub.user?.username || 'Candidate',
+        targetExam: sub.user?.target_exam || 'JEE Main',
+        totalScore: 0,
+        testsTaken: 0,
+        avgAccuracy: 0,
+        accuracySum: 0,
+      };
+    }
+    userMap[uid].totalScore += sub.score;
+    userMap[uid].testsTaken += 1;
+    userMap[uid].accuracySum += Number(sub.accuracy_pct || 0);
+  });
+
+  const ranked = Object.values(userMap).map((entry) => ({
+    ...entry,
+    avgAccuracy: (entry.accuracySum / entry.testsTaken).toFixed(1),
+  }));
+
+  // Sort descending by total score, tie-break on accuracy
+  ranked.sort((a, b) => b.totalScore - a.totalScore || b.avgAccuracy - a.avgAccuracy);
+
+  return ranked;
 }
