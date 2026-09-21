@@ -17,7 +17,10 @@ import {
   UserX,
   Hourglass,
   Lock,
-  Trash2
+  Trash2,
+  CheckCircle,
+  ArrowRight,
+  ArrowLeft
 } from 'lucide-react';
 import {
   getAllCircles,
@@ -35,6 +38,125 @@ import {
   postAnnouncement,
   getCircleLeaderboard
 } from '../../services/circleService';
+import { supabase } from '../../services/supabaseClient';
+
+// Built-in standardized question generator for circle exams
+function generateStandardQuestionSet(subject, chapter, count) {
+  const sampleBank = {
+    Physics: [
+      {
+        question: "A particle moves along the x-axis with velocity v = k√x. The displacement varies with time as:",
+        options: ["x ∝ t", "x ∝ t²", "x ∝ t^(1/2)", "x ∝ t³"],
+        correctAnswer: 1,
+        explanation: "v = dx/dt = k√x => x^(-1/2) dx = k dt. Integrating gives 2√x = kt => x ∝ t²."
+      },
+      {
+        question: "A body of mass m is projected with velocity v at an angle θ with horizontal. The angular momentum about point of projection at max height is:",
+        options: ["(m v³ sin²θ cosθ)/(2g)", "(m v³ sinθ cos²θ)/(2g)", "(m v³ sin²θ)/(2g)", "Zero"],
+        correctAnswer: 0,
+        explanation: "L = m * v_horizontal * H_max = m (v cosθ) * (v² sin²θ / 2g) = (m v³ sin²θ cosθ) / (2g)."
+      },
+      {
+        question: "Two capacitors C₁ and C₂ are charged to V₁ and V₂ and connected in parallel. Loss in energy is:",
+        options: ["C₁C₂(V₁-V₂)² / (C₁+C₂)", "C₁C₂(V₁-V₂)² / 2(C₁+C₂)", "(C₁+C₂)(V₁-V₂)² / 2", "Zero"],
+        correctAnswer: 1,
+        explanation: "Energy loss in redistribution = 1/2 * (C₁C₂ / (C₁+C₂)) * (V₁ - V₂)²."
+      },
+      {
+        question: "In a Young's double-slit experiment, if the distance between slits is halved and screen distance doubled, fringe width becomes:",
+        options: ["Halved", "Doubled", "Four times", "Unchanged"],
+        correctAnswer: 2,
+        explanation: "β = λD/d. New β' = λ(2D)/(d/2) = 4(λD/d) = 4β."
+      },
+      {
+        question: "Work done by static friction on a rolling sphere without slipping on a horizontal surface is:",
+        options: ["Always positive", "Always negative", "Zero", "Depends on radius"],
+        correctAnswer: 2,
+        explanation: "In pure rolling on a stationary surface, the point of contact is instantaneously at rest, so work done by static friction is zero."
+      }
+    ],
+    Chemistry: [
+      {
+        question: "Which of the following molecules has the highest dipole moment?",
+        options: ["NH₃", "NF₃", "BF₃", "CH₄"],
+        correctAnswer: 0,
+        explanation: "In NH₃, orbital dipole and N-H bond moments add up in the same direction, unlike NF₃ where lone pair moment opposes N-F moments."
+      },
+      {
+        question: "The oxidation state of Fe in brown ring complex [Fe(H₂O)₅(NO)]SO₄ is:",
+        options: ["+1", "+2", "+3", "0"],
+        correctAnswer: 0,
+        explanation: "NO acts as NO⁺, so Fe is in +1 oxidation state."
+      },
+      {
+        question: "Which alkene gives only acetone on reductive ozonolysis?",
+        options: ["2-Methylpropene", "2,3-Dimethylbut-2-ene", "But-2-ene", "2-Methylbut-2-ene"],
+        correctAnswer: 1,
+        explanation: "2,3-Dimethylbut-2-ene (CH₃)₂C=C(CH₃)₂ cleaves into two molecules of acetone (CH₃)₂C=O."
+      },
+      {
+        question: "The unit of rate constant for a second-order reaction is:",
+        options: ["s⁻¹", "mol L⁻¹ s⁻¹", "L mol⁻¹ s⁻¹", "L² mol⁻² s⁻¹"],
+        correctAnswer: 2,
+        explanation: "Unit = (mol/L)^(1-n) s⁻¹ = (mol/L)⁻¹ s⁻¹ = L mol⁻¹ s⁻¹."
+      },
+      {
+        question: "Among the following, the strongest Bronsted base is:",
+        options: ["NH₂⁻", "OH⁻", "CH₃O⁻", "F⁻"],
+        correctAnswer: 0,
+        explanation: "NH₃ is the weakest acid among NH₃, H₂O, CH₃OH, and HF; thus its conjugate base NH₂⁻ is the strongest base."
+      }
+    ],
+    Mathematics: [
+      {
+        question: "If A is a 3×3 non-singular matrix such that adj(2A) = k * adj(A), then k equals:",
+        options: ["2", "4", "8", "16"],
+        correctAnswer: 1,
+        explanation: "adj(cA) = c^(n-1) adj(A). Here n = 3, so adj(2A) = 2^(3-1) adj(A) = 4 adj(A) => k = 4."
+      },
+      {
+        question: "The value of ∫₀^(π/2) (sin x / (sin x + cos x)) dx is:",
+        options: ["π", "π/2", "π/4", "0"],
+        correctAnswer: 2,
+        explanation: "By property ∫₀ᵃ f(x)dx = ∫₀ᵃ f(a-x)dx, 2I = ∫₀^(π/2) 1 dx = π/2 => I = π/4."
+      },
+      {
+        question: "The number of real roots of equation eˣ + x - 2 = 0 is:",
+        options: ["0", "1", "2", "Infinitely many"],
+        correctAnswer: 1,
+        explanation: "f'(x) = eˣ + 1 > 0 for all real x, so f(x) is strictly increasing. Thus it can cross the x-axis exactly once."
+      },
+      {
+        question: "If vectors a, b, c are coplanar, then the scalar triple product [a+b  b+c  c+a] is equal to:",
+        options: ["0", "[a b c]", "2[a b c]", "-[a b c]"],
+        correctAnswer: 0,
+        explanation: "[a+b b+c c+a] = 2[a b c]. Since a, b, c are coplanar, [a b c] = 0, hence 2(0) = 0."
+      },
+      {
+        question: "The radius of the circle x² + y² - 4x + 6y - 12 = 0 is:",
+        options: ["3", "4", "5", "√13"],
+        correctAnswer: 2,
+        explanation: "Center (2, -3). Radius r = √(g² + f² - c) = √(4 + 9 - (-12)) = √25 = 5."
+      }
+    ]
+  };
+
+  const pool = sampleBank[subject] || sampleBank['Physics'];
+  const questions = [];
+  const targetCount = Math.max(1, count || 5);
+
+  for (let i = 0; i < targetCount; i++) {
+    const base = pool[i % pool.length];
+    questions.push({
+      id: i + 1,
+      question: `[${chapter || subject}] Q${i + 1}: ${base.question}`,
+      options: [...base.options],
+      correctAnswer: base.correctAnswer,
+      explanation: base.explanation
+    });
+  }
+  return questions;
+}
 
 export default function CircleList({ currentUser, onStartTest, generateQuestionsForTest }) {
   const [circles, setCircles] = useState([]);
@@ -52,9 +174,17 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
   const [processingId, setProcessingId] = useState(null);
   const [isGeneratingTest, setIsGeneratingTest] = useState(false);
 
+  // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [announcementMsg, setAnnouncementMsg] = useState('');
+
+  // Built-in Exam Interface Modal (Ensures same paper is attempted)
+  const [activeExam, setActiveExam] = useState(null);
+  const [examAnswers, setExamAnswers] = useState({});
+  const [currentQIndex, setCurrentQIndex] = useState(0);
+  const [examSubmitted, setExamSubmitted] = useState(false);
+  const [examScoreResult, setExamScoreResult] = useState(null);
 
   const announcementsEndRef = useRef(null);
 
@@ -64,7 +194,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     subject: 'Physics',
     chapter: 'All',
     durationMinutes: 60,
-    questionCount: 15,
+    questionCount: 5,
     windowStart: '',
     windowEnd: ''
   });
@@ -202,6 +332,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     }
   };
 
+  // Admin schedules test: Generates once and saves questions JSON directly into DB
   const handleScheduleTest = async (e) => {
     e.preventDefault();
     if (!selectedCircle || !currentUser?.id) return;
@@ -209,17 +340,25 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     setIsGeneratingTest(true);
     let questions = [];
 
-    // If an external generator is provided, generate once for all members
     if (typeof generateQuestionsForTest === 'function') {
       try {
         questions = await generateQuestionsForTest({
           subject: newTest.subject,
           chapter: newTest.chapter,
-          count: Number(newTest.questionCount) || 15
+          count: Number(newTest.questionCount) || 5
         });
       } catch (err) {
-        console.error('Error generating questions:', err);
+        console.error('Error generating questions via prop:', err);
       }
+    }
+
+    // If external generator not provided, use standardized generator
+    if (!Array.isArray(questions) || questions.length === 0) {
+      questions = generateStandardQuestionSet(
+        newTest.subject,
+        newTest.chapter,
+        Number(newTest.questionCount) || 5
+      );
     }
 
     const res = await scheduleCircleTest(
@@ -239,7 +378,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
         subject: 'Physics',
         chapter: 'All',
         durationMinutes: 60,
-        questionCount: 15,
+        questionCount: 5,
         windowStart: '',
         windowEnd: ''
       });
@@ -259,6 +398,80 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     } else {
       setCircleTests((prev) => prev.filter((t) => t.id !== testId));
     }
+  };
+
+  // Launch the standardized test for any member
+  const handleAttemptTest = (test) => {
+    let questions = Array.isArray(test.questions) && test.questions.length > 0
+      ? test.questions
+      : generateStandardQuestionSet(test.subject, test.chapter, 5);
+
+    const standardizedTest = {
+      ...test,
+      questions
+    };
+
+    if (typeof onStartTest === 'function') {
+      onStartTest(standardizedTest);
+    }
+
+    // Launch self-contained test interface
+    setActiveExam(standardizedTest);
+    setExamAnswers({});
+    setCurrentQIndex(0);
+    setExamSubmitted(false);
+    setExamScoreResult(null);
+  };
+
+  // Handle Exam submission & live leaderboard sync
+  const handleExamSubmit = async () => {
+    if (!activeExam || !currentUser?.id) return;
+
+    const questions = activeExam.questions || [];
+    let correctCount = 0;
+
+    questions.forEach((q, idx) => {
+      if (examAnswers[idx] === q.correctAnswer) {
+        correctCount += 1;
+      }
+    });
+
+    const score = correctCount * 4 - (Object.keys(examAnswers).length - correctCount) * 1;
+    const finalScore = Math.max(0, score);
+    const accuracy = questions.length > 0 ? ((correctCount / questions.length) * 100).toFixed(1) : 0;
+
+    // Record submission into Supabase circle_test_submissions
+    try {
+      await supabase
+        .from('circle_test_submissions')
+        .upsert(
+          [
+            {
+              circle_id: selectedCircle.id,
+              test_id: activeExam.id,
+              user_id: currentUser.id,
+              score: finalScore,
+              total_marks: questions.length * 4,
+              accuracy_pct: accuracy,
+              submitted_at: new Date().toISOString()
+            }
+          ],
+          { onConflict: 'test_id,user_id' }
+        );
+
+      const refreshedRanks = await getCircleLeaderboard(selectedCircle.id);
+      setLeaderboard(refreshedRanks);
+    } catch (err) {
+      console.error('Error submitting exam result to leaderboard:', err);
+    }
+
+    setExamScoreResult({
+      correct: correctCount,
+      total: questions.length,
+      score: finalScore,
+      accuracy
+    });
+    setExamSubmitted(true);
   };
 
   const handleSendAnnouncement = async (e) => {
@@ -518,11 +731,9 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                                   <span className="text-[10px] font-semibold uppercase tracking-wider bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
                                     {test.subject}
                                   </span>
-                                  {Array.isArray(test.questions) && test.questions.length > 0 && (
-                                    <span className="text-[10px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2 py-0.5 rounded">
-                                      {test.questions.length} Qs (Standardized)
-                                    </span>
-                                  )}
+                                  <span className="text-[10px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2 py-0.5 rounded">
+                                    {Array.isArray(test.questions) && test.questions.length > 0 ? test.questions.length : 5} Qs (Standardized Paper)
+                                  </span>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
                                   <span className="flex items-center gap-1">
@@ -542,7 +753,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                               <div className="flex items-center gap-2 shrink-0">
                                 {isOpen ? (
                                   <button
-                                    onClick={() => onStartTest && onStartTest(test)}
+                                    onClick={() => handleAttemptTest(test)}
                                     className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow"
                                   >
                                     Attempt Test
@@ -557,7 +768,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                                   </span>
                                 )}
 
-                                {/* Admin Test Delete Button */}
                                 {isCircleAdmin && (
                                   <button
                                     onClick={(e) => handleDeleteTest(test.id, e)}
@@ -719,6 +929,144 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
         </div>
       </div>
 
+      {/* Built-in Exam Runner Modal (Guarantees all members take identical paper) */}
+      {activeExam && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl p-6 shadow-2xl flex flex-col gap-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div>
+                <h3 className="text-base font-bold text-white">{activeExam.title}</h3>
+                <span className="text-[11px] text-slate-400">
+                  Standardized Exam • {activeExam.questions?.length || 0} Questions • Marking: +4, -1
+                </span>
+              </div>
+              <button
+                onClick={() => setActiveExam(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {!examSubmitted ? (
+              <>
+                {/* Question Box */}
+                {activeExam.questions && activeExam.questions.length > 0 && (
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between text-xs text-indigo-400 font-semibold">
+                      <span>Question {currentQIndex + 1} of {activeExam.questions.length}</span>
+                      <span className="text-slate-400">{activeExam.subject} • {activeExam.chapter}</span>
+                    </div>
+
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-sm text-slate-200 font-medium">
+                      {activeExam.questions[currentQIndex].question}
+                    </div>
+
+                    {/* Options A, B, C, D */}
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {activeExam.questions[currentQIndex].options.map((opt, optIdx) => {
+                        const isChosen = examAnswers[currentQIndex] === optIdx;
+                        return (
+                          <button
+                            key={optIdx}
+                            onClick={() =>
+                              setExamAnswers((prev) => ({ ...prev, [currentQIndex]: optIdx }))
+                            }
+                            className={`p-3 rounded-xl border text-left text-xs transition flex items-center gap-3 ${
+                              isChosen
+                                ? 'bg-indigo-600/20 border-indigo-500 text-white font-semibold'
+                                : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
+                          >
+                            <span
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold border ${
+                                isChosen
+                                  ? 'bg-indigo-600 border-indigo-400 text-white'
+                                  : 'bg-slate-900 border-slate-700 text-slate-400'
+                              }`}
+                            >
+                              {String.fromCharCode(65 + optIdx)}
+                            </span>
+                            <span>{opt}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Navigation Buttons */}
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                      <button
+                        disabled={currentQIndex === 0}
+                        onClick={() => setCurrentQIndex((prev) => prev - 1)}
+                        className="flex items-center gap-1 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs disabled:opacity-40 transition"
+                      >
+                        <ArrowLeft className="w-3.5 h-3.5" /> Previous
+                      </button>
+
+                      {currentQIndex < activeExam.questions.length - 1 ? (
+                        <button
+                          onClick={() => setCurrentQIndex((prev) => prev + 1)}
+                          className="flex items-center gap-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition"
+                        >
+                          Next <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleExamSubmit}
+                          className="flex items-center gap-1 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow"
+                        >
+                          Submit Test Paper
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Score & Result Summary */
+              <div className="flex flex-col items-center justify-center gap-4 py-6 text-center">
+                <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-white">Test Submitted Successfully!</h4>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Your result has been registered to the Circle Leaderboard.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 w-full max-w-md bg-slate-950 p-4 rounded-xl border border-slate-800 mt-2">
+                  <div>
+                    <span className="text-[10px] text-slate-500 uppercase block">Score</span>
+                    <span className="text-base font-bold text-indigo-400">{examScoreResult?.score} pts</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 uppercase block">Correct</span>
+                    <span className="text-base font-bold text-emerald-400">
+                      {examScoreResult?.correct} / {examScoreResult?.total}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 uppercase block">Accuracy</span>
+                    <span className="text-base font-bold text-amber-400">{examScoreResult?.accuracy}%</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setActiveExam(null);
+                    setCircleTab('leaderboard');
+                  }}
+                  className="mt-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition"
+                >
+                  View Circle Leaderboard
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Modal: Create Circle */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
@@ -840,7 +1188,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                   <input
                     type="number"
                     min="5"
-                    max="50"
+                    max="30"
                     value={newTest.questionCount}
                     onChange={(e) => setNewTest({ ...newTest, questionCount: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
@@ -882,7 +1230,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                   disabled={isGeneratingTest}
                   className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold disabled:opacity-50"
                 >
-                  {isGeneratingTest ? 'Generating Test Paper...' : 'Schedule Test for All'}
+                  {isGeneratingTest ? 'Generating Standard Paper...' : 'Schedule Test for All'}
                 </button>
               </div>
             </form>
