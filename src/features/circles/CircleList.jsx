@@ -804,26 +804,127 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                   )}
 
                   {/* 2. Admin Announcements Channel */}
+                  {/* 2. Full-Screen Style Admin Announcements Channel */}
                   {circleTab === 'announcements' && (
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl flex flex-col h-[520px] overflow-hidden">
-                      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl flex flex-col h-[calc(100vh-250px)] min-h-[560px] max-h-[780px] overflow-hidden shadow-2xl">
+                      {/* Channel Header Banner */}
+                      <div className="p-4 px-5 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                            <Megaphone className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-bold text-white tracking-wide">
+                                #{selectedCircle.name} Announcements
+                              </h4>
+                              <span className="text-[10px] font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded">
+                                Official Notice Board
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-400">
+                              Admin broadcasts, test schedules, and cohort updates
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className="text-xs text-slate-400 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/60 hidden sm:inline-block">
+                          {circleMembers.length} Subscriber{circleMembers.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+
+                      {/* Announcement Feed */}
+                      <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-4">
                         {announcements.length === 0 ? (
-                          <div className="m-auto text-center text-slate-500 text-xs">
-                            No announcements posted yet.
+                          <div className="m-auto text-center flex flex-col items-center gap-2 text-slate-500 text-xs py-12">
+                            <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600">
+                              <Megaphone className="w-6 h-6" />
+                            </div>
+                            <p className="font-medium text-slate-400">No announcements posted yet.</p>
+                            <p className="text-[11px] text-slate-500 max-w-xs">
+                              {isCircleAdmin
+                                ? 'Broadcast schedules, test links, or motivation messages below.'
+                                : 'Check back later for updates from your circle admin.'}
+                            </p>
                           </div>
                         ) : (
-                          announcements.map((a) => (
-                            <div key={a.id} className="bg-slate-950 border border-slate-800/80 p-3 rounded-xl max-w-xl self-start">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs font-bold text-indigo-400">@{a.author?.username || 'Admin'}</span>
-                                <span className="text-[10px] text-slate-500">
-                                  {new Date(a.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                </span>
+                          announcements.map((a) => {
+                            const authorName = a.author?.username || 'Circle Admin';
+                            const initial = authorName[0]?.toUpperCase() || 'A';
+                            const timeStr = a.created_at
+                              ? new Date(a.created_at).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : '';
+                            const dateStr = a.created_at
+                              ? new Date(a.created_at).toLocaleDateString([], {
+                                  month: 'short',
+                                  day: 'numeric'
+                                })
+                              : '';
+
+                            return (
+                              <div
+                                key={a.id}
+                                className="bg-slate-900/90 border border-slate-800 p-4 md:p-5 rounded-2xl max-w-2xl self-start flex gap-3.5 shadow-md"
+                              >
+                                <div className="w-9 h-9 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold text-xs shrink-0">
+                                  {initial}
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1.5">
+                                    <span className="text-xs font-bold text-indigo-400">
+                                      @{authorName}
+                                    </span>
+                                    <span className="text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.2 rounded">
+                                      Admin
+                                    </span>
+                                    <span className="text-[10px] text-slate-500 ml-auto">
+                                      {dateStr} • {timeStr}
+                                    </span>
+                                  </div>
+
+                                  <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap">
+                                    {a.message}
+                                  </p>
+                                </div>
                               </div>
-                              <p className="text-xs text-slate-200 whitespace-pre-wrap">{a.message}</p>
-                            </div>
-                          ))
+                            );
+                          })
                         )}
+                        <div ref={announcementsEndRef} />
+                      </div>
+
+                      {/* Admin Message Post Dock */}
+                      {isCircleAdmin ? (
+                        <form
+                          onSubmit={handleSendAnnouncement}
+                          className="p-3 md:p-4 border-t border-slate-800 bg-slate-900/95 flex items-center gap-2.5"
+                        >
+                          <input
+                            type="text"
+                            placeholder={`Broadcast an announcement to #${selectedCircle.name}...`}
+                            value={announcementMsg}
+                            onChange={(e) => setAnnouncementMsg(e.target.value)}
+                            className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-200 outline-none focus:border-indigo-500 transition placeholder:text-slate-500"
+                          />
+                          <button
+                            type="submit"
+                            disabled={!announcementMsg.trim()}
+                            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white px-5 py-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow"
+                          >
+                            <Send className="w-3.5 h-3.5" /> Broadcast
+                          </button>
+                        </form>
+                      ) : (
+                        <div className="p-3 text-center text-[11px] text-slate-500 border-t border-slate-800 bg-slate-950/80">
+                          🔒 Broadcasts are exclusive to the Circle Admin. Members receive notifications in read-only mode.
+                        </div>
+                      )}
+                    </div>
+                  )}
                         <div ref={announcementsEndRef} />
                       </div>
 
