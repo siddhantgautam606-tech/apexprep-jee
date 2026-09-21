@@ -185,9 +185,29 @@ export async function handleJoinRequest({ circleId, userId, memberRecordId, acce
   }
 }
 
-// 9. Schedule a test with fixed availability window and fixed questions (Admin only)
+// 9. Schedule a test: if questions aren't provided, auto-pull from the questions bank and freeze them
 export async function scheduleCircleTest(circleId, testData, userId) {
-  const { title, subject, chapter, durationMinutes, windowStart, windowEnd, questions } = testData;
+  const { title, subject, chapter, durationMinutes, questionCount, windowStart, windowEnd, questions } = testData;
+
+  let testQuestions = Array.isArray(questions) && questions.length > 0 ? questions : [];
+
+  // If no questions were pre-generated, pull a fixed batch from Supabase questions table
+  if (testQuestions.length === 0) {
+    let query = supabase
+      .from('questions')
+      .select('*')
+      .eq('subject', subject);
+
+    if (chapter && chapter !== 'All') {
+      query = query.eq('chapter', chapter);
+    }
+
+    const { data: qBank, error: qError } = await query.limit(Number(questionCount) || 15);
+
+    if (!qError && qBank && qBank.length > 0) {
+      testQuestions = qBank;
+    }
+  }
 
   const { data, error } = await supabase
     .from('circle_tests')
@@ -200,7 +220,7 @@ export async function scheduleCircleTest(circleId, testData, userId) {
         duration_minutes: Number(durationMinutes) || 60,
         window_start: windowStart ? new Date(windowStart).toISOString() : new Date().toISOString(),
         window_end: windowEnd ? new Date(windowEnd).toISOString() : new Date(Date.now() + 86400000).toISOString(),
-        questions: Array.isArray(questions) ? questions : [],
+        questions: testQuestions,
         created_by: userId,
       },
     ])
@@ -213,7 +233,6 @@ export async function scheduleCircleTest(circleId, testData, userId) {
   }
   return { data };
 }
-
 // 10. Delete a scheduled test (Admin only)
 export async function deleteCircleTest(testId) {
   if (!testId) return { error: 'Test ID is required.' };

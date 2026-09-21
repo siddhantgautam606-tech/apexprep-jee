@@ -40,103 +40,102 @@ import {
 } from '../../services/circleService';
 import { supabase } from '../../services/supabaseClient';
 
-// Built-in standardized question generator for circle exams
 function generateStandardQuestionSet(subject, chapter, count) {
   const sampleBank = {
     Physics: [
       {
-        question: "A particle moves along the x-axis with velocity v = kÃ¢Ë†Å¡x. The displacement varies with time as:",
-        options: ["x Ã¢Ë†Â t", "x Ã¢Ë†Â tÃ‚Â²", "x Ã¢Ë†Â t^(1/2)", "x Ã¢Ë†Â tÃ‚Â³"],
+        question: 'A particle moves along the x-axis with velocity v = k*sqrt(x). The displacement varies with time as:',
+        options: ['x proportional to t', 'x proportional to t^2', 'x proportional to t^(1/2)', 'x proportional to t^3'],
         correctAnswer: 1,
-        explanation: "v = dx/dt = kÃ¢Ë†Å¡x => x^(-1/2) dx = k dt. Integrating gives 2Ã¢Ë†Å¡x = kt => x Ã¢Ë†Â tÃ‚Â²."
+        explanation: 'v = dx/dt = k*sqrt(x) => x^(-1/2) dx = k dt. Integrating gives 2*sqrt(x) = kt => x proportional to t^2.'
       },
       {
-        question: "A body of mass m is projected with velocity v at an angle ÃŽÂ¸ with horizontal. The angular momentum about point of projection at max height is:",
-        options: ["(m vÃ‚Â³ sinÃ‚Â²ÃŽÂ¸ cosÃŽÂ¸)/(2g)", "(m vÃ‚Â³ sinÃŽÂ¸ cosÃ‚Â²ÃŽÂ¸)/(2g)", "(m vÃ‚Â³ sinÃ‚Â²ÃŽÂ¸)/(2g)", "Zero"],
+        question: 'A body of mass m is projected with velocity v at an angle theta with horizontal. The angular momentum about point of projection at max height is:',
+        options: ['(m v^3 sin^2(theta) cos(theta))/(2g)', '(m v^3 sin(theta) cos^2(theta))/(2g)', '(m v^3 sin^2(theta))/(2g)', 'Zero'],
         correctAnswer: 0,
-        explanation: "L = m * v_horizontal * H_max = m (v cosÃŽÂ¸) * (vÃ‚Â² sinÃ‚Â²ÃŽÂ¸ / 2g) = (m vÃ‚Â³ sinÃ‚Â²ÃŽÂ¸ cosÃŽÂ¸) / (2g)."
+        explanation: 'L = m * v_horizontal * H_max = m (v cos(theta)) * (v^2 sin^2(theta) / 2g) = (m v^3 sin^2(theta) cos(theta)) / (2g).'
       },
       {
-        question: "Two capacitors CÃ¢â€šÂ and CÃ¢â€šâ€š are charged to VÃ¢â€šÂ and VÃ¢â€šâ€š and connected in parallel. Loss in energy is:",
-        options: ["CÃ¢â€šÂCÃ¢â€šâ€š(VÃ¢â€šÂ-VÃ¢â€šâ€š)Ã‚Â² / (CÃ¢â€šÂ+CÃ¢â€šâ€š)", "CÃ¢â€šÂCÃ¢â€šâ€š(VÃ¢â€šÂ-VÃ¢â€šâ€š)Ã‚Â² / 2(CÃ¢â€šÂ+CÃ¢â€šâ€š)", "(CÃ¢â€šÂ+CÃ¢â€šâ€š)(VÃ¢â€šÂ-VÃ¢â€šâ€š)Ã‚Â² / 2", "Zero"],
+        question: 'Two capacitors C1 and C2 are charged to V1 and V2 and connected in parallel. Loss in energy is:',
+        options: ['C1*C2*(V1-V2)^2 / (C1+C2)', 'C1*C2*(V1-V2)^2 / 2(C1+C2)', '(C1+C2)*(V1-V2)^2 / 2', 'Zero'],
         correctAnswer: 1,
-        explanation: "Energy loss in redistribution = 1/2 * (CÃ¢â€šÂCÃ¢â€šâ€š / (CÃ¢â€šÂ+CÃ¢â€šâ€š)) * (VÃ¢â€šÂ - VÃ¢â€šâ€š)Ã‚Â²."
+        explanation: 'Energy loss in redistribution = 1/2 * (C1*C2 / (C1+C2)) * (V1 - V2)^2.'
       },
       {
-        question: "In a Young's double-slit experiment, if the distance between slits is halved and screen distance doubled, fringe width becomes:",
-        options: ["Halved", "Doubled", "Four times", "Unchanged"],
+        question: 'In a Young double-slit experiment, if the distance between slits is halved and screen distance doubled, fringe width becomes:',
+        options: ['Halved', 'Doubled', 'Four times', 'Unchanged'],
         correctAnswer: 2,
-        explanation: "ÃŽÂ² = ÃŽÂ»D/d. New ÃŽÂ²' = ÃŽÂ»(2D)/(d/2) = 4(ÃŽÂ»D/d) = 4ÃŽÂ²."
+        explanation: 'beta = lambda*D/d. New beta prime = lambda*(2D)/(d/2) = 4*(lambda*D/d) = 4*beta.'
       },
       {
-        question: "Work done by static friction on a rolling sphere without slipping on a horizontal surface is:",
-        options: ["Always positive", "Always negative", "Zero", "Depends on radius"],
+        question: 'Work done by static friction on a rolling sphere without slipping on a horizontal surface is:',
+        options: ['Always positive', 'Always negative', 'Zero', 'Depends on radius'],
         correctAnswer: 2,
-        explanation: "In pure rolling on a stationary surface, the point of contact is instantaneously at rest, so work done by static friction is zero."
+        explanation: 'In pure rolling on a stationary surface, the point of contact is instantaneously at rest, so work done by static friction is zero.'
       }
     ],
     Chemistry: [
       {
-        question: "Which of the following molecules has the highest dipole moment?",
-        options: ["NHÃ¢â€šÆ’", "NFÃ¢â€šÆ’", "BFÃ¢â€šÆ’", "CHÃ¢â€šâ€ž"],
+        question: 'Which of the following molecules has the highest dipole moment?',
+        options: ['NH3', 'NF3', 'BF3', 'CH4'],
         correctAnswer: 0,
-        explanation: "In NHÃ¢â€šÆ’, orbital dipole and N-H bond moments add up in the same direction, unlike NFÃ¢â€šÆ’ where lone pair moment opposes N-F moments."
+        explanation: 'In NH3, orbital dipole and N-H bond moments add up in the same direction, unlike NF3 where lone pair moment opposes N-F moments.'
       },
       {
-        question: "The oxidation state of Fe in brown ring complex [Fe(HÃ¢â€šâ€šO)Ã¢â€šâ€¦(NO)]SOÃ¢â€šâ€ž is:",
-        options: ["+1", "+2", "+3", "0"],
+        question: 'The oxidation state of Fe in brown ring complex [Fe(H2O)5(NO)]SO4 is:',
+        options: ['+1', '+2', '+3', '0'],
         correctAnswer: 0,
-        explanation: "NO acts as NOÃ¢ÂÂº, so Fe is in +1 oxidation state."
+        explanation: 'NO acts as NO+, so Fe is in +1 oxidation state.'
       },
       {
-        question: "Which alkene gives only acetone on reductive ozonolysis?",
-        options: ["2-Methylpropene", "2,3-Dimethylbut-2-ene", "But-2-ene", "2-Methylbut-2-ene"],
+        question: 'Which alkene gives only acetone on reductive ozonolysis?',
+        options: ['2-Methylpropene', '2,3-Dimethylbut-2-ene', 'But-2-ene', '2-Methylbut-2-ene'],
         correctAnswer: 1,
-        explanation: "2,3-Dimethylbut-2-ene (CHÃ¢â€šÆ’)Ã¢â€šâ€šC=C(CHÃ¢â€šÆ’)Ã¢â€šâ€š cleaves into two molecules of acetone (CHÃ¢â€šÆ’)Ã¢â€šâ€šC=O."
+        explanation: '2,3-Dimethylbut-2-ene (CH3)2C=C(CH3)2 cleaves into two molecules of acetone (CH3)2C=O.'
       },
       {
-        question: "The unit of rate constant for a second-order reaction is:",
-        options: ["sÃ¢ÂÂ»Ã‚Â¹", "mol LÃ¢ÂÂ»Ã‚Â¹ sÃ¢ÂÂ»Ã‚Â¹", "L molÃ¢ÂÂ»Ã‚Â¹ sÃ¢ÂÂ»Ã‚Â¹", "LÃ‚Â² molÃ¢ÂÂ»Ã‚Â² sÃ¢ÂÂ»Ã‚Â¹"],
+        question: 'The unit of rate constant for a second-order reaction is:',
+        options: ['s^-1', 'mol L^-1 s^-1', 'L mol^-1 s^-1', 'L^2 mol^-2 s^-1'],
         correctAnswer: 2,
-        explanation: "Unit = (mol/L)^(1-n) sÃ¢ÂÂ»Ã‚Â¹ = (mol/L)Ã¢ÂÂ»Ã‚Â¹ sÃ¢ÂÂ»Ã‚Â¹ = L molÃ¢ÂÂ»Ã‚Â¹ sÃ¢ÂÂ»Ã‚Â¹."
+        explanation: 'Unit = (mol/L)^(1-n) s^-1 = (mol/L)^-1 s^-1 = L mol^-1 s^-1.'
       },
       {
-        question: "Among the following, the strongest Bronsted base is:",
-        options: ["NHÃ¢â€šâ€šÃ¢ÂÂ»", "OHÃ¢ÂÂ»", "CHÃ¢â€šÆ’OÃ¢ÂÂ»", "FÃ¢ÂÂ»"],
+        question: 'Among the following, the strongest Bronsted base is:',
+        options: ['NH2^-', 'OH^-', 'CH3O^-', 'F^-'],
         correctAnswer: 0,
-        explanation: "NHÃ¢â€šÆ’ is the weakest acid among NHÃ¢â€šÆ’, HÃ¢â€šâ€šO, CHÃ¢â€šÆ’OH, and HF; thus its conjugate base NHÃ¢â€šâ€šÃ¢ÂÂ» is the strongest base."
+        explanation: 'NH3 is the weakest acid among NH3, H2O, CH3OH, and HF; thus its conjugate base NH2^- is the strongest base.'
       }
     ],
     Mathematics: [
       {
-        question: "If A is a 3Ãƒâ€”3 non-singular matrix such that adj(2A) = k * adj(A), then k equals:",
-        options: ["2", "4", "8", "16"],
+        question: 'If A is a 3x3 non-singular matrix such that adj(2A) = k * adj(A), then k equals:',
+        options: ['2', '4', '8', '16'],
         correctAnswer: 1,
-        explanation: "adj(cA) = c^(n-1) adj(A). Here n = 3, so adj(2A) = 2^(3-1) adj(A) = 4 adj(A) => k = 4."
+        explanation: 'adj(cA) = c^(n-1) adj(A). Here n = 3, so adj(2A) = 2^(3-1) adj(A) = 4 adj(A) => k = 4.'
       },
       {
-        question: "The value of Ã¢Ë†Â«Ã¢â€šâ‚¬^(Ãâ‚¬/2) (sin x / (sin x + cos x)) dx is:",
-        options: ["Ãâ‚¬", "Ãâ‚¬/2", "Ãâ‚¬/4", "0"],
+        question: 'The value of integral from 0 to pi/2 of (sin x / (sin x + cos x)) dx is:',
+        options: ['pi', 'pi/2', 'pi/4', '0'],
         correctAnswer: 2,
-        explanation: "By property Ã¢Ë†Â«Ã¢â€šâ‚¬Ã¡ÂµÆ’ f(x)dx = Ã¢Ë†Â«Ã¢â€šâ‚¬Ã¡ÂµÆ’ f(a-x)dx, 2I = Ã¢Ë†Â«Ã¢â€šâ‚¬^(Ãâ‚¬/2) 1 dx = Ãâ‚¬/2 => I = Ãâ‚¬/4."
+        explanation: 'By property integral f(x)dx = integral f(a-x)dx, 2I = integral 1 dx = pi/2 => I = pi/4.'
       },
       {
-        question: "The number of real roots of equation eÃ‹Â£ + x - 2 = 0 is:",
-        options: ["0", "1", "2", "Infinitely many"],
+        question: 'The number of real roots of equation e^x + x - 2 = 0 is:',
+        options: ['0', '1', '2', 'Infinitely many'],
         correctAnswer: 1,
-        explanation: "f'(x) = eÃ‹Â£ + 1 > 0 for all real x, so f(x) is strictly increasing. Thus it can cross the x-axis exactly once."
+        explanation: "f'(x) = e^x + 1 > 0 for all real x, so f(x) is strictly increasing. Thus it can cross the x-axis exactly once."
       },
       {
-        question: "If vectors a, b, c are coplanar, then the scalar triple product [a+b  b+c  c+a] is equal to:",
-        options: ["0", "[a b c]", "2[a b c]", "-[a b c]"],
+        question: 'If vectors a, b, c are coplanar, then the scalar triple product [a+b  b+c  c+a] is equal to:',
+        options: ['0', '[a b c]', '2[a b c]', '-[a b c]'],
         correctAnswer: 0,
-        explanation: "[a+b b+c c+a] = 2[a b c]. Since a, b, c are coplanar, [a b c] = 0, hence 2(0) = 0."
+        explanation: '[a+b b+c c+a] = 2[a b c]. Since a, b, c are coplanar, [a b c] = 0, hence 2(0) = 0.'
       },
       {
-        question: "The radius of the circle xÃ‚Â² + yÃ‚Â² - 4x + 6y - 12 = 0 is:",
-        options: ["3", "4", "5", "Ã¢Ë†Å¡13"],
+        question: 'The radius of the circle x^2 + y^2 - 4x + 6y - 12 = 0 is:',
+        options: ['3', '4', '5', 'sqrt(13)'],
         correctAnswer: 2,
-        explanation: "Center (2, -3). Radius r = Ã¢Ë†Å¡(gÃ‚Â² + fÃ‚Â² - c) = Ã¢Ë†Å¡(4 + 9 - (-12)) = Ã¢Ë†Å¡25 = 5."
+        explanation: 'Center (2, -3). Radius r = sqrt(g^2 + f^2 - c) = sqrt(4 + 9 - (-12)) = sqrt(25) = 5.'
       }
     ]
   };
@@ -258,7 +257,10 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     setCircleMembers(membersRes.approved);
     setPendingRequests(membersRes.pending);
     setCircleTests(tests);
-    const sortedAnn = Array.isArray(ann) ? [...ann].sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0)) : []; setAnnouncements(sortedAnn);
+    const sortedAnn = Array.isArray(ann)
+      ? [...ann].sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
+      : [];
+    setAnnouncements(sortedAnn);
     setLeaderboard(ranks);
   };
 
@@ -351,7 +353,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     }
   };
 
-  // Admin schedules test: Generates once and saves questions JSON directly into Supabase
   const handleScheduleTest = async (e) => {
     e.preventDefault();
     if (!selectedCircle || !currentUser?.id) return;
@@ -418,7 +419,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     }
   };
 
-  // Launch test directly inside circle so every member answers the exact same questions
   const handleAttemptTest = (test) => {
     const questions = Array.isArray(test.questions) && test.questions.length > 0
       ? test.questions
@@ -437,7 +437,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     setTimeLeft((Number(test.duration_minutes) || 60) * 60);
   };
 
-  // Submit and write scores directly to database
   const handleExamSubmit = async () => {
     if (!activeExam || !currentUser?.id) return;
 
@@ -500,7 +499,10 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     } else {
       setAnnouncementMsg('');
       const ann = await getCircleAnnouncements(selectedCircle.id);
-      const sortedAnn = Array.isArray(ann) ? [...ann].sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0)) : []; setAnnouncements(sortedAnn);
+      const sortedAnn = Array.isArray(ann)
+        ? [...ann].sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
+        : [];
+      setAnnouncements(sortedAnn);
     }
   };
 
@@ -522,7 +524,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
 
   return (
     <div className="w-full max-w-5xl flex flex-col gap-6">
-      {/* Top Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-sm">
         <div className="flex items-center gap-3">
           <div className="bg-indigo-600/20 text-indigo-400 p-2.5 rounded-xl border border-indigo-600/30">
@@ -543,7 +544,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Circle Directory */}
         <div className="flex flex-col gap-3">
           <h3 className="text-sm font-semibold text-slate-300">Available Circles</h3>
 
@@ -606,11 +606,9 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
           )}
         </div>
 
-        {/* Right: Selected Circle Content */}
         <div className="lg:col-span-2 flex flex-col gap-5">
           {selectedCircle ? (
             <>
-              {/* Circle Header */}
               <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div>
@@ -659,7 +657,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                   </div>
                 </div>
 
-                {/* Sub-Tabs */}
                 <div className="flex items-center gap-1 border-b border-slate-800 pb-2 text-xs">
                   <button
                     onClick={() => setCircleTab('tests')}
@@ -709,7 +706,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                 </div>
               </div>
 
-              {/* Gated Access Guard */}
               {!isApprovedMember ? (
                 <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-2xl text-center flex flex-col items-center justify-center gap-2">
                   <Lock className="w-8 h-8 text-amber-400/60 mb-1" />
@@ -722,7 +718,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                 </div>
               ) : (
                 <>
-                  {/* 1. Scheduled Tests Tab */}
                   {circleTab === 'tests' && (
                     <div className="flex flex-col gap-3">
                       {circleTests.length === 0 ? (
@@ -762,7 +757,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                                   </span>
                                   {start && end && (
                                     <span className="text-[11px] text-indigo-400 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-800/40">
-                                      Window: {start.toLocaleDateString()} {start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} Ã¢â‚¬â€œ {end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                      Window: {start.toLocaleDateString()} {start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                     </span>
                                   )}
                                 </div>
@@ -803,11 +798,8 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                     </div>
                   )}
 
-                  {/* 2. Admin Announcements Channel */}
-                  {/* 2. Full-Screen Style Admin Announcements Channel */}
                   {circleTab === 'announcements' && (
                     <div className="bg-slate-950 border border-slate-800 rounded-2xl flex flex-col h-[calc(100vh-250px)] min-h-[560px] max-h-[780px] overflow-hidden shadow-2xl">
-                      {/* Channel Header Banner */}
                       <div className="p-4 px-5 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
@@ -833,7 +825,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                         </span>
                       </div>
 
-                      {/* Announcement Feed */}
                       <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-4">
                         {announcements.length === 0 ? (
                           <div className="m-auto text-center flex flex-col items-center gap-2 text-slate-500 text-xs py-12">
@@ -882,7 +873,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                                       Admin
                                     </span>
                                     <span className="text-[10px] text-slate-500 ml-auto">
-                                      {dateStr} Ã¢â‚¬Â¢ {timeStr}
+                                      {dateStr} - {timeStr}
                                     </span>
                                   </div>
 
@@ -897,7 +888,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                         <div ref={announcementsEndRef} />
                       </div>
 
-                      {/* Admin Message Post Dock */}
                       {isCircleAdmin ? (
                         <form
                           onSubmit={handleSendAnnouncement}
@@ -920,13 +910,12 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                         </form>
                       ) : (
                         <div className="p-3 text-center text-[11px] text-slate-500 border-t border-slate-800 bg-slate-950/80">
-                          Ã°Å¸â€â€™ Broadcasts are exclusive to the Circle Admin. Members receive notifications in read-only mode.
+                          Broadcasts are exclusive to the Circle Admin. Members receive notifications in read-only mode.
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* 3. Circle Leaderboard */}
                   {circleTab === 'leaderboard' && (
                     <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                       {leaderboard.length === 0 ? (
@@ -949,7 +938,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                             {leaderboard.map((row, idx) => (
                               <tr key={row.userId} className="hover:bg-slate-800/40 transition">
                                 <td className="py-3 px-4 font-bold text-slate-300">
-                                  {idx === 0 ? 'Ã°Å¸Â¥â€¡ 1' : idx === 1 ? 'Ã°Å¸Â¥Ë† 2' : idx === 2 ? 'Ã°Å¸Â¥â€° 3' : `#${idx + 1}`}
+                                  {idx === 0 ? '1' : idx === 1 ? '2' : idx === 2 ? '3' : `#${idx + 1}`}
                                 </td>
                                 <td className="py-3 px-4 font-medium text-white">@{row.username}</td>
                                 <td className="py-3 px-4 text-slate-400">{row.targetExam}</td>
@@ -964,7 +953,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                     </div>
                   )}
 
-                  {/* 4. Admin Admission Requests Tab */}
                   {circleTab === 'admin' && isCircleAdmin && (
                     <div className="flex flex-col gap-3">
                       <h4 className="text-xs font-semibold text-slate-400">
@@ -1025,7 +1013,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
         </div>
       </div>
 
-      {/* Standardized Exam Attempt Modal */}
       {activeExam && (
         <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl p-6 shadow-2xl flex flex-col gap-5">
@@ -1033,7 +1020,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
               <div>
                 <h3 className="text-base font-bold text-white">{activeExam.title}</h3>
                 <span className="text-[11px] text-slate-400">
-                  Standardized Exam Ã¢â‚¬Â¢ {activeExam.questions?.length || 0} Questions Ã¢â‚¬Â¢ Marking: +4, -1
+                  Standardized Exam - {activeExam.questions?.length || 0} Questions - Marking: +4, -1
                 </span>
               </div>
               <div className="flex items-center gap-3">
@@ -1056,7 +1043,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between text-xs text-indigo-400 font-semibold">
                     <span>Question {currentQIndex + 1} of {activeExam.questions.length}</span>
-                    <span className="text-slate-400">{activeExam.subject} Ã¢â‚¬Â¢ {activeExam.chapter}</span>
+                    <span className="text-slate-400">{activeExam.subject} - {activeExam.chapter}</span>
                   </div>
 
                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-sm text-slate-200 font-medium">
@@ -1164,7 +1151,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
         </div>
       )}
 
-      {/* Modal: Create Circle */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl">
@@ -1219,7 +1205,6 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
         </div>
       )}
 
-      {/* Modal: Schedule Test (Admin Only) */}
       {showScheduleModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl">
@@ -1337,4 +1322,3 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     </div>
   );
 }
-

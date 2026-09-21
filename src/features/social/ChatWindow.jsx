@@ -25,7 +25,6 @@ export default function ChatWindow({ currentUser }) {
 
   const messagesEndRef = useRef(null);
 
-  // Load friends list safely
   useEffect(() => {
     async function loadFriends() {
       if (!currentUser?.id) return;
@@ -43,7 +42,6 @@ export default function ChatWindow({ currentUser }) {
     loadFriends();
   }, [currentUser?.id]);
 
-  // Load messages when an active conversation is picked
   useEffect(() => {
     if (!currentUser?.id || !activeFriend?.id) return;
 
@@ -52,7 +50,7 @@ export default function ChatWindow({ currentUser }) {
     async function loadChat() {
       setLoadingMessages(true);
       try {
-     const history = await getDirectMessages(currentUser.id, activeFriend.id);
+        const history = await getDirectMessages(currentUser.id, activeFriend.id);
         const sorted = Array.isArray(history)
           ? [...history].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
           : [];
@@ -112,7 +110,6 @@ export default function ChatWindow({ currentUser }) {
 
   return (
     <div className="w-full h-[calc(100vh-140px)] max-h-[920px] bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
-      {/* 1. LEFT SIDEBAR */}
       <div
         className={`w-full md:w-80 lg:w-96 flex flex-col border-r border-slate-800/80 bg-slate-900/60 shrink-0 ${
           activeFriend ? 'hidden md:flex' : 'flex'
@@ -130,7 +127,6 @@ export default function ChatWindow({ currentUser }) {
           </span>
         </div>
 
-        {/* Search Contacts */}
         <div className="p-3 border-b border-slate-800/50">
           <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus-within:border-indigo-500 transition">
             <Search className="w-4 h-4 text-slate-500 shrink-0" />
@@ -144,7 +140,6 @@ export default function ChatWindow({ currentUser }) {
           </div>
         </div>
 
-        {/* Contacts Roster */}
         <div className="flex-1 overflow-y-auto divide-y divide-slate-800/40">
           {loadingFriends ? (
             <div className="p-8 text-center text-slate-500 text-xs">Loading contacts...</div>
@@ -191,7 +186,6 @@ export default function ChatWindow({ currentUser }) {
         </div>
       </div>
 
-      {/* 2. RIGHT CONVERSATION SCREEN */}
       <div
         className={`flex-1 flex flex-col bg-slate-950/70 relative ${
           !activeFriend ? 'hidden md:flex' : 'flex'
@@ -199,7 +193,6 @@ export default function ChatWindow({ currentUser }) {
       >
         {activeFriend ? (
           <>
-            {/* Header */}
             <div className="p-3.5 px-5 border-b border-slate-800/80 bg-slate-900/70 backdrop-blur-sm flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button
@@ -228,7 +221,6 @@ export default function ChatWindow({ currentUser }) {
               </span>
             </div>
 
-            {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-3">
               {loadingMessages ? (
                 <div className="m-auto text-slate-500 text-xs">Loading message history...</div>
@@ -275,7 +267,6 @@ export default function ChatWindow({ currentUser }) {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Bar */}
             <form
               onSubmit={handleSend}
               className="p-3 md:p-4 border-t border-slate-800 bg-slate-900/90 flex items-center gap-2"
