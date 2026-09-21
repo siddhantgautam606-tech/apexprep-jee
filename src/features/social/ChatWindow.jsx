@@ -52,7 +52,16 @@ export default function ChatWindow({ currentUser }) {
     async function loadChat() {
       setLoadingMessages(true);
       try {
-        const history = await getDirectMessages(currentUser.id, activeFriend.id);
+     const history = await getDirectMessages(currentUser.id, activeFriend.id);
+        const sorted = Array.isArray(history)
+          ? [...history].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+          : [];
+        setMessages(sorted);
+      } catch (err) {
+        console.error('Failed to load messages:', err);
+        setMessages([]);
+      } finally {
+        setLoadingMessages(false);
         setMessages(Array.isArray(history) ? history : []);
       } catch (err) {
         console.error('Failed to load messages:', err);
