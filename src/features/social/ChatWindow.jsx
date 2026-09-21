@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
   Send,
@@ -57,12 +57,6 @@ export default function ChatWindow({ currentUser }) {
           ? [...history].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
           : [];
         setMessages(sorted);
-      } catch (err) {
-        console.error('Failed to load messages:', err);
-        setMessages([]);
-      } finally {
-        setLoadingMessages(false);
-        setMessages(Array.isArray(history) ? history : []);
       } catch (err) {
         console.error('Failed to load messages:', err);
         setMessages([]);

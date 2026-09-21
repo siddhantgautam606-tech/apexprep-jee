@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import {
   Users,
   Plus,
@@ -45,28 +45,28 @@ function generateStandardQuestionSet(subject, chapter, count) {
   const sampleBank = {
     Physics: [
       {
-        question: "A particle moves along the x-axis with velocity v = kâˆšx. The displacement varies with time as:",
-        options: ["x âˆ t", "x âˆ tÂ²", "x âˆ t^(1/2)", "x âˆ tÂ³"],
+        question: "A particle moves along the x-axis with velocity v = kÃ¢Ë†Å¡x. The displacement varies with time as:",
+        options: ["x Ã¢Ë†Â t", "x Ã¢Ë†Â tÃ‚Â²", "x Ã¢Ë†Â t^(1/2)", "x Ã¢Ë†Â tÃ‚Â³"],
         correctAnswer: 1,
-        explanation: "v = dx/dt = kâˆšx => x^(-1/2) dx = k dt. Integrating gives 2âˆšx = kt => x âˆ tÂ²."
+        explanation: "v = dx/dt = kÃ¢Ë†Å¡x => x^(-1/2) dx = k dt. Integrating gives 2Ã¢Ë†Å¡x = kt => x Ã¢Ë†Â tÃ‚Â²."
       },
       {
-        question: "A body of mass m is projected with velocity v at an angle Î¸ with horizontal. The angular momentum about point of projection at max height is:",
-        options: ["(m vÂ³ sinÂ²Î¸ cosÎ¸)/(2g)", "(m vÂ³ sinÎ¸ cosÂ²Î¸)/(2g)", "(m vÂ³ sinÂ²Î¸)/(2g)", "Zero"],
+        question: "A body of mass m is projected with velocity v at an angle ÃŽÂ¸ with horizontal. The angular momentum about point of projection at max height is:",
+        options: ["(m vÃ‚Â³ sinÃ‚Â²ÃŽÂ¸ cosÃŽÂ¸)/(2g)", "(m vÃ‚Â³ sinÃŽÂ¸ cosÃ‚Â²ÃŽÂ¸)/(2g)", "(m vÃ‚Â³ sinÃ‚Â²ÃŽÂ¸)/(2g)", "Zero"],
         correctAnswer: 0,
-        explanation: "L = m * v_horizontal * H_max = m (v cosÎ¸) * (vÂ² sinÂ²Î¸ / 2g) = (m vÂ³ sinÂ²Î¸ cosÎ¸) / (2g)."
+        explanation: "L = m * v_horizontal * H_max = m (v cosÃŽÂ¸) * (vÃ‚Â² sinÃ‚Â²ÃŽÂ¸ / 2g) = (m vÃ‚Â³ sinÃ‚Â²ÃŽÂ¸ cosÃŽÂ¸) / (2g)."
       },
       {
-        question: "Two capacitors Câ‚ and Câ‚‚ are charged to Vâ‚ and Vâ‚‚ and connected in parallel. Loss in energy is:",
-        options: ["Câ‚Câ‚‚(Vâ‚-Vâ‚‚)Â² / (Câ‚+Câ‚‚)", "Câ‚Câ‚‚(Vâ‚-Vâ‚‚)Â² / 2(Câ‚+Câ‚‚)", "(Câ‚+Câ‚‚)(Vâ‚-Vâ‚‚)Â² / 2", "Zero"],
+        question: "Two capacitors CÃ¢â€šÂ and CÃ¢â€šâ€š are charged to VÃ¢â€šÂ and VÃ¢â€šâ€š and connected in parallel. Loss in energy is:",
+        options: ["CÃ¢â€šÂCÃ¢â€šâ€š(VÃ¢â€šÂ-VÃ¢â€šâ€š)Ã‚Â² / (CÃ¢â€šÂ+CÃ¢â€šâ€š)", "CÃ¢â€šÂCÃ¢â€šâ€š(VÃ¢â€šÂ-VÃ¢â€šâ€š)Ã‚Â² / 2(CÃ¢â€šÂ+CÃ¢â€šâ€š)", "(CÃ¢â€šÂ+CÃ¢â€šâ€š)(VÃ¢â€šÂ-VÃ¢â€šâ€š)Ã‚Â² / 2", "Zero"],
         correctAnswer: 1,
-        explanation: "Energy loss in redistribution = 1/2 * (Câ‚Câ‚‚ / (Câ‚+Câ‚‚)) * (Vâ‚ - Vâ‚‚)Â²."
+        explanation: "Energy loss in redistribution = 1/2 * (CÃ¢â€šÂCÃ¢â€šâ€š / (CÃ¢â€šÂ+CÃ¢â€šâ€š)) * (VÃ¢â€šÂ - VÃ¢â€šâ€š)Ã‚Â²."
       },
       {
         question: "In a Young's double-slit experiment, if the distance between slits is halved and screen distance doubled, fringe width becomes:",
         options: ["Halved", "Doubled", "Four times", "Unchanged"],
         correctAnswer: 2,
-        explanation: "Î² = Î»D/d. New Î²' = Î»(2D)/(d/2) = 4(Î»D/d) = 4Î²."
+        explanation: "ÃŽÂ² = ÃŽÂ»D/d. New ÃŽÂ²' = ÃŽÂ»(2D)/(d/2) = 4(ÃŽÂ»D/d) = 4ÃŽÂ²."
       },
       {
         question: "Work done by static friction on a rolling sphere without slipping on a horizontal surface is:",
@@ -78,53 +78,53 @@ function generateStandardQuestionSet(subject, chapter, count) {
     Chemistry: [
       {
         question: "Which of the following molecules has the highest dipole moment?",
-        options: ["NHâ‚ƒ", "NFâ‚ƒ", "BFâ‚ƒ", "CHâ‚„"],
+        options: ["NHÃ¢â€šÆ’", "NFÃ¢â€šÆ’", "BFÃ¢â€šÆ’", "CHÃ¢â€šâ€ž"],
         correctAnswer: 0,
-        explanation: "In NHâ‚ƒ, orbital dipole and N-H bond moments add up in the same direction, unlike NFâ‚ƒ where lone pair moment opposes N-F moments."
+        explanation: "In NHÃ¢â€šÆ’, orbital dipole and N-H bond moments add up in the same direction, unlike NFÃ¢â€šÆ’ where lone pair moment opposes N-F moments."
       },
       {
-        question: "The oxidation state of Fe in brown ring complex [Fe(Hâ‚‚O)â‚…(NO)]SOâ‚„ is:",
+        question: "The oxidation state of Fe in brown ring complex [Fe(HÃ¢â€šâ€šO)Ã¢â€šâ€¦(NO)]SOÃ¢â€šâ€ž is:",
         options: ["+1", "+2", "+3", "0"],
         correctAnswer: 0,
-        explanation: "NO acts as NOâº, so Fe is in +1 oxidation state."
+        explanation: "NO acts as NOÃ¢ÂÂº, so Fe is in +1 oxidation state."
       },
       {
         question: "Which alkene gives only acetone on reductive ozonolysis?",
         options: ["2-Methylpropene", "2,3-Dimethylbut-2-ene", "But-2-ene", "2-Methylbut-2-ene"],
         correctAnswer: 1,
-        explanation: "2,3-Dimethylbut-2-ene (CHâ‚ƒ)â‚‚C=C(CHâ‚ƒ)â‚‚ cleaves into two molecules of acetone (CHâ‚ƒ)â‚‚C=O."
+        explanation: "2,3-Dimethylbut-2-ene (CHÃ¢â€šÆ’)Ã¢â€šâ€šC=C(CHÃ¢â€šÆ’)Ã¢â€šâ€š cleaves into two molecules of acetone (CHÃ¢â€šÆ’)Ã¢â€šâ€šC=O."
       },
       {
         question: "The unit of rate constant for a second-order reaction is:",
-        options: ["sâ»Â¹", "mol Lâ»Â¹ sâ»Â¹", "L molâ»Â¹ sâ»Â¹", "LÂ² molâ»Â² sâ»Â¹"],
+        options: ["sÃ¢ÂÂ»Ã‚Â¹", "mol LÃ¢ÂÂ»Ã‚Â¹ sÃ¢ÂÂ»Ã‚Â¹", "L molÃ¢ÂÂ»Ã‚Â¹ sÃ¢ÂÂ»Ã‚Â¹", "LÃ‚Â² molÃ¢ÂÂ»Ã‚Â² sÃ¢ÂÂ»Ã‚Â¹"],
         correctAnswer: 2,
-        explanation: "Unit = (mol/L)^(1-n) sâ»Â¹ = (mol/L)â»Â¹ sâ»Â¹ = L molâ»Â¹ sâ»Â¹."
+        explanation: "Unit = (mol/L)^(1-n) sÃ¢ÂÂ»Ã‚Â¹ = (mol/L)Ã¢ÂÂ»Ã‚Â¹ sÃ¢ÂÂ»Ã‚Â¹ = L molÃ¢ÂÂ»Ã‚Â¹ sÃ¢ÂÂ»Ã‚Â¹."
       },
       {
         question: "Among the following, the strongest Bronsted base is:",
-        options: ["NHâ‚‚â»", "OHâ»", "CHâ‚ƒOâ»", "Fâ»"],
+        options: ["NHÃ¢â€šâ€šÃ¢ÂÂ»", "OHÃ¢ÂÂ»", "CHÃ¢â€šÆ’OÃ¢ÂÂ»", "FÃ¢ÂÂ»"],
         correctAnswer: 0,
-        explanation: "NHâ‚ƒ is the weakest acid among NHâ‚ƒ, Hâ‚‚O, CHâ‚ƒOH, and HF; thus its conjugate base NHâ‚‚â» is the strongest base."
+        explanation: "NHÃ¢â€šÆ’ is the weakest acid among NHÃ¢â€šÆ’, HÃ¢â€šâ€šO, CHÃ¢â€šÆ’OH, and HF; thus its conjugate base NHÃ¢â€šâ€šÃ¢ÂÂ» is the strongest base."
       }
     ],
     Mathematics: [
       {
-        question: "If A is a 3Ã—3 non-singular matrix such that adj(2A) = k * adj(A), then k equals:",
+        question: "If A is a 3Ãƒâ€”3 non-singular matrix such that adj(2A) = k * adj(A), then k equals:",
         options: ["2", "4", "8", "16"],
         correctAnswer: 1,
         explanation: "adj(cA) = c^(n-1) adj(A). Here n = 3, so adj(2A) = 2^(3-1) adj(A) = 4 adj(A) => k = 4."
       },
       {
-        question: "The value of âˆ«â‚€^(Ï€/2) (sin x / (sin x + cos x)) dx is:",
-        options: ["Ï€", "Ï€/2", "Ï€/4", "0"],
+        question: "The value of Ã¢Ë†Â«Ã¢â€šâ‚¬^(Ãâ‚¬/2) (sin x / (sin x + cos x)) dx is:",
+        options: ["Ãâ‚¬", "Ãâ‚¬/2", "Ãâ‚¬/4", "0"],
         correctAnswer: 2,
-        explanation: "By property âˆ«â‚€áµƒ f(x)dx = âˆ«â‚€áµƒ f(a-x)dx, 2I = âˆ«â‚€^(Ï€/2) 1 dx = Ï€/2 => I = Ï€/4."
+        explanation: "By property Ã¢Ë†Â«Ã¢â€šâ‚¬Ã¡ÂµÆ’ f(x)dx = Ã¢Ë†Â«Ã¢â€šâ‚¬Ã¡ÂµÆ’ f(a-x)dx, 2I = Ã¢Ë†Â«Ã¢â€šâ‚¬^(Ãâ‚¬/2) 1 dx = Ãâ‚¬/2 => I = Ãâ‚¬/4."
       },
       {
-        question: "The number of real roots of equation eË£ + x - 2 = 0 is:",
+        question: "The number of real roots of equation eÃ‹Â£ + x - 2 = 0 is:",
         options: ["0", "1", "2", "Infinitely many"],
         correctAnswer: 1,
-        explanation: "f'(x) = eË£ + 1 > 0 for all real x, so f(x) is strictly increasing. Thus it can cross the x-axis exactly once."
+        explanation: "f'(x) = eÃ‹Â£ + 1 > 0 for all real x, so f(x) is strictly increasing. Thus it can cross the x-axis exactly once."
       },
       {
         question: "If vectors a, b, c are coplanar, then the scalar triple product [a+b  b+c  c+a] is equal to:",
@@ -133,10 +133,10 @@ function generateStandardQuestionSet(subject, chapter, count) {
         explanation: "[a+b b+c c+a] = 2[a b c]. Since a, b, c are coplanar, [a b c] = 0, hence 2(0) = 0."
       },
       {
-        question: "The radius of the circle xÂ² + yÂ² - 4x + 6y - 12 = 0 is:",
-        options: ["3", "4", "5", "âˆš13"],
+        question: "The radius of the circle xÃ‚Â² + yÃ‚Â² - 4x + 6y - 12 = 0 is:",
+        options: ["3", "4", "5", "Ã¢Ë†Å¡13"],
         correctAnswer: 2,
-        explanation: "Center (2, -3). Radius r = âˆš(gÂ² + fÂ² - c) = âˆš(4 + 9 - (-12)) = âˆš25 = 5."
+        explanation: "Center (2, -3). Radius r = Ã¢Ë†Å¡(gÃ‚Â² + fÃ‚Â² - c) = Ã¢Ë†Å¡(4 + 9 - (-12)) = Ã¢Ë†Å¡25 = 5."
       }
     ]
   };
@@ -258,7 +258,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     setCircleMembers(membersRes.approved);
     setPendingRequests(membersRes.pending);
     setCircleTests(tests);
-    setAnnouncements(ann);
+    const sortedAnn = Array.isArray(ann) ? [...ann].sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0)) : []; setAnnouncements(sortedAnn);
     setLeaderboard(ranks);
   };
 
@@ -500,7 +500,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     } else {
       setAnnouncementMsg('');
       const ann = await getCircleAnnouncements(selectedCircle.id);
-      setAnnouncements(ann);
+      const sortedAnn = Array.isArray(ann) ? [...ann].sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0)) : []; setAnnouncements(sortedAnn);
     }
   };
 
@@ -762,7 +762,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                                   </span>
                                   {start && end && (
                                     <span className="text-[11px] text-indigo-400 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-800/40">
-                                      Window: {start.toLocaleDateString()} {start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} â€“ {end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                      Window: {start.toLocaleDateString()} {start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} Ã¢â‚¬â€œ {end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                     </span>
                                   )}
                                 </div>
@@ -882,7 +882,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                                       Admin
                                     </span>
                                     <span className="text-[10px] text-slate-500 ml-auto">
-                                      {dateStr} â€¢ {timeStr}
+                                      {dateStr} Ã¢â‚¬Â¢ {timeStr}
                                     </span>
                                   </div>
 
@@ -920,30 +920,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                         </form>
                       ) : (
                         <div className="p-3 text-center text-[11px] text-slate-500 border-t border-slate-800 bg-slate-950/80">
-                          ðŸ”’ Broadcasts are exclusive to the Circle Admin. Members receive notifications in read-only mode.
-                        </div>
-                      )}
-                    </div>
-                  )}
-                        <div ref={announcementsEndRef} />
-                      </div>
-
-                      {isCircleAdmin ? (
-                        <form onSubmit={handleSendAnnouncement} className="p-3 border-t border-slate-800 bg-slate-950 flex items-center gap-2">
-                          <input
-                            type="text"
-                            placeholder="Broadcast an announcement to your circle..."
-                            value={announcementMsg}
-                            onChange={(e) => setAnnouncementMsg(e.target.value)}
-                            className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500"
-                          />
-                          <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-medium flex items-center gap-1 transition">
-                            <Send className="w-3.5 h-3.5" /> Send
-                          </button>
-                        </form>
-                      ) : (
-                        <div className="p-2.5 text-center text-[11px] text-slate-500 border-t border-slate-800 bg-slate-950">
-                          Announcements are broadcast exclusively by the Circle Admin.
+                          Ã°Å¸â€â€™ Broadcasts are exclusive to the Circle Admin. Members receive notifications in read-only mode.
                         </div>
                       )}
                     </div>
@@ -972,7 +949,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                             {leaderboard.map((row, idx) => (
                               <tr key={row.userId} className="hover:bg-slate-800/40 transition">
                                 <td className="py-3 px-4 font-bold text-slate-300">
-                                  {idx === 0 ? 'ðŸ¥‡ 1' : idx === 1 ? 'ðŸ¥ˆ 2' : idx === 2 ? 'ðŸ¥‰ 3' : `#${idx + 1}`}
+                                  {idx === 0 ? 'Ã°Å¸Â¥â€¡ 1' : idx === 1 ? 'Ã°Å¸Â¥Ë† 2' : idx === 2 ? 'Ã°Å¸Â¥â€° 3' : `#${idx + 1}`}
                                 </td>
                                 <td className="py-3 px-4 font-medium text-white">@{row.username}</td>
                                 <td className="py-3 px-4 text-slate-400">{row.targetExam}</td>
@@ -1056,7 +1033,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
               <div>
                 <h3 className="text-base font-bold text-white">{activeExam.title}</h3>
                 <span className="text-[11px] text-slate-400">
-                  Standardized Exam â€¢ {activeExam.questions?.length || 0} Questions â€¢ Marking: +4, -1
+                  Standardized Exam Ã¢â‚¬Â¢ {activeExam.questions?.length || 0} Questions Ã¢â‚¬Â¢ Marking: +4, -1
                 </span>
               </div>
               <div className="flex items-center gap-3">
@@ -1079,7 +1056,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between text-xs text-indigo-400 font-semibold">
                     <span>Question {currentQIndex + 1} of {activeExam.questions.length}</span>
-                    <span className="text-slate-400">{activeExam.subject} â€¢ {activeExam.chapter}</span>
+                    <span className="text-slate-400">{activeExam.subject} Ã¢â‚¬Â¢ {activeExam.chapter}</span>
                   </div>
 
                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-sm text-slate-200 font-medium">
@@ -1360,3 +1337,4 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     </div>
   );
 }
+
