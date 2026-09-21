@@ -16,24 +16,27 @@ import {
   UserCheck,
   UserX,
   Hourglass,
-  Lock
+  Lock,
+  Trash2
 } from 'lucide-react';
 import {
   getAllCircles,
   getUserCircleMemberships,
   createCircle,
+  deleteCircle,
   requestJoinCircle,
   leaveCircle,
   getCircleMembers,
   handleJoinRequest,
   getCircleTests,
   scheduleCircleTest,
+  deleteCircleTest,
   getCircleAnnouncements,
   postAnnouncement,
   getCircleLeaderboard
 } from '../../services/circleService';
 
-export default function CircleList({ currentUser, onStartTest }) {
+export default function CircleList({ currentUser, onStartTest, generateQuestionsForTest }) {
   const [circles, setCircles] = useState([]);
   const [membershipMap, setMembershipMap] = useState({});
   const [selectedCircle, setSelectedCircle] = useState(null);
@@ -47,6 +50,7 @@ export default function CircleList({ currentUser, onStartTest }) {
   const [circleTab, setCircleTab] = useState('tests');
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
+  const [isGeneratingTest, setIsGeneratingTest] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -60,6 +64,7 @@ export default function CircleList({ currentUser, onStartTest }) {
     subject: 'Physics',
     chapter: 'All',
     durationMinutes: 60,
+    questionCount: 15,
     windowStart: '',
     windowEnd: ''
   });
@@ -120,6 +125,22 @@ export default function CircleList({ currentUser, onStartTest }) {
       setNewCircle({ name: '', description: '' });
       await loadData();
       if (res.data) handleSelectCircle(res.data);
+    }
+  };
+
+  const handleDeleteCircle = async () => {
+    if (!selectedCircle || !currentUser?.id) return;
+    const confirm = window.confirm(
+      `Are you sure you want to PERMANENTLY delete "${selectedCircle.name}"? This action cannot be undone.`
+    );
+    if (!confirm) return;
+
+    const res = await deleteCircle(selectedCircle.id, currentUser.id);
+    if (res.error) {
+      alert(res.error);
+    } else {
+      setSelectedCircle(null);
+      await loadData();
     }
   };
 
@@ -185,7 +206,30 @@ export default function CircleList({ currentUser, onStartTest }) {
     e.preventDefault();
     if (!selectedCircle || !currentUser?.id) return;
 
-    const res = await scheduleCircleTest(selectedCircle.id, newTest, currentUser.id);
+    setIsGeneratingTest(true);
+    let questions = [];
+
+    // If an external generator is provided, generate once for all members
+    if (typeof generateQuestionsForTest === 'function') {
+      try {
+        questions = await generateQuestionsForTest({
+          subject: newTest.subject,
+          chapter: newTest.chapter,
+          count: Number(newTest.questionCount) || 15
+        });
+      } catch (err) {
+        console.error('Error generating questions:', err);
+      }
+    }
+
+    const res = await scheduleCircleTest(
+      selectedCircle.id,
+      { ...newTest, questions },
+      currentUser.id
+    );
+
+    setIsGeneratingTest(false);
+
     if (res.error) {
       alert(res.error);
     } else {
@@ -195,11 +239,25 @@ export default function CircleList({ currentUser, onStartTest }) {
         subject: 'Physics',
         chapter: 'All',
         durationMinutes: 60,
+        questionCount: 15,
         windowStart: '',
         windowEnd: ''
       });
       const tests = await getCircleTests(selectedCircle.id);
       setCircleTests(tests);
+    }
+  };
+
+  const handleDeleteTest = async (testId, e) => {
+    e?.stopPropagation();
+    const confirm = window.confirm('Are you sure you want to delete this test?');
+    if (!confirm) return;
+
+    const res = await deleteCircleTest(testId);
+    if (res.error) {
+      alert(res.error);
+    } else {
+      setCircleTests((prev) => prev.filter((t) => t.id !== testId));
     }
   };
 
@@ -223,6 +281,7 @@ export default function CircleList({ currentUser, onStartTest }) {
     (selectedCircle.created_by === currentUser.id ||
       membershipMap[selectedCircle.id]?.role === 'admin');
 
+  const isCircleCreator = selectedCircle?.created_by === currentUser?.id;
   const userStatus = selectedCircle ? membershipMap[selectedCircle.id]?.status : null;
   const isApprovedMember = userStatus === 'approved' || isCircleAdmin;
 
@@ -236,7 +295,7 @@ export default function CircleList({ currentUser, onStartTest }) {
           </div>
           <div>
             <h2 className="text-lg font-bold text-white">Friend Circles & Cohorts</h2>
-            <p className="text-xs text-slate-400">Admin-gated study circles with timed examinations, notices & rank boards</p>
+            <p className="text-xs text-slate-400">Admin-gated study circles with uniform timed tests, notices & rank boards</p>
           </div>
         </div>
 
@@ -316,7 +375,7 @@ export default function CircleList({ currentUser, onStartTest }) {
         <div className="lg:col-span-2 flex flex-col gap-5">
           {selectedCircle ? (
             <>
-              {/* Circle Head Info */}
+              {/* Circle Header */}
               <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div>
@@ -334,7 +393,7 @@ export default function CircleList({ currentUser, onStartTest }) {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Admin Test Scheduling */}
+                    {/* Admin Test Scheduling Button */}
                     {isCircleAdmin && (
                       <button
                         onClick={() => setShowScheduleModal(true)}
@@ -344,14 +403,25 @@ export default function CircleList({ currentUser, onStartTest }) {
                       </button>
                     )}
 
-                    {/* Exit Circle Button */}
-                    {isApprovedMember && selectedCircle.created_by !== currentUser?.id && (
+                    {/* Exit Circle Button (Non-creator approved member) */}
+                    {isApprovedMember && !isCircleCreator && (
                       <button
                         onClick={handleLeaveCircle}
                         title="Leave this Circle"
                         className="flex items-center gap-1 text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 px-3 py-1.5 rounded-xl transition"
                       >
                         <LogOut className="w-3.5 h-3.5" /> Leave
+                      </button>
+                    )}
+
+                    {/* Delete Circle Button (Creator only) */}
+                    {isCircleCreator && (
+                      <button
+                        onClick={handleDeleteCircle}
+                        title="Permanently Delete Circle"
+                        className="flex items-center gap-1 text-xs text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-600 border border-rose-500/30 px-3 py-1.5 rounded-xl transition"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Delete Circle
                       </button>
                     )}
                   </div>
@@ -425,7 +495,7 @@ export default function CircleList({ currentUser, onStartTest }) {
                     <div className="flex flex-col gap-3">
                       {circleTests.length === 0 ? (
                         <div className="p-8 text-center text-slate-500 text-xs bg-slate-900/50 border border-slate-800 rounded-xl">
-                          No tests scheduled yet. {isCircleAdmin ? 'Click "Schedule Test" above to configure an exam window.' : 'Circle admin has not scheduled any exams yet.'}
+                          No tests scheduled yet. {isCircleAdmin ? 'Click "Schedule Test" above to configure a test for all members.' : 'Circle admin has not scheduled any exams yet.'}
                         </div>
                       ) : (
                         circleTests.map((test) => {
@@ -448,6 +518,11 @@ export default function CircleList({ currentUser, onStartTest }) {
                                   <span className="text-[10px] font-semibold uppercase tracking-wider bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
                                     {test.subject}
                                   </span>
+                                  {Array.isArray(test.questions) && test.questions.length > 0 && (
+                                    <span className="text-[10px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2 py-0.5 rounded">
+                                      {test.questions.length} Qs (Standardized)
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
                                   <span className="flex items-center gap-1">
@@ -464,7 +539,7 @@ export default function CircleList({ currentUser, onStartTest }) {
                                 </div>
                               </div>
 
-                              <div>
+                              <div className="flex items-center gap-2 shrink-0">
                                 {isOpen ? (
                                   <button
                                     onClick={() => onStartTest && onStartTest(test)}
@@ -481,6 +556,17 @@ export default function CircleList({ currentUser, onStartTest }) {
                                     Window Closed
                                   </span>
                                 )}
+
+                                {/* Admin Test Delete Button */}
+                                {isCircleAdmin && (
+                                  <button
+                                    onClick={(e) => handleDeleteTest(test.id, e)}
+                                    title="Delete this test"
+                                    className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 rounded-xl transition"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
                               </div>
                             </div>
                           );
@@ -489,7 +575,7 @@ export default function CircleList({ currentUser, onStartTest }) {
                     </div>
                   )}
 
-                  {/* 2. Admin Announcements Channel (Fixed viewport) */}
+                  {/* 2. Admin Announcements Channel */}
                   {circleTab === 'announcements' && (
                     <div className="bg-slate-900 border border-slate-800 rounded-2xl flex flex-col h-[520px] overflow-hidden">
                       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
@@ -513,7 +599,6 @@ export default function CircleList({ currentUser, onStartTest }) {
                         <div ref={announcementsEndRef} />
                       </div>
 
-                      {/* Admin Input pinned at bottom */}
                       {isCircleAdmin ? (
                         <form onSubmit={handleSendAnnouncement} className="p-3 border-t border-slate-800 bg-slate-950 flex items-center gap-2">
                           <input
@@ -689,7 +774,7 @@ export default function CircleList({ currentUser, onStartTest }) {
         </div>
       )}
 
-      {/* Modal: Schedule Test with Date/Time Window */}
+      {/* Modal: Schedule Test (Admin Only) */}
       {showScheduleModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl">
@@ -739,15 +824,28 @@ export default function CircleList({ currentUser, onStartTest }) {
                 </div>
               </div>
 
-              <div>
-                <label className="text-slate-400 block mb-1">Chapter Focus</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Current Electricity (or 'All')"
-                  value={newTest.chapter}
-                  onChange={(e) => setNewTest({ ...newTest, chapter: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-400 block mb-1">Chapter Focus</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Current Electricity (or 'All')"
+                    value={newTest.chapter}
+                    onChange={(e) => setNewTest({ ...newTest, chapter: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">Number of Questions</label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="50"
+                    value={newTest.questionCount}
+                    onChange={(e) => setNewTest({ ...newTest, questionCount: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -781,9 +879,10 @@ export default function CircleList({ currentUser, onStartTest }) {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold"
+                  disabled={isGeneratingTest}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold disabled:opacity-50"
                 >
-                  Schedule Test
+                  {isGeneratingTest ? 'Generating Test Paper...' : 'Schedule Test for All'}
                 </button>
               </div>
             </form>

@@ -63,7 +63,24 @@ export async function createCircle(name, description, userId) {
   return { data: circle };
 }
 
-// 4. Request to join a circle (status: 'pending')
+// 4. Delete an entire circle (Creator / Admin only)
+export async function deleteCircle(circleId, userId) {
+  if (!circleId || !userId) return { error: 'Invalid parameters.' };
+
+  const { error } = await supabase
+    .from('circles')
+    .delete()
+    .eq('id', circleId)
+    .eq('created_by', userId);
+
+  if (error) {
+    console.error('Error deleting circle:', error);
+    return { error: error.message };
+  }
+  return { success: true };
+}
+
+// 5. Request to join a circle (status: 'pending')
 export async function requestJoinCircle(circleId, userId) {
   if (!circleId || !userId) return { error: 'Invalid parameters.' };
 
@@ -80,7 +97,7 @@ export async function requestJoinCircle(circleId, userId) {
   return { data };
 }
 
-// 5. Leave a circle
+// 6. Leave a circle
 export async function leaveCircle(circleId, userId) {
   if (!circleId || !userId) return { error: 'Invalid parameters.' };
 
@@ -97,7 +114,7 @@ export async function leaveCircle(circleId, userId) {
   return { success: true };
 }
 
-// 6. Fetch members (approved and pending)
+// 7. Fetch members (approved and pending)
 export async function getCircleMembers(circleId) {
   if (!circleId) return { approved: [], pending: [] };
 
@@ -124,7 +141,7 @@ export async function getCircleMembers(circleId) {
   return { approved, pending };
 }
 
-// 7. Admin: Accept or Reject a join request (targets circle_id + user_id and id)
+// 8. Admin: Accept or Reject a join request
 export async function handleJoinRequest({ circleId, userId, memberRecordId, accept = true }) {
   try {
     if (accept) {
@@ -168,9 +185,9 @@ export async function handleJoinRequest({ circleId, userId, memberRecordId, acce
   }
 }
 
-// 8. Schedule a circle test with fixed availability window (Admin only)
+// 9. Schedule a test with fixed availability window and fixed questions (Admin only)
 export async function scheduleCircleTest(circleId, testData, userId) {
-  const { title, subject, chapter, durationMinutes, windowStart, windowEnd } = testData;
+  const { title, subject, chapter, durationMinutes, windowStart, windowEnd, questions } = testData;
 
   const { data, error } = await supabase
     .from('circle_tests')
@@ -183,6 +200,7 @@ export async function scheduleCircleTest(circleId, testData, userId) {
         duration_minutes: Number(durationMinutes) || 60,
         window_start: windowStart ? new Date(windowStart).toISOString() : new Date().toISOString(),
         window_end: windowEnd ? new Date(windowEnd).toISOString() : new Date(Date.now() + 86400000).toISOString(),
+        questions: Array.isArray(questions) ? questions : [],
         created_by: userId,
       },
     ])
@@ -196,7 +214,23 @@ export async function scheduleCircleTest(circleId, testData, userId) {
   return { data };
 }
 
-// 9. Fetch scheduled tests
+// 10. Delete a scheduled test (Admin only)
+export async function deleteCircleTest(testId) {
+  if (!testId) return { error: 'Test ID is required.' };
+
+  const { error } = await supabase
+    .from('circle_tests')
+    .delete()
+    .eq('id', testId);
+
+  if (error) {
+    console.error('Error deleting test:', error);
+    return { error: error.message };
+  }
+  return { success: true };
+}
+
+// 11. Fetch scheduled tests
 export async function getCircleTests(circleId) {
   if (!circleId) return [];
 
@@ -213,7 +247,7 @@ export async function getCircleTests(circleId) {
   return data || [];
 }
 
-// 10. Admin Announcements (Broadcast)
+// 12. Admin Announcements (Broadcast)
 export async function getCircleAnnouncements(circleId) {
   if (!circleId) return [];
 
@@ -256,7 +290,7 @@ export async function postAnnouncement(circleId, message, userId) {
   return { data };
 }
 
-// 11. Circle Leaderboard Computation
+// 13. Circle Leaderboard Computation
 export async function getCircleLeaderboard(circleId) {
   if (!circleId) return [];
 
