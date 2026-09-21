@@ -46,6 +46,7 @@ export default function CircleList({ currentUser, onStartTest }) {
 
   const [circleTab, setCircleTab] = useState('tests');
   const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -122,7 +123,7 @@ export default function CircleList({ currentUser, onStartTest }) {
     }
   };
 
-  const handleJoinRequest = async (circleId, e) => {
+  const handleJoinRequestClick = async (circleId, e) => {
     e?.stopPropagation();
     if (!currentUser?.id) return alert('Please sign in to request joining.');
 
@@ -156,10 +157,22 @@ export default function CircleList({ currentUser, onStartTest }) {
     }
   };
 
-  const handleApproveReject = async (memberId, accept) => {
-    const res = await handleJoinRequest(memberId, accept);
+  const handleApproveReject = async (req, accept) => {
+    const targetUserId = req.user_id || req.user?.id;
+    const recordId = req.id;
+    setProcessingId(recordId || targetUserId);
+
+    const res = await handleJoinRequest({
+      circleId: selectedCircle.id,
+      userId: targetUserId,
+      memberRecordId: recordId,
+      accept
+    });
+
+    setProcessingId(null);
+
     if (res.error) {
-      alert(res.error);
+      alert('Action failed: ' + res.error);
     } else {
       const refreshed = await getCircleMembers(selectedCircle.id);
       setCircleMembers(refreshed.approved);
@@ -277,7 +290,7 @@ export default function CircleList({ currentUser, onStartTest }) {
                       </span>
                     ) : (
                       <button
-                        onClick={(e) => handleJoinRequest(circle.id, e)}
+                        onClick={(e) => handleJoinRequestClick(circle.id, e)}
                         className="flex items-center gap-1 text-[11px] font-medium text-indigo-400 hover:text-white bg-indigo-600/20 hover:bg-indigo-600 px-2.5 py-1 rounded-md transition"
                       >
                         <UserPlus className="w-3 h-3" /> Request
@@ -572,34 +585,40 @@ export default function CircleList({ currentUser, onStartTest }) {
                           No pending join requests at this time.
                         </div>
                       ) : (
-                        pendingRequests.map((req) => (
-                          <div
-                            key={req.id}
-                            className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl flex items-center justify-between gap-4"
-                          >
-                            <div>
-                              <span className="font-semibold text-white text-xs">@{req.user?.username || 'Aspirant'}</span>
-                              <span className="text-[11px] text-slate-400 block">
-                                Target: {req.user?.target_exam || 'JEE Main'}
-                              </span>
-                            </div>
+                        pendingRequests.map((req) => {
+                          const isActing = processingId === (req.id || req.user_id || req.user?.id);
 
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleApproveReject(req.id, true)}
-                                className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-medium px-3 py-1.5 rounded-lg transition"
-                              >
-                                <UserCheck className="w-3.5 h-3.5" /> Accept
-                              </button>
-                              <button
-                                onClick={() => handleApproveReject(req.id, false)}
-                                className="flex items-center gap-1 bg-slate-800 hover:bg-rose-600/80 text-slate-300 hover:text-white text-[11px] font-medium px-3 py-1.5 rounded-lg transition"
-                              >
-                                <UserX className="w-3.5 h-3.5" /> Decline
-                              </button>
+                          return (
+                            <div
+                              key={req.id || req.user_id || req.user?.id}
+                              className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl flex items-center justify-between gap-4"
+                            >
+                              <div>
+                                <span className="font-semibold text-white text-xs">@{req.user?.username || 'Aspirant'}</span>
+                                <span className="text-[11px] text-slate-400 block">
+                                  Target: {req.user?.target_exam || 'JEE Main'}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <button
+                                  disabled={isActing}
+                                  onClick={() => handleApproveReject(req, true)}
+                                  className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[11px] font-medium px-3 py-1.5 rounded-lg transition"
+                                >
+                                  <UserCheck className="w-3.5 h-3.5" /> {isActing ? 'Updating...' : 'Accept'}
+                                </button>
+                                <button
+                                  disabled={isActing}
+                                  onClick={() => handleApproveReject(req, false)}
+                                  className="flex items-center gap-1 bg-slate-800 hover:bg-rose-600/80 disabled:opacity-50 text-slate-300 hover:text-white text-[11px] font-medium px-3 py-1.5 rounded-lg transition"
+                                >
+                                  <UserX className="w-3.5 h-3.5" /> {isActing ? '...' : 'Decline'}
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   )}

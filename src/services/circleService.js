@@ -105,6 +105,8 @@ export async function getCircleMembers(circleId) {
     .from('circle_members')
     .select(`
       id,
+      circle_id,
+      user_id,
       role,
       status,
       joined_at,
@@ -122,34 +124,46 @@ export async function getCircleMembers(circleId) {
   return { approved, pending };
 }
 
-// 7. Admin: Accept or Reject a join request
-export async function handleJoinRequest(memberRecordId, accept = true) {
+// 7. Admin: Accept or Reject a join request (targets circle_id + user_id and id)
+export async function handleJoinRequest({ circleId, userId, memberRecordId, accept = true }) {
   try {
     if (accept) {
-      const { data, error } = await supabase
+      let query = supabase
         .from('circle_members')
-        .update({ status: 'approved' })
-        .eq('id', memberRecordId)
-        .select();
+        .update({ status: 'approved' });
+
+      if (circleId && userId) {
+        query = query.eq('circle_id', circleId).eq('user_id', userId);
+      } else if (memberRecordId) {
+        query = query.eq('id', memberRecordId);
+      }
+
+      const { data, error } = await query.select();
 
       if (error) {
-        console.error('Error accepting member:', error);
+        console.error('Error approving member:', error);
         return { error: error.message };
       }
       return { data };
     } else {
-      const { error } = await supabase
-        .from('circle_members')
-        .delete()
-        .eq('id', memberRecordId);
+      let query = supabase.from('circle_members').delete();
+
+      if (circleId && userId) {
+        query = query.eq('circle_id', circleId).eq('user_id', userId);
+      } else if (memberRecordId) {
+        query = query.eq('id', memberRecordId);
+      }
+
+      const { error } = await query;
 
       if (error) {
-        console.error('Error rejecting member:', error);
+        console.error('Error declining member:', error);
         return { error: error.message };
       }
       return { success: true };
     }
   } catch (err) {
+    console.error('Unexpected error handling join request:', err);
     return { error: err.message };
   }
 }
@@ -212,7 +226,7 @@ export async function getCircleAnnouncements(circleId) {
       author:created_by ( username )
     `)
     .eq('circle_id', circleId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching announcements:', error);
