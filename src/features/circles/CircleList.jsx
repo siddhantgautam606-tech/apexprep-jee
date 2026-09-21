@@ -22,6 +22,7 @@ import {
   ArrowRight,
   ArrowLeft
 } from 'lucide-react';
+import { getStandardQuestions } from '../../data/jeeQuestionBank';
 import {
   getAllCircles,
   getUserCircleMemberships,
@@ -41,120 +42,7 @@ import {
 import { supabase } from '../../services/supabaseClient';
 
 function generateStandardQuestionSet(subject, chapter, count) {
-  const sampleBank = {
-    Physics: [
-      {
-        question: 'A particle moves along the x-axis with velocity v = k*sqrt(x). The displacement varies with time as:',
-        options: ['x proportional to t', 'x proportional to t^2', 'x proportional to t^(1/2)', 'x proportional to t^3'],
-        correctAnswer: 1,
-        explanation: 'v = dx/dt = k*sqrt(x) => x^(-1/2) dx = k dt. Integrating gives 2*sqrt(x) = kt => x proportional to t^2.'
-      },
-      {
-        question: 'A body of mass m is projected with velocity v at an angle theta with horizontal. The angular momentum about point of projection at max height is:',
-        options: ['(m v^3 sin^2(theta) cos(theta))/(2g)', '(m v^3 sin(theta) cos^2(theta))/(2g)', '(m v^3 sin^2(theta))/(2g)', 'Zero'],
-        correctAnswer: 0,
-        explanation: 'L = m * v_horizontal * H_max = m (v cos(theta)) * (v^2 sin^2(theta) / 2g) = (m v^3 sin^2(theta) cos(theta)) / (2g).'
-      },
-      {
-        question: 'Two capacitors C1 and C2 are charged to V1 and V2 and connected in parallel. Loss in energy is:',
-        options: ['C1*C2*(V1-V2)^2 / (C1+C2)', 'C1*C2*(V1-V2)^2 / 2(C1+C2)', '(C1+C2)*(V1-V2)^2 / 2', 'Zero'],
-        correctAnswer: 1,
-        explanation: 'Energy loss in redistribution = 1/2 * (C1*C2 / (C1+C2)) * (V1 - V2)^2.'
-      },
-      {
-        question: 'In a Young double-slit experiment, if the distance between slits is halved and screen distance doubled, fringe width becomes:',
-        options: ['Halved', 'Doubled', 'Four times', 'Unchanged'],
-        correctAnswer: 2,
-        explanation: 'beta = lambda*D/d. New beta prime = lambda*(2D)/(d/2) = 4*(lambda*D/d) = 4*beta.'
-      },
-      {
-        question: 'Work done by static friction on a rolling sphere without slipping on a horizontal surface is:',
-        options: ['Always positive', 'Always negative', 'Zero', 'Depends on radius'],
-        correctAnswer: 2,
-        explanation: 'In pure rolling on a stationary surface, the point of contact is instantaneously at rest, so work done by static friction is zero.'
-      }
-    ],
-    Chemistry: [
-      {
-        question: 'Which of the following molecules has the highest dipole moment?',
-        options: ['NH3', 'NF3', 'BF3', 'CH4'],
-        correctAnswer: 0,
-        explanation: 'In NH3, orbital dipole and N-H bond moments add up in the same direction, unlike NF3 where lone pair moment opposes N-F moments.'
-      },
-      {
-        question: 'The oxidation state of Fe in brown ring complex [Fe(H2O)5(NO)]SO4 is:',
-        options: ['+1', '+2', '+3', '0'],
-        correctAnswer: 0,
-        explanation: 'NO acts as NO+, so Fe is in +1 oxidation state.'
-      },
-      {
-        question: 'Which alkene gives only acetone on reductive ozonolysis?',
-        options: ['2-Methylpropene', '2,3-Dimethylbut-2-ene', 'But-2-ene', '2-Methylbut-2-ene'],
-        correctAnswer: 1,
-        explanation: '2,3-Dimethylbut-2-ene (CH3)2C=C(CH3)2 cleaves into two molecules of acetone (CH3)2C=O.'
-      },
-      {
-        question: 'The unit of rate constant for a second-order reaction is:',
-        options: ['s^-1', 'mol L^-1 s^-1', 'L mol^-1 s^-1', 'L^2 mol^-2 s^-1'],
-        correctAnswer: 2,
-        explanation: 'Unit = (mol/L)^(1-n) s^-1 = (mol/L)^-1 s^-1 = L mol^-1 s^-1.'
-      },
-      {
-        question: 'Among the following, the strongest Bronsted base is:',
-        options: ['NH2^-', 'OH^-', 'CH3O^-', 'F^-'],
-        correctAnswer: 0,
-        explanation: 'NH3 is the weakest acid among NH3, H2O, CH3OH, and HF; thus its conjugate base NH2^- is the strongest base.'
-      }
-    ],
-    Mathematics: [
-      {
-        question: 'If A is a 3x3 non-singular matrix such that adj(2A) = k * adj(A), then k equals:',
-        options: ['2', '4', '8', '16'],
-        correctAnswer: 1,
-        explanation: 'adj(cA) = c^(n-1) adj(A). Here n = 3, so adj(2A) = 2^(3-1) adj(A) = 4 adj(A) => k = 4.'
-      },
-      {
-        question: 'The value of integral from 0 to pi/2 of (sin x / (sin x + cos x)) dx is:',
-        options: ['pi', 'pi/2', 'pi/4', '0'],
-        correctAnswer: 2,
-        explanation: 'By property integral f(x)dx = integral f(a-x)dx, 2I = integral 1 dx = pi/2 => I = pi/4.'
-      },
-      {
-        question: 'The number of real roots of equation e^x + x - 2 = 0 is:',
-        options: ['0', '1', '2', 'Infinitely many'],
-        correctAnswer: 1,
-        explanation: "f'(x) = e^x + 1 > 0 for all real x, so f(x) is strictly increasing. Thus it can cross the x-axis exactly once."
-      },
-      {
-        question: 'If vectors a, b, c are coplanar, then the scalar triple product [a+b  b+c  c+a] is equal to:',
-        options: ['0', '[a b c]', '2[a b c]', '-[a b c]'],
-        correctAnswer: 0,
-        explanation: '[a+b b+c c+a] = 2[a b c]. Since a, b, c are coplanar, [a b c] = 0, hence 2(0) = 0.'
-      },
-      {
-        question: 'The radius of the circle x^2 + y^2 - 4x + 6y - 12 = 0 is:',
-        options: ['3', '4', '5', 'sqrt(13)'],
-        correctAnswer: 2,
-        explanation: 'Center (2, -3). Radius r = sqrt(g^2 + f^2 - c) = sqrt(4 + 9 - (-12)) = sqrt(25) = 5.'
-      }
-    ]
-  };
-
-  const pool = sampleBank[subject] || sampleBank['Physics'];
-  const questions = [];
-  const targetCount = Math.max(1, count || 5);
-
-  for (let i = 0; i < targetCount; i++) {
-    const base = pool[i % pool.length];
-    questions.push({
-      id: i + 1,
-      question: `[${chapter || subject}] Q${i + 1}: ${base.question}`,
-      options: [...base.options],
-      correctAnswer: base.correctAnswer,
-      explanation: base.explanation
-    });
-  }
-  return questions;
+  return getStandardQuestions(subject, chapter, count);
 }
 
 export default function CircleList({ currentUser, onStartTest, generateQuestionsForTest }) {
