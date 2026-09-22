@@ -1,103 +1,136 @@
-import { getAllQuestions } from './questionService';
+import { fetchQuestionsForTest } from './questionService';
+import { formatMathSymbols, getStandardQuestions } from '../data/jeeQuestionBank';
+import { QUESTIONS_POOL } from '../data/questionsPool';
 
-// Extract available unique chapters dynamically from whatever is inside the Question Pool
-export function getAvailableChaptersFromPool() {
-  const all = getAllQuestions();
-  const map = { Physics: new Set(), Chemistry: new Set(), Math: new Set(), Mathematics: new Set() };
+/**
+ * Calculates candidate score, accuracy, and subject breakdown for TestRunner.jsx
+ */
+export function computeExamStats(questions = [], answers = {}, totalTimeSeconds = 0) {
+  let correct = 0;
+  let incorrect = 0;
+  let unattempted = 0;
 
-  all.forEach((q) => {
-    const sub = q.subject === 'Mathematics' ? 'Math' : q.subject;
-    if (map[sub]) {
-      map[sub].add(q.chapter);
+  const subjectStats = {};
+
+  questions.forEach((q, idx) => {
+    const sub = q.subject || 'General';
+    if (!subjectStats[sub]) {
+      subjectStats[sub] = { total: 0, correct: 0, incorrect: 0, score: 0 };
+    }
+    subjectStats[sub].total += 1;
+
+    const userAns = answers[idx] ?? answers[q.id];
+
+    if (userAns === undefined || userAns === null) {
+      unattempted += 1;
+    } else if (Number(userAns) === Number(q.correctAnswer)) {
+      correct += 1;
+      subjectStats[sub].correct += 1;
+      subjectStats[sub].score += 4;
+    } else {
+      incorrect += 1;
+      subjectStats[sub].incorrect += 1;
+      subjectStats[sub].score -= 1;
     }
   });
+
+  const attempted = correct + incorrect;
+  const rawScore = correct * 4 - incorrect * 1;
+  const maxScore = questions.length * 4;
+  const accuracy = attempted > 0 ? ((correct / attempted) * 100).toFixed(1) : 0;
 
   return {
-    Physics: Array.from(map.Physics),
-    Chemistry: Array.from(map.Chemistry),
-    Math: Array.from(new Set([...map.Math, ...map.Mathematics]))
+    correct,
+    incorrect,
+    unattempted,
+    attempted,
+    total: questions.length,
+    score: rawScore,
+    maxScore,
+    accuracy: Number(accuracy),
+    subjectStats,
+    timeTakenSeconds: totalTimeSeconds
   };
 }
 
-// Draw test questions directly from Question Pool
-export function filterAndSampleQuestions({ subjects, selectedChapters, targetCount }) {
-  const all = getAllQuestions();
+/**
+ * Extracts available chapters for a subject from QUESTIONS_POOL
+ */
+export function getAvailableChaptersFromPool(subject) {
+  if (!subject || subject === 'Full Syllabus' || subject === 'All') {
+    return ['All'];
+  }
 
-  // Normalize questions so both legacy and pool formats work seamlessly
-  const normalized = all.map((q, idx) => ({
-    id: q.id || idx + 1,
-    subject: q.subject === 'Mathematics' ? 'Math' : q.subject,
-    chapter: q.chapter || 'General',
-    section: q.section || (idx >= 20 ? 'Section B' : 'Section A'),
-    meta: q.yearTag || q.meta || 'JEE Practice',
-    type: q.type || (Array.isArray(q.options) && q.options.length > 0 ? 'MCQ' : 'NUM'),
-    text: q.question || q.text,
-    options: Array.isArray(q.options)
-      ? q.options.map((opt, oIdx) =>
-          typeof opt === 'string'
-            ? { key: String.fromCharCode(65 + oIdx), text: opt }
-            : opt
-        )
-      : [],
-    correct:
-      typeof q.correctIndex === 'number'
-        ? String.fromCharCode(65 + q.correctIndex)
-        : String(q.correct || '').trim(),
-    solution: q.explanation || q.solution || 'No detailed explanation provided.',
-    graphicSvg: q.graphicSvg || null
-  }));
+  const pool = Array.isArray(QUESTIONS_POOL) ? QUESTIONS_POOL : [];
+  const chapters = new Set();
 
-  // Filter against active selections
-  let pool = normalized.filter((q) => {
-    const normSub = q.subject === 'Mathematics' ? 'Math' : q.subject;
-    const mappedSubjects = subjects.map((s) => (s === 'Mathematics' ? 'Math' : s));
-    const subjectOk = mappedSubjects.length === 0 || mappedSubjects.includes(normSub);
-    const chapterOk = selectedChapters.length === 0 || selectedChapters.includes(q.chapter);
-    return subjectOk && chapterOk;
-  });
-
-  // Fallback to all if selected pool is empty
-  if (pool.length === 0) pool = normalized;
-
-  // Shuffle and sample
-  const shuffled = [...pool].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, Math.min(targetCount, shuffled.length));
-}
-
-export function computeExamStats(testQuestions, userAnswers) {
-  let totalScore = 0;
-  let totalCorrect = 0;
-  let totalAttempted = 0;
-
-  const subStats = {
-    Physics: { correct: 0, wrong: 0, unattempted: 0, score: 0 },
-    Chemistry: { correct: 0, wrong: 0, unattempted: 0, score: 0 },
-    Math: { correct: 0, wrong: 0, unattempted: 0, score: 0 }
-  };
-
-  testQuestions.forEach((q) => {
-    const given = userAnswers[q.id];
-    const subKey = q.subject === 'Mathematics' ? 'Math' : q.subject;
-    const s = subStats[subKey] || subStats['Physics'];
-
-    if (given === undefined || given === '') {
-      s.unattempted++;
-    } else {
-      totalAttempted++;
-      const isCor = String(given).trim().toLowerCase() === String(q.correct).trim().toLowerCase();
-      if (isCor) {
-        totalCorrect++;
-        s.correct++;
-        s.score += 4;
-        totalScore += 4;
-      } else {
-        s.wrong++;
-        s.score -= 1;
-        totalScore -= 1;
-      }
+  pool.forEach((q) => {
+    if (q.subject?.toLowerCase() === subject.toLowerCase() && q.chapter) {
+      chapters.add(q.chapter);
     }
   });
 
-  const accuracy = totalAttempted > 0 ? Math.round((totalCorrect / totalAttempted) * 100) : 0;
-  return { totalScore, totalCorrect, totalAttempted, accuracy, subStats };
+  return ['All', ...Array.from(chapters)];
 }
+
+/**
+ * Samples questions synchronously from QUESTIONS_POOL
+ */
+export function filterAndSampleQuestions(config = {}) {
+  const { subject = 'Physics', chapter = 'All', count = 25 } = config;
+  let pool = Array.isArray(QUESTIONS_POOL) ? [...QUESTIONS_POOL] : [];
+
+  if (subject && subject !== 'Full Syllabus' && subject !== 'All') {
+    pool = pool.filter((q) => q.subject?.toLowerCase() === subject.toLowerCase());
+  }
+  if (chapter && chapter !== 'All') {
+    pool = pool.filter((q) => q.chapter?.toLowerCase() === chapter.toLowerCase());
+  }
+
+  const shuffled = pool.sort(() => 0.5 - Math.random());
+  const selected = shuffled.slice(0, count);
+
+  if (selected.length < count) {
+    const needed = count - selected.length;
+    const fallback = getStandardQuestions(
+      subject === 'Full Syllabus' || subject === 'All' ? 'Physics' : subject,
+      chapter,
+      needed
+    );
+    selected.push(...fallback);
+  }
+
+  return selected.slice(0, count).map((q, idx) => ({
+    ...q,
+    id: q.id || idx + 1,
+    question: formatMathSymbols(q.question),
+    options: Array.isArray(q.options) ? q.options.map((opt) => formatMathSymbols(opt)) : [],
+    explanation: formatMathSymbols(q.explanation || '')
+  }));
+}
+
+/**
+ * Async paper generator for individual practice tests
+ */
+export async function generatePersonalTestPaper(config = {}) {
+  const subject = config.subject || 'Full Syllabus';
+  const chapter = config.chapter || 'All';
+  const totalCount = Number(config.questionCount) || 25;
+
+  if (subject === 'Full Syllabus') {
+    const perSubject = Math.floor(totalCount / 3);
+    const remainder = totalCount % 3;
+
+    const [physics, chemistry, math] = await Promise.all([
+      fetchQuestionsForTest('Physics', 'All', perSubject + remainder),
+      fetchQuestionsForTest('Chemistry', 'All', perSubject),
+      fetchQuestionsForTest('Mathematics', 'All', perSubject)
+    ]);
+
+    return [...physics, ...chemistry, ...math];
+  }
+
+  return await fetchQuestionsForTest(subject, chapter, totalCount);
+}
+
+export { formatMathSymbols };

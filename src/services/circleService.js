@@ -1,5 +1,4 @@
 import { supabase } from './supabaseClient';
-import { getStandardQuestions } from '../data/jeeQuestionBank';
 
 // Get all circles
 export async function getAllCircles() {
@@ -286,66 +285,5 @@ export async function getCircleLeaderboard(circleId) {
   }
 }
 
-// Add a custom question to the Supabase database
-export async function addCustomQuestionToDB(questionData, userId) {
-  try {
-    const { data, error } = await supabase
-      .from('custom_questions')
-      .insert([
-        {
-          subject: questionData.subject,
-          chapter: questionData.chapter || 'All',
-          question: questionData.question,
-          options: questionData.options,
-          correct_answer: Number(questionData.correctAnswer),
-          explanation: questionData.explanation || '',
-          created_by: userId
-        }
-      ])
-      .select()
-      .single();
-
-    if (error) throw error;
-    return { data, error: null };
-  } catch (err) {
-    console.error('Error adding custom question:', err);
-    return { data: null, error: err.message };
-  }
-}
-
-// Fetch questions for tests from Supabase with fallback
-export async function fetchQuestionsForTest(subject = 'Physics', chapter = 'All', count = 5) {
-  try {
-    let query = supabase.from('custom_questions').select('*').eq('subject', subject);
-    if (chapter && chapter !== 'All') {
-      query = query.eq('chapter', chapter);
-    }
-
-    const { data: dbQuestions, error } = await query;
-    let pool = [];
-
-    if (!error && Array.isArray(dbQuestions) && dbQuestions.length > 0) {
-      pool = dbQuestions.map((q, idx) => ({
-        id: idx + 1,
-        question: q.question,
-        options: q.options,
-        correctAnswer: q.correct_answer,
-        explanation: q.explanation
-      }));
-    }
-
-    const shuffledCustom = pool.sort(() => 0.5 - Math.random());
-    const selected = shuffledCustom.slice(0, count);
-
-    if (selected.length < count) {
-      const needed = count - selected.length;
-      const fallbackSet = getStandardQuestions(subject, chapter, needed);
-      selected.push(...fallbackSet);
-    }
-
-    return selected;
-  } catch (err) {
-    console.error('Error in fetchQuestionsForTest:', err);
-    return getStandardQuestions(subject, chapter, count);
-  }
-}
+// Re-export question pool functions from central questionService
+export { addCustomQuestionToDB, fetchQuestionsForTest } from './questionService';
