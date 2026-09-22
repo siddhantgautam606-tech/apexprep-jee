@@ -1,164 +1,143 @@
-import { fetchQuestionsForTest } from './questionService';
-import { formatMathSymbols, getStandardQuestions } from '../data/jeeQuestionBank';
-import { QUESTIONS_POOL } from '../data/questionsPool';
-
 /**
- * Calculates candidate score, accuracy, and subject breakdown for TestRunner.jsx
+ * Standard JEE Marking Scheme:
+ * Correct: +4
+ * Incorrect: -1
+ * Unattempted: 0
  */
-export function computeExamStats(questions = [], answers = {}, totalTimeSeconds = 0) {
-  let totalCorrect = 0;
-  let totalWrong = 0;
-  let totalUnattempted = 0;
-  let totalScore = 0;
+export function computeExamStats(questions = [], answers = {}, timeTakenSeconds = 0) {
+  if (!Array.isArray(questions) || questions.length === 0) {
+    return {
+      totalQuestions: 0,
+      attempted: 0,
+      correct: 0,
+      incorrect: 0,
+      unattempted: 0,
+      score: 0,
+      maxScore: 0,
+      accuracy: 0,
+      timeTakenFormatted: '00:00',
+      subjectBreakdown: {}
+    };
+  }
 
-  const subStats = {};
+  let correctCount = 0;
+  let incorrectCount = 0;
+  let unattemptedCount = 0;
+  let subjectStats = {};
 
-  (questions || []).forEach((q) => {
+  questions.forEach((q, idx) => {
     const sub = q.subject || 'General';
-    if (!subStats[sub]) {
-      subStats[sub] = { correct: 0, wrong: 0, unattempted: 0, score: 0 };
+    if (!subjectStats[sub]) {
+      subjectStats[sub] = { total: 0, correct: 0, incorrect: 0, score: 0 };
     }
+    subjectStats[sub].total += 1;
 
-    const given = answers[q.id];
+    // Check both index key (0, 1, 2) and question ID key
+    const userChoice = answers[idx] !== undefined ? answers[idx] : answers[q.id];
 
-    if (given === undefined || given === null || given === '') {
-      totalUnattempted += 1;
-      subStats[sub].unattempted += 1;
-      return;
-    }
-
-    const isCorrect = String(given).trim().toLowerCase() === String(q.correct).trim().toLowerCase();
-
-    if (isCorrect) {
-      totalCorrect += 1;
-      subStats[sub].correct += 1;
-      subStats[sub].score += 4;
-      totalScore += 4;
-    } else {
-      totalWrong += 1;
-      subStats[sub].wrong += 1;
-      // Numerical-type questions carry no negative marking (+4 / 0);
-      // only MCQs are +4 / -1, matching the official JEE scheme.
-      if (q.type !== 'Numerical' && q.type !== 'NUM') {
-        subStats[sub].score -= 1;
-        totalScore -= 1;
+    // Determine correct answer (0-3 index or letter 'A','B','C','D')
+    let correctChoice = q.correctAnswer !== undefined ? q.correctAnswer : q.correct_answer;
+    if (typeof correctChoice === 'string') {
+      const upper = correctChoice.trim().toUpperCase();
+      if (['A', 'B', 'C', 'D'].includes(upper)) {
+        correctChoice = upper.charCodeAt(0) - 65;
+      } else if (!isNaN(Number(upper))) {
+        correctChoice = Number(upper);
       }
     }
-  });
 
-  const totalAttempted = totalCorrect + totalWrong;
-  const total = (questions || []).length;
-
-  return {
-    totalCorrect,
-    totalWrong,
-    totalUnattempted,
-    totalAttempted,
-    total,
-    totalScore,
-    maxScore: total * 4,
-    accuracy: totalAttempted > 0 ? Number(((totalCorrect / totalAttempted) * 100).toFixed(1)) : 0,
-    subStats,
-    timeTakenSeconds: totalTimeSeconds
-  };
-}
-
-/**
- * Extracts available chapters per subject from QUESTIONS_POOL for TestConfig.jsx.
- * Returns { Physics: [...chapterIds], Chemistry: [...], Math: [...] } — the shape
- * TestConfig.jsx indexes into directly (chapterMap.Physics, chapterMap[selectedSubject]).
- */
-const SUBJECT_ID_TO_KEY = { physics: 'Physics', chemistry: 'Chemistry', math: 'Math', mathematics: 'Math' };
-
-export function getAvailableChaptersFromPool() {
-  const pool = Array.isArray(QUESTIONS_POOL) ? QUESTIONS_POOL : [];
-  const bySubject = { Physics: new Set(), Chemistry: new Set(), Math: new Set() };
-
-  pool.forEach((q) => {
-    const key = SUBJECT_ID_TO_KEY[String(q?.subjectId || '').toLowerCase()];
-    if (key && q.chapterId) {
-      bySubject[key].add(q.chapterId);
+    if (userChoice === undefined || userChoice === null || userChoice === '') {
+      unattemptedCount += 1;
+    } else if (Number(userChoice) === Number(correctChoice)) {
+      correctCount += 1;
+      subjectStats[sub].correct += 1;
+      subjectStats[sub].score += 4;
+    } else {
+      incorrectCount += 1;
+      subjectStats[sub].incorrect += 1;
+      subjectStats[sub].score -= 1;
     }
   });
 
+  const attemptedCount = correctCount + incorrectCount;
+  const totalScore = (correctCount * 4) - (incorrectCount * 1);
+  const maxPossibleScore = questions.length * 4;
+
+  const accuracyPct = attemptedCount > 0 
+    ? Math.max(0, Math.round((correctCount / attemptedCount) * 100)) 
+    : 0;
+
+  const minutes = Math.floor(timeTakenSeconds / 60);
+  const seconds = timeTakenSeconds % 60;
+  const timeTakenFormatted = `${minutes}m ${seconds < 10 ? '0' : ''}${seconds}s`;
+
   return {
-    Physics: Array.from(bySubject.Physics),
-    Chemistry: Array.from(bySubject.Chemistry),
-    Math: Array.from(bySubject.Math)
+    totalQuestions: questions.length,
+    attempted: attemptedCount,
+    correct: correctCount,
+    incorrect: incorrectCount,
+    unattempted: unattemptedCount,
+    score: totalScore,
+    maxScore: maxPossibleScore,
+    accuracy: accuracyPct,
+    timeTakenSeconds,
+    timeTakenFormatted,
+    subjectBreakdown: subjectStats
   };
 }
 
 /**
- * Samples questions synchronously from QUESTIONS_POOL for TestOrganizer.jsx.
- * Accepts multi-subject / multi-chapter selections (arrays), matching what
- * TestConfig.jsx -> TestOrganizer.jsx actually passes through.
+ * Filter questions based on subject, chapter, and sample count
  */
-export function filterAndSampleQuestions(config = {}) {
-  const { subjects = [], selectedChapters = [], targetCount = 25 } = config;
-  let pool = Array.isArray(QUESTIONS_POOL) ? [...QUESTIONS_POOL] : [];
+export function filterAndSampleQuestions(pool = [], config = {}) {
+  let filtered = [...pool];
 
-  if (Array.isArray(subjects) && subjects.length > 0) {
-    const wanted = subjects.map((s) => String(s).toLowerCase());
-    pool = pool.filter((q) => wanted.includes(String(q?.subjectId || '').toLowerCase()));
+  if (config.subject && config.subject !== 'All' && config.subject !== 'Full Syllabus') {
+    filtered = filtered.filter(
+      (q) => q.subject && q.subject.toLowerCase() === config.subject.toLowerCase()
+    );
   }
 
-  if (Array.isArray(selectedChapters) && selectedChapters.length > 0) {
-    pool = pool.filter((q) => selectedChapters.includes(q.chapterId));
+  if (config.chapter && config.chapter !== 'All') {
+    const chaptersToMatch = Array.isArray(config.chapter)
+      ? config.chapter
+      : config.chapter.split(',').map((c) => c.trim().toLowerCase());
+
+    filtered = filtered.filter((q) =>
+      q.chapter && chaptersToMatch.includes(q.chapter.toLowerCase())
+    );
   }
 
-  const shuffled = pool.sort(() => 0.5 - Math.random());
-  const selected = shuffled.slice(0, targetCount);
+  // Shuffle questions randomly
+  const shuffled = [...filtered].sort(() => 0.5 - Math.random());
 
-  if (selected.length < targetCount) {
-    const needed = targetCount - selected.length;
-    const fallbackSubject =
-      Array.isArray(subjects) && subjects.length === 1
-        ? SUBJECT_ID_TO_KEY[String(subjects[0]).toLowerCase()] || subjects[0]
-        : 'Physics';
-    const fallback = getStandardQuestions(fallbackSubject, 'All', needed);
-    selected.push(...fallback);
-  }
-
-  return selected.slice(0, targetCount).map((q, idx) => ({
-    ...q,
-    id: q.id || idx + 1,
-    subject: SUBJECT_ID_TO_KEY[String(q?.subjectId || '').toLowerCase()] || q.subject || 'General',
-    question: formatMathSymbols(q.question || q.question_text || q.text || ''),
-    options: Array.isArray(q.options)
-      ? q.options.map((opt) => (typeof opt === 'string' ? formatMathSymbols(opt) : opt?.text ? formatMathSymbols(opt.text) : ''))
-      : [],
-    correctAnswer:
-      q.correctAnswer !== undefined
-        ? q.correctAnswer
-        : q.correctIndex !== undefined
-        ? q.correctIndex
-        : q.correct_answer,
-    explanation: formatMathSymbols(q.explanation || q.solution || '')
-  }));
+  const count = Number(config.questionCount || config.count) || 5;
+  return shuffled.slice(0, Math.min(count, shuffled.length));
 }
 
 /**
- * Async paper generator for individual practice tests
+ * Extract unique chapters list from question pool for a specific subject
  */
-export async function generatePersonalTestPaper(config = {}) {
-  const subject = config.subject || 'Full Syllabus';
-  const chapter = config.chapter || 'All';
-  const totalCount = Number(config.questionCount) || 25;
+export function getAvailableChaptersFromPool(pool = [], subject = 'All') {
+  if (!Array.isArray(pool) || pool.length === 0) return ['All'];
 
-  if (subject === 'Full Syllabus') {
-    const perSubject = Math.floor(totalCount / 3);
-    const remainder = totalCount % 3;
-
-    const [physics, chemistry, math] = await Promise.all([
-      fetchQuestionsForTest('Physics', 'All', perSubject + remainder),
-      fetchQuestionsForTest('Chemistry', 'All', perSubject),
-      fetchQuestionsForTest('Mathematics', 'All', perSubject)
-    ]);
-
-    return [...physics, ...chemistry, ...math];
+  let relevant = pool;
+  if (subject && subject !== 'All' && subject !== 'Full Syllabus') {
+    relevant = pool.filter(
+      (q) => q.subject && q.subject.toLowerCase() === subject.toLowerCase()
+    );
   }
 
-  return await fetchQuestionsForTest(subject, chapter, totalCount);
+  const chapters = Array.from(
+    new Set(relevant.map((q) => q.chapter).filter(Boolean))
+  );
+
+  return ['All', ...chapters];
 }
 
-export { formatMathSymbols };
+/**
+ * General filter questions helper
+ */
+export function filterQuestions(pool = [], filters = {}) {
+  return filterAndSampleQuestions(pool, filters);
+}
