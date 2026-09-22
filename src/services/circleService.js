@@ -19,6 +19,7 @@ export async function getAllCircles() {
 // Get user circle memberships
 export async function getUserCircleMemberships(userId) {
   try {
+    if (!userId) return [];
     const { data, error } = await supabase
       .from('circle_members')
       .select('*')
@@ -35,17 +36,30 @@ export async function getUserCircleMemberships(userId) {
 // Create a new circle
 export async function createCircle(name, description, userId) {
   try {
+    let resolvedUserId = userId;
+    if (!resolvedUserId) {
+      const { data: authData } = await supabase.auth.getUser();
+      resolvedUserId = authData?.user?.id;
+    }
+
+    const insertPayload = { name, description };
+    if (resolvedUserId) {
+      insertPayload.created_by = resolvedUserId;
+    }
+
     const { data, error } = await supabase
       .from('circles')
-      .insert([{ name, description, created_by: userId }])
+      .insert([insertPayload])
       .select()
       .single();
 
     if (error) throw error;
 
-    await supabase.from('circle_members').insert([
-      { circle_id: data.id, user_id: userId, role: 'admin', status: 'approved' }
-    ]);
+    if (resolvedUserId && data?.id) {
+      await supabase.from('circle_members').insert([
+        { circle_id: data.id, user_id: resolvedUserId, role: 'admin', status: 'approved' }
+      ]);
+    }
 
     return { data, error: null };
   } catch (err) {
@@ -57,12 +71,11 @@ export async function createCircle(name, description, userId) {
 // Delete circle
 export async function deleteCircle(circleId, userId) {
   try {
-    const { error } = await supabase
-      .from('circles')
-      .delete()
-      .eq('id', circleId)
-      .eq('created_by', userId);
-
+    let query = supabase.from('circles').delete().eq('id', circleId);
+    if (userId) {
+      query = query.eq('created_by', userId);
+    }
+    const { error } = await query;
     if (error) throw error;
     return { error: null };
   } catch (err) {
@@ -74,9 +87,17 @@ export async function deleteCircle(circleId, userId) {
 // Request to join circle
 export async function requestJoinCircle(circleId, userId) {
   try {
+    let resolvedUserId = userId;
+    if (!resolvedUserId) {
+      const { data: authData } = await supabase.auth.getUser();
+      resolvedUserId = authData?.user?.id;
+    }
+
+    if (!resolvedUserId) throw new Error('You must be logged in to join a circle.');
+
     const { data, error } = await supabase
       .from('circle_members')
-      .insert([{ circle_id: circleId, user_id: userId, role: 'member', status: 'pending' }])
+      .insert([{ circle_id: circleId, user_id: resolvedUserId, role: 'member', status: 'pending' }])
       .select()
       .single();
 
@@ -123,7 +144,7 @@ export async function getCircleMembers(circleId) {
   }
 }
 
-// Handle join requests (accept/decline)
+// Handle join requests
 export async function handleJoinRequest({ circleId, userId, memberRecordId, accept }) {
   try {
     if (accept) {
@@ -165,23 +186,40 @@ export async function getCircleTests(circleId) {
   }
 }
 
-// Schedule a circle test (with schema fallback)
+// Schedule a circle test (with user recovery and dynamic schema fallbacks)
 export async function scheduleCircleTest(circleId, testData, userId) {
   try {
-    const qCount = Number(testData.questionCount) || Number(testData.question_count) || 5;
+    // 1. Resolve logged-in user fallback
+    let resolvedUserId = userId;
+    if (!resolvedUserId) {
+      const { data: authData } = await supabase.auth.getUser();
+      resolvedUserId = authData?.user?.id || null;
+    }
 
+    const qCount =
+      Number(testData.questionCount) ||
+      Number(testData.question_count) ||
+      (Array.isArray(testData.questions) ? testData.questions.length : 5);
+
+    const questionsPayload = Array.isArray(testData.questions) ? testData.questions : [];
+    const duration = Number(testData.durationMinutes) || Number(testData.duration) || 60;
+
+    // Base payload with standard columns
     const payload = {
       circle_id: circleId,
-      title: testData.title,
-      subject: testData.subject,
+      title: testData.title || 'Practice Test',
+      subject: testData.subject || 'All',
       chapter: testData.chapter || 'All',
-      duration_minutes: Number(testData.durationMinutes) || 60,
+      duration_minutes: duration,
       question_count: qCount,
-      questions: testData.questions,
-      window_start: testData.windowStart || null,
-      window_end: testData.windowEnd || null,
-      created_by: userId
+      questions: questionsPayload,
+      window_start: testData.windowStart ? new Date(testData.windowStart).toISOString() : null,
+      window_end: testData.windowEnd ? new Date(testData.windowEnd).toISOString() : null
     };
+
+    if (resolvedUserId) {
+      payload.created_by = resolvedUserId;
+    }
 
     let { data, error } = await supabase
       .from('circle_tests')
@@ -189,14 +227,34 @@ export async function scheduleCircleTest(circleId, testData, userId) {
       .select()
       .single();
 
-    if (error && error.message && error.message.includes('question_count')) {
-      delete payload.question_count;
-      payload.total_questions = qCount;
+    // Fallback 1: Column name schema adjustments
+    if (error) {
+      const errMsg = error.message.toLowerCase();
+
+      // If duration_minutes column does not exist, try duration
+      if (errMsg.includes('duration_minutes')) {
+        delete payload.duration_minutes;
+        payload.duration = duration;
+      }
+
+      // If question_count column does not exist, try total_questions
+      if (errMsg.includes('question_count')) {
+        delete payload.question_count;
+        payload.total_questions = qCount;
+      }
+
+      // If window date columns don't exist in the table schema, strip them
+      if (errMsg.includes('window_start') || errMsg.includes('window_end')) {
+        delete payload.window_start;
+        delete payload.window_end;
+      }
+
       const retry = await supabase
         .from('circle_tests')
         .insert([payload])
         .select()
         .single();
+
       data = retry.data;
       error = retry.error;
     }
@@ -244,9 +302,20 @@ export async function getCircleAnnouncements(circleId) {
 
 export async function postAnnouncement(circleId, message, userId) {
   try {
+    let resolvedUserId = userId;
+    if (!resolvedUserId) {
+      const { data: authData } = await supabase.auth.getUser();
+      resolvedUserId = authData?.user?.id || null;
+    }
+
+    const payload = { circle_id: circleId, message };
+    if (resolvedUserId) {
+      payload.created_by = resolvedUserId;
+    }
+
     const { data, error } = await supabase
       .from('circle_announcements')
-      .insert([{ circle_id: circleId, message, created_by: userId }])
+      .insert([payload])
       .select('*, author:created_by(id, username)')
       .single();
 
@@ -299,5 +368,4 @@ export async function getCircleLeaderboard(circleId) {
   }
 }
 
-// Re-export question pool functions from central questionService
 export { addCustomQuestionToDB, fetchQuestionsForTest } from './questionService';

@@ -9,6 +9,8 @@ export function getAllSubjects() {
   return ['Physics', 'Chemistry', 'Mathematics'];
 }
 
+const SUBJECT_ID_TO_LABEL = { physics: 'Physics', chemistry: 'Chemistry', math: 'Mathematics', mathematics: 'Mathematics' };
+
 /**
  * Filters questions for QuestionPool.jsx
  */
@@ -16,30 +18,41 @@ export function getFilteredQuestions({ subject, chapter, difficulty, search } = 
   let list = Array.isArray(QUESTIONS_POOL) ? [...QUESTIONS_POOL] : [];
 
   if (subject && subject !== 'All') {
-    list = list.filter((q) => q.subject?.toLowerCase() === subject.toLowerCase());
+    list = list.filter(
+      (q) => (SUBJECT_ID_TO_LABEL[String(q.subjectId || '').toLowerCase()] || q.subject) === subject
+    );
   }
   if (chapter && chapter !== 'All') {
-    list = list.filter((q) => q.chapter?.toLowerCase() === chapter.toLowerCase());
+    list = list.filter(
+      (q) => (q.chapterId || q.chapter || '').toLowerCase() === chapter.toLowerCase()
+    );
   }
   if (difficulty && difficulty !== 'All') {
-    list = list.filter((q) => q.difficulty?.toLowerCase() === difficulty.toLowerCase());
+    list = list.filter((q) => (q.difficulty || '').toLowerCase() === difficulty.toLowerCase());
   }
   if (search && search.trim()) {
     const s = search.toLowerCase();
     list = list.filter(
       (q) =>
-        q.question?.toLowerCase().includes(s) ||
-        q.chapter?.toLowerCase().includes(s) ||
-        q.subject?.toLowerCase().includes(s)
+        (q.question || q.text || '').toLowerCase().includes(s) ||
+        (q.chapterId || q.chapter || '').toLowerCase().includes(s) ||
+        (q.yearTag || '').toLowerCase().includes(s)
     );
   }
 
-  return list.map((q) => ({
-    ...q,
-    question: formatMathSymbols(q.question),
-    options: Array.isArray(q.options) ? q.options.map((opt) => formatMathSymbols(opt)) : [],
-    explanation: formatMathSymbols(q.explanation || '')
-  }));
+  return list.map((q) => {
+    const questionText = q.question || q.text || '';
+    const correctAnswer = q.correctAnswer !== undefined ? q.correctAnswer : q.correctIndex;
+    return {
+      ...q,
+      subject: SUBJECT_ID_TO_LABEL[String(q.subjectId || '').toLowerCase()] || q.subject,
+      chapter: q.chapter || q.chapterId,
+      question: formatMathSymbols(questionText),
+      options: Array.isArray(q.options) ? q.options.map((opt) => formatMathSymbols(opt)) : [],
+      correctAnswer,
+      explanation: formatMathSymbols(q.explanation || '')
+    };
+  });
 }
 
 /**

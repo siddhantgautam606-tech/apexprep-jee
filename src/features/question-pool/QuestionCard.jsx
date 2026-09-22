@@ -1,96 +1,187 @@
-import React, { useState } from 'react';
-import { CheckCircle2, ChevronDown, ChevronUp, Tag } from 'lucide-react';
+import * as MathHelper from '../../data/jeeQuestionBank';
 
-export default function QuestionCard({ data, index }) {
-  const [showSolution, setShowSolution] = useState(false);
-  const [selectedOption, setSelectedOption] = useState(null);
+// Safe helper in case formatMathSymbols is missing or throws an error
+const safeFormatMath = (value) => {
+  if (value === null || value === undefined) return '';
+  const str = typeof value === 'string' ? value : typeof value === 'object' ? JSON.stringify(value) : String(value);
+  if (typeof MathHelper.formatMathSymbols === 'function') {
+    try {
+      return MathHelper.formatMathSymbols(str);
+    } catch {
+      return str;
+    }
+  }
+  return str;
+};
 
-  const difficultyColors = {
-    Easy: 'text-emerald-400 bg-emerald-950/60 border-emerald-800',
-    Medium: 'text-amber-400 bg-amber-950/60 border-amber-800',
-    Hard: 'text-rose-400 bg-rose-950/60 border-rose-800'
+export default function QuestionCard({ question, index }) {
+  if (!question) return null;
+
+  // Flatten nested objects if data is stored inside a wrapper
+  const qData = question.data || question.payload || question;
+
+  // Resolve question text across all common naming schemas
+  const rawPrompt =
+    qData.question ||
+    qData.question_text ||
+    qData.questionText ||
+    qData.statement ||
+    qData.problem ||
+    qData.prompt ||
+    qData.body ||
+    qData.text ||
+    qData.title ||
+    qData.q ||
+    qData.qText ||
+    question.question ||
+    question.question_text ||
+    question.statement ||
+    '';
+
+  const promptText = safeFormatMath(rawPrompt);
+
+  // Resolve options (handles Arrays, Keyed Objects {A, B, C, D}, and comma/newline delimited text)
+  const rawOptions =
+    qData.options ||
+    qData.choices ||
+    qData.answers ||
+    question.options ||
+    question.choices ||
+    [];
+
+  let options = [];
+  if (Array.isArray(rawOptions)) {
+    options = rawOptions.map((opt) => {
+      if (typeof opt === 'string' || typeof opt === 'number') return safeFormatMath(opt);
+      if (opt && typeof opt === 'object') {
+        return safeFormatMath(opt.text || opt.option || opt.label || opt.value || JSON.stringify(opt));
+      }
+      return String(opt);
+    });
+  } else if (rawOptions && typeof rawOptions === 'object') {
+    // Handle objects like { A: 'Option 1', B: 'Option 2' }
+    options = Object.entries(rawOptions).map(([key, val]) => {
+      const valText = typeof val === 'object' ? (val.text || val.value || JSON.stringify(val)) : val;
+      return `${key}: ${safeFormatMath(valText)}`;
+    });
+  }
+
+  // Resolve correct answer index or key (e.g. 0, 'A', '1')
+  const correctRaw =
+    qData.correctAnswer !== undefined
+      ? qData.correctAnswer
+      : qData.correct_answer !== undefined
+      ? qData.correct_answer
+      : qData.answer !== undefined
+      ? qData.answer
+      : question.correctAnswer || question.correct_answer || question.answer;
+
+  const getIsCorrect = (optIdx, optValue) => {
+    if (correctRaw === undefined || correctRaw === null) return false;
+    if (Number(correctRaw) === optIdx) return true;
+    if (typeof correctRaw === 'string') {
+      const trimmed = correctRaw.trim().toUpperCase();
+      if (trimmed === String.fromCharCode(65 + optIdx)) return true;
+      if (typeof optValue === 'string' && optValue.startsWith(`${trimmed}:`)) return true;
+      if (typeof optValue === 'string' && optValue.trim() === correctRaw.trim()) return true;
+    }
+    return false;
   };
 
+  const explanationRaw = qData.explanation || qData.solution || question.explanation || question.solution || '';
+  const explanation = safeFormatMath(explanationRaw);
+
+  const subject = qData.subject || question.subject;
+  const chapter = qData.chapter || question.chapter;
+  const difficulty = qData.difficulty || question.difficulty;
+
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md transition hover:border-slate-700">
-      {/* Meta tags */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-4 border-b border-slate-800 text-xs">
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 shadow-sm hover:border-slate-700 transition">
+      <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
         <div className="flex items-center gap-2">
-          <span className="bg-indigo-950 text-indigo-300 border border-indigo-800 px-2.5 py-1 rounded-md font-medium">
-            {data.subject} • {data.chapter}
+          <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded border border-indigo-500/20">
+            Q{index !== undefined ? index + 1 : question.id || '•'}
           </span>
-          <span className={`px-2.5 py-1 rounded-md border font-medium ${difficultyColors[data.difficulty] || ''}`}>
-            {data.difficulty}
-          </span>
+          {subject && (
+            <span className="text-[11px] font-semibold text-slate-300 bg-slate-800 px-2 py-0.5 rounded">
+              {subject}
+            </span>
+          )}
+          {chapter && chapter !== 'All' && (
+            <span className="text-[11px] text-slate-400">
+              {chapter}
+            </span>
+          )}
         </div>
-        <span className="flex items-center gap-1 text-slate-400 font-mono text-[11px] bg-slate-800/60 px-2 py-1 rounded border border-slate-700">
-          <Tag className="w-3 h-3 text-slate-400" />
-          {data.yearTag}
-        </span>
+
+        {difficulty && (
+          <span
+            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+              String(difficulty).toLowerCase() === 'easy'
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                : String(difficulty).toLowerCase() === 'hard'
+                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+            }`}
+          >
+            {difficulty}
+          </span>
+        )}
       </div>
 
-      {/* Question */}
-      <div className="text-slate-100 font-medium text-base mb-5 leading-relaxed">
-        <span className="text-slate-500 font-semibold mr-2">Q{index + 1}.</span>
-        {data.question}
+      {/* Main Question Text */}
+      <div className="text-sm font-medium text-slate-100 leading-relaxed whitespace-pre-wrap">
+        {promptText ? (
+          promptText
+        ) : (
+          <span className="text-amber-400/80 italic text-xs">
+            [Prompt missing from item schema: keys available: {Object.keys(qData).join(', ')}]
+          </span>
+        )}
       </div>
 
       {/* Options */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
-        {data.options.map((option, idx) => {
-          const isSelected = selectedOption === idx;
-          const isCorrect = idx === data.correctIndex;
-          let style = 'bg-slate-800/40 border-slate-800 text-slate-300 hover:bg-slate-800 hover:border-slate-700';
+      {options.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
+          {options.map((opt, optIdx) => {
+            const isCorrect = getIsCorrect(optIdx, opt);
 
-          if (showSolution) {
-            if (isCorrect) style = 'bg-emerald-950/60 border-emerald-600 text-emerald-300 font-medium';
-            else if (isSelected) style = 'bg-rose-950/60 border-rose-600 text-rose-300';
-          } else if (isSelected) {
-            style = 'bg-indigo-950 border-indigo-500 text-indigo-200';
-          }
+            return (
+              <div
+                key={optIdx}
+                className={`p-3 rounded-xl border text-xs flex items-center gap-3 transition ${
+                  isCorrect
+                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 font-semibold'
+                    : 'bg-slate-950/60 border-slate-800 text-slate-300'
+                }`}
+              >
+                <span
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 border ${
+                    isCorrect
+                      ? 'bg-emerald-500 border-emerald-400 text-white'
+                      : 'bg-slate-900 border-slate-700 text-slate-400'
+                  }`}
+                >
+                  {String.fromCharCode(65 + optIdx)}
+                </span>
+                <span className="flex-1">{opt}</span>
+                {isCorrect && (
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30 ml-auto shrink-0">
+                    Correct
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-          return (
-            <button
-              key={idx}
-              onClick={() => setSelectedOption(idx)}
-              className={`text-left px-4 py-3 rounded-xl border text-sm transition flex items-center justify-between ${style}`}
-            >
-              <span>
-                <strong className="text-slate-500 mr-2">{String.fromCharCode(65 + idx)}.</strong>
-                {option}
-              </span>
-              {showSolution && isCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Solution Toggle */}
-      <div className="pt-2 border-t border-slate-800/80 flex flex-col gap-3">
-        <button
-          onClick={() => setShowSolution(!showSolution)}
-          className="self-start text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 transition"
-        >
-          {showSolution ? (
-            <>
-              Hide Solution <ChevronUp className="w-4 h-4" />
-            </>
-          ) : (
-            <>
-              Show Explanation & Answer <ChevronDown className="w-4 h-4" />
-            </>
-          )}
-        </button>
-
-        {showSolution && (
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 leading-relaxed">
-            <span className="font-semibold text-emerald-400 block mb-1">
-              Correct Answer: Option {String.fromCharCode(65 + data.correctIndex)} ({data.options[data.correctIndex]})
-            </span>
-            {data.explanation}
-          </div>
-        )}
-      </div>
+      {explanation && (
+        <div className="mt-2 bg-slate-950/80 border border-slate-800/80 rounded-lg p-3 text-xs text-slate-400">
+          <span className="font-semibold text-slate-300 block mb-0.5">Explanation:</span>
+          {explanation}
+        </div>
+      )}
     </div>
   );
 }

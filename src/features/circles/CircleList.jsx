@@ -22,7 +22,7 @@ import {
   ArrowRight,
   ArrowLeft
 } from 'lucide-react';
-import { getStandardQuestions, formatMathSymbols } from '../../data/jeeQuestionBank';
+import * as MathHelper from '../../data/jeeQuestionBank';
 import {
   getAllCircles,
   getUserCircleMemberships,
@@ -43,11 +43,33 @@ import {
 } from '../../services/circleService';
 import { supabase } from '../../services/supabaseClient';
 
+const safeFormatMath = (str) => {
+  if (str === null || str === undefined) return '';
+  const text = typeof str === 'string' ? str : String(str);
+  if (typeof MathHelper.formatMathSymbols === 'function') {
+    try {
+      return MathHelper.formatMathSymbols(text);
+    } catch {
+      return text;
+    }
+  }
+  return text;
+};
+
 function generateStandardQuestionSet(subject, chapter, count) {
-  return getStandardQuestions(subject, chapter, count);
+  if (typeof MathHelper.getStandardQuestions === 'function') {
+    try {
+      return MathHelper.getStandardQuestions(subject, chapter, count) || [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
 }
 
 export default function CircleList({ currentUser, onStartTest, generateQuestionsForTest }) {
+  const currentUserId = currentUser?.id || currentUser?.user?.id || null;
+
   const [circles, setCircles] = useState([]);
   const [membershipMap, setMembershipMap] = useState({});
   const [selectedCircle, setSelectedCircle] = useState(null);
@@ -106,12 +128,18 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
   const loadData = async () => {
     setLoading(true);
     const all = await getAllCircles();
-    setCircles(all);
+    setCircles(all || []);
 
-    if (currentUser?.id) {
-      const memberships = await getUserCircleMemberships(currentUser.id);
+    let uid = currentUserId;
+    if (!uid) {
+      const { data: authData } = await supabase.auth.getUser();
+      uid = authData?.user?.id;
+    }
+
+    if (uid) {
+      const memberships = await getUserCircleMemberships(uid);
       const mapping = {};
-      memberships.forEach((m) => {
+      (memberships || []).forEach((m) => {
         mapping[m.circle_id] = { status: m.status, role: m.role };
       });
       setMembershipMap(mapping);
@@ -121,7 +149,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
 
   useEffect(() => {
     loadData();
-  }, [currentUser?.id]);
+  }, [currentUserId]);
 
   useEffect(() => {
     if (circleTab === 'announcements') {
@@ -158,21 +186,26 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
       getCircleLeaderboard(circle.id)
     ]);
 
-    setCircleMembers(membersRes.approved);
-    setPendingRequests(membersRes.pending);
-    setCircleTests(tests);
+    setCircleMembers(membersRes?.approved || []);
+    setPendingRequests(membersRes?.pending || []);
+    setCircleTests(tests || []);
     const sortedAnn = Array.isArray(ann)
       ? [...ann].sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
       : [];
     setAnnouncements(sortedAnn);
-    setLeaderboard(ranks);
+    setLeaderboard(ranks || []);
   };
 
   const handleCreateCircle = async (e) => {
     e.preventDefault();
-    if (!currentUser?.id) return alert('Please sign in first.');
+    let uid = currentUserId;
+    if (!uid) {
+      const { data: authData } = await supabase.auth.getUser();
+      uid = authData?.user?.id;
+    }
+    if (!uid) return alert('Please sign in first.');
 
-    const res = await createCircle(newCircle.name, newCircle.description, currentUser.id);
+    const res = await createCircle(newCircle.name, newCircle.description, uid);
     if (res.error) {
       alert(res.error);
     } else {
@@ -184,13 +217,18 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
   };
 
   const handleDeleteCircle = async () => {
-    if (!selectedCircle || !currentUser?.id) return;
+    if (!selectedCircle) return;
+    let uid = currentUserId;
+    if (!uid) {
+      const { data: authData } = await supabase.auth.getUser();
+      uid = authData?.user?.id;
+    }
     const confirm = window.confirm(
       `Are you sure you want to PERMANENTLY delete "${selectedCircle.name}"? This action cannot be undone.`
     );
     if (!confirm) return;
 
-    const res = await deleteCircle(selectedCircle.id, currentUser.id);
+    const res = await deleteCircle(selectedCircle.id, uid);
     if (res.error) {
       alert(res.error);
     } else {
@@ -201,9 +239,14 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
 
   const handleJoinRequestClick = async (circleId, e) => {
     e?.stopPropagation();
-    if (!currentUser?.id) return alert('Please sign in to request joining.');
+    let uid = currentUserId;
+    if (!uid) {
+      const { data: authData } = await supabase.auth.getUser();
+      uid = authData?.user?.id;
+    }
+    if (!uid) return alert('Please sign in to request joining.');
 
-    const res = await requestJoinCircle(circleId, currentUser.id);
+    const res = await requestJoinCircle(circleId, uid);
     if (res.error) {
       alert(res.error);
     } else {
@@ -215,11 +258,16 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
   };
 
   const handleLeaveCircle = async () => {
-    if (!selectedCircle || !currentUser?.id) return;
+    if (!selectedCircle) return;
+    let uid = currentUserId;
+    if (!uid) {
+      const { data: authData } = await supabase.auth.getUser();
+      uid = authData?.user?.id;
+    }
     const confirm = window.confirm(`Are you sure you want to leave ${selectedCircle.name}?`);
     if (!confirm) return;
 
-    const res = await leaveCircle(selectedCircle.id, currentUser.id);
+    const res = await leaveCircle(selectedCircle.id, uid);
     if (res.error) {
       alert(res.error);
     } else {
@@ -251,57 +299,87 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
       alert('Action failed: ' + res.error);
     } else {
       const refreshed = await getCircleMembers(selectedCircle.id);
-      setCircleMembers(refreshed.approved);
-      setPendingRequests(refreshed.pending);
+      setCircleMembers(refreshed?.approved || []);
+      setPendingRequests(refreshed?.pending || []);
       await loadData();
     }
   };
 
   const handleScheduleTest = async (e) => {
     e.preventDefault();
-    if (!selectedCircle || !currentUser?.id) return;
+    if (!selectedCircle) return alert('Please select a circle first.');
+
+    let uid = currentUserId;
+    if (!uid) {
+      const { data: authData } = await supabase.auth.getUser();
+      uid = authData?.user?.id;
+    }
+    if (!uid) return alert('Please sign in to schedule a test.');
 
     setIsGeneratingTest(true);
     let questions = [];
+
+    const reqCount = Number(newTest.questionCount) || 5;
 
     if (typeof generateQuestionsForTest === 'function') {
       try {
         questions = await generateQuestionsForTest({
           subject: newTest.subject,
           chapter: newTest.chapter,
-          count: Number(newTest.questionCount) || 5
+          count: reqCount
         });
       } catch (err) {
-        console.error('Error generating questions via prop:', err);
+        console.warn('generateQuestionsForTest prop fallback triggered:', err);
       }
     }
 
     if (!Array.isArray(questions) || questions.length === 0) {
       if (typeof fetchQuestionsForTest === 'function') {
-        questions = await fetchQuestionsForTest(
-          newTest.subject,
-          newTest.chapter,
-          Number(newTest.questionCount) || 5
-        );
-      } else {
-        questions = generateStandardQuestionSet(
-          newTest.subject,
-          newTest.chapter,
-          Number(newTest.questionCount) || 5
-        );
+        try {
+          questions = await fetchQuestionsForTest(newTest.subject, newTest.chapter, reqCount);
+        } catch (err) {
+          console.warn('fetchQuestionsForTest failed, using standard generator:', err);
+        }
       }
     }
 
+    if (!Array.isArray(questions) || questions.length === 0) {
+      questions = generateStandardQuestionSet(newTest.subject, newTest.chapter, reqCount);
+    }
+
+    // Sanitize question items
+    const sanitizedQuestions = (questions || []).map((item, idx) => {
+      const prompt =
+        item.question ||
+        item.question_text ||
+        item.statement ||
+        item.text ||
+        item.problem ||
+        `Question ${idx + 1}`;
+
+      const options = Array.isArray(item.options)
+        ? item.options.map((opt) => (typeof opt === 'object' ? opt.text || JSON.stringify(opt) : String(opt)))
+        : ['Option A', 'Option B', 'Option C', 'Option D'];
+
+      return {
+        id: item.id || idx + 1,
+        question: prompt,
+        options,
+        correctAnswer: item.correctAnswer !== undefined ? item.correctAnswer : item.correct || 0,
+        explanation: item.explanation || item.solution || ''
+      };
+    });
+
     const res = await scheduleCircleTest(
       selectedCircle.id,
-      { ...newTest, questions },
-      currentUser.id
+      { ...newTest, questions: sanitizedQuestions },
+      uid
     );
 
     setIsGeneratingTest(false);
 
     if (res.error) {
-      alert(res.error);
+      alert('Could not schedule test: ' + res.error);
     } else {
       setShowScheduleModal(false);
       setNewTest({
@@ -314,13 +392,18 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
         windowEnd: ''
       });
       const tests = await getCircleTests(selectedCircle.id);
-      setCircleTests(tests);
+      setCircleTests(tests || []);
     }
   };
 
   const handleCreateQuestionSubmit = async (e) => {
     e.preventDefault();
-    if (!currentUser?.id) return alert('Please sign in first.');
+    let uid = currentUserId;
+    if (!uid) {
+      const { data: authData } = await supabase.auth.getUser();
+      uid = authData?.user?.id;
+    }
+    if (!uid) return alert('Please sign in first.');
     if (!newQuestionData.question.trim()) return alert('Question text is required.');
 
     const payload = {
@@ -338,11 +421,11 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     };
 
     if (typeof addCustomQuestionToDB === 'function') {
-      const res = await addCustomQuestionToDB(payload, currentUser.id);
+      const res = await addCustomQuestionToDB(payload, uid);
       if (res.error) {
         alert('Failed to save question: ' + res.error);
       } else {
-        alert('Question added successfully to the website question pool!');
+        alert('Question added successfully to the question pool!');
         setShowAddQuestionModal(false);
         setNewQuestionData({
           subject: 'Physics',
@@ -357,7 +440,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
         });
       }
     } else {
-      alert('Database addition is not configured in circleService.');
+      alert('Question addition service is not configured.');
     }
   };
 
@@ -378,17 +461,26 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     let questions = [];
 
     if (Array.isArray(test.questions) && test.questions.length > 0) {
-      questions = test.questions.map((q) => ({
-        ...q,
-        question: formatMathSymbols(q.question),
-        options: Array.isArray(q.options) ? q.options.map((opt) => formatMathSymbols(opt)) : [],
-        explanation: formatMathSymbols(q.explanation || '')
-      }));
+      questions = test.questions.map((q) => {
+        const promptRaw = q.question || q.question_text || q.text || q.statement || '';
+        const rawOpts = q.options || q.choices || [];
+        const options = Array.isArray(rawOpts)
+          ? rawOpts.map((opt) => safeFormatMath(typeof opt === 'object' ? opt.text : opt))
+          : [];
+
+        return {
+          ...q,
+          question: safeFormatMath(promptRaw),
+          options,
+          correctAnswer: q.correctAnswer !== undefined ? q.correctAnswer : q.correct || 0,
+          explanation: safeFormatMath(q.explanation || q.solution || '')
+        };
+      });
     } else {
       questions = generateStandardQuestionSet(
         test.subject,
         test.chapter,
-        Number(test.question_count) || 5
+        Number(test.question_count || test.total_questions) || 5
       );
     }
 
@@ -402,36 +494,40 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     setCurrentQIndex(0);
     setExamSubmitted(false);
     setExamScoreResult(null);
-    setTimeLeft((Number(test.duration_minutes) || 60) * 60);
+    setTimeLeft((Number(test.duration_minutes || test.duration) || 60) * 60);
   };
 
   const handleExamSubmit = async () => {
-    if (!activeExam || !currentUser?.id) return;
+    if (!activeExam) return;
+    let uid = currentUserId;
+    if (!uid) {
+      const { data: authData } = await supabase.auth.getUser();
+      uid = authData?.user?.id;
+    }
 
     const questions = activeExam.questions || [];
     let correctCount = 0;
 
     questions.forEach((q, idx) => {
-      if (examAnswers[idx] === q.correctAnswer) {
+      if (Number(examAnswers[idx]) === Number(q.correctAnswer)) {
         correctCount += 1;
       }
     });
 
     const attemptedCount = Object.keys(examAnswers).length;
-    const incorrectCount = attemptedCount - correctCount;
+    const incorrectCount = Math.max(0, attemptedCount - correctCount);
     const score = correctCount * 4 - incorrectCount * 1;
     const finalScore = Math.max(0, score);
     const accuracy = attemptedCount > 0 ? ((correctCount / attemptedCount) * 100).toFixed(1) : 0;
 
-    try {
-      await supabase
-        .from('circle_test_submissions')
-        .upsert(
+    if (uid && selectedCircle) {
+      try {
+        await supabase.from('circle_test_submissions').upsert(
           [
             {
               circle_id: selectedCircle.id,
               test_id: activeExam.id,
-              user_id: currentUser.id,
+              user_id: uid,
               score: finalScore,
               total_marks: questions.length * 4,
               accuracy_pct: Number(accuracy),
@@ -441,10 +537,11 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
           { onConflict: 'test_id,user_id' }
         );
 
-      const refreshedRanks = await getCircleLeaderboard(selectedCircle.id);
-      setLeaderboard(refreshedRanks);
-    } catch (err) {
-      console.error('Error submitting exam to leaderboard:', err);
+        const refreshedRanks = await getCircleLeaderboard(selectedCircle.id);
+        setLeaderboard(refreshedRanks || []);
+      } catch (err) {
+        console.error('Error submitting exam to leaderboard:', err);
+      }
     }
 
     setExamScoreResult({
@@ -459,9 +556,14 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
 
   const handleSendAnnouncement = async (e) => {
     e.preventDefault();
-    if (!announcementMsg.trim() || !selectedCircle || !currentUser?.id) return;
+    if (!announcementMsg.trim() || !selectedCircle) return;
+    let uid = currentUserId;
+    if (!uid) {
+      const { data: authData } = await supabase.auth.getUser();
+      uid = authData?.user?.id;
+    }
 
-    const res = await postAnnouncement(selectedCircle.id, announcementMsg, currentUser.id);
+    const res = await postAnnouncement(selectedCircle.id, announcementMsg, uid);
     if (res.error) {
       alert(res.error);
     } else {
@@ -482,11 +584,11 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
 
   const isCircleAdmin =
     selectedCircle &&
-    currentUser?.id &&
-    (selectedCircle.created_by === currentUser.id ||
+    currentUserId &&
+    (selectedCircle.created_by === currentUserId ||
       membershipMap[selectedCircle.id]?.role === 'admin');
 
-  const isCircleCreator = selectedCircle?.created_by === currentUser?.id;
+  const isCircleCreator = selectedCircle?.created_by === currentUserId;
   const userStatus = selectedCircle ? membershipMap[selectedCircle.id]?.status : null;
   const isApprovedMember = userStatus === 'approved' || isCircleAdmin;
 
@@ -722,7 +824,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                                     {test.subject}
                                   </span>
                                   <span className="text-[10px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2 py-0.5 rounded">
-                                    {Array.isArray(test.questions) && test.questions.length > 0 ? test.questions.length : 5} Qs (Standardized Paper)
+                                    {Array.isArray(test.questions) && test.questions.length > 0 ? test.questions.length : (test.question_count || test.total_questions || 5)} Qs
                                   </span>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
@@ -730,7 +832,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                                     <BookOpen className="w-3.5 h-3.5 text-slate-500" /> {test.chapter}
                                   </span>
                                   <span className="flex items-center gap-1">
-                                    <Clock className="w-3.5 h-3.5 text-slate-500" /> {test.duration_minutes} mins
+                                    <Clock className="w-3.5 h-3.5 text-slate-500" /> {test.duration_minutes || test.duration || 60} mins
                                   </span>
                                   {start && end && (
                                     <span className="text-[11px] text-indigo-400 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-800/40">
@@ -744,7 +846,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                                 {isOpen ? (
                                   <button
                                     onClick={() => handleAttemptTest(test)}
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow"
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow cursor-pointer"
                                   >
                                     Attempt Test
                                   </button>
@@ -762,7 +864,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                                   <button
                                     onClick={(e) => handleDeleteTest(test.id, e)}
                                     title="Delete this test"
-                                    className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 rounded-xl transition"
+                                    className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 rounded-xl transition cursor-pointer"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -880,7 +982,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                           <button
                             type="submit"
                             disabled={!announcementMsg.trim()}
-                            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white px-5 py-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow"
+                            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white px-5 py-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow cursor-pointer"
                           >
                             <Send className="w-3.5 h-3.5" /> Broadcast
                           </button>
@@ -960,14 +1062,14 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                                 <button
                                   disabled={isActing}
                                   onClick={() => handleApproveReject(req, true)}
-                                  className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[11px] font-medium px-3 py-1.5 rounded-lg transition"
+                                  className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[11px] font-medium px-3 py-1.5 rounded-lg transition cursor-pointer"
                                 >
                                   <UserCheck className="w-3.5 h-3.5" /> {isActing ? 'Updating...' : 'Accept'}
                                 </button>
                                 <button
                                   disabled={isActing}
                                   onClick={() => handleApproveReject(req, false)}
-                                  className="flex items-center gap-1 bg-slate-800 hover:bg-rose-600/80 disabled:opacity-50 text-slate-300 hover:text-white text-[11px] font-medium px-3 py-1.5 rounded-lg transition"
+                                  className="flex items-center gap-1 bg-slate-800 hover:bg-rose-600/80 disabled:opacity-50 text-slate-300 hover:text-white text-[11px] font-medium px-3 py-1.5 rounded-lg transition cursor-pointer"
                                 >
                                   <UserX className="w-3.5 h-3.5" /> {isActing ? '...' : 'Decline'}
                                 </button>
@@ -1008,7 +1110,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                 )}
                 <button
                   onClick={() => setActiveExam(null)}
-                  className="text-slate-400 hover:text-white p-1 rounded-lg"
+                  className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1023,20 +1125,20 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                     <span className="text-slate-400">{activeExam.subject} - {activeExam.chapter}</span>
                   </div>
 
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-sm text-slate-200 font-medium">
-                    {activeExam.questions[currentQIndex].question}
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-sm text-slate-200 font-medium whitespace-pre-wrap">
+                    {activeExam.questions[currentQIndex]?.question || 'No question prompt provided.'}
                   </div>
 
                   <div className="grid grid-cols-1 gap-2.5">
-                    {activeExam.questions[currentQIndex].options.map((opt, optIdx) => {
-                      const isChosen = examAnswers[currentQIndex] === optIdx;
+                    {activeExam.questions[currentQIndex]?.options?.map((opt, optIdx) => {
+                      const isChosen = Number(examAnswers[currentQIndex]) === optIdx;
                       return (
                         <button
                           key={optIdx}
                           onClick={() =>
                             setExamAnswers((prev) => ({ ...prev, [currentQIndex]: optIdx }))
                           }
-                          className={`p-3 rounded-xl border text-left text-xs transition flex items-center gap-3 ${
+                          className={`p-3 rounded-xl border text-left text-xs transition flex items-center gap-3 cursor-pointer ${
                             isChosen
                               ? 'bg-indigo-600/20 border-indigo-500 text-white font-semibold'
                               : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'
@@ -1061,7 +1163,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                     <button
                       disabled={currentQIndex === 0}
                       onClick={() => setCurrentQIndex((prev) => prev - 1)}
-                      className="flex items-center gap-1 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs disabled:opacity-40 transition"
+                      className="flex items-center gap-1 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs disabled:opacity-40 transition cursor-pointer"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" /> Previous
                     </button>
@@ -1069,14 +1171,14 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                     {currentQIndex < activeExam.questions.length - 1 ? (
                       <button
                         onClick={() => setCurrentQIndex((prev) => prev + 1)}
-                        className="flex items-center gap-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition"
+                        className="flex items-center gap-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition cursor-pointer"
                       >
                         Next <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     ) : (
                       <button
                         onClick={handleExamSubmit}
-                        className="flex items-center gap-1 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow"
+                        className="flex items-center gap-1 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow cursor-pointer"
                       >
                         Submit Test Paper
                       </button>
@@ -1118,7 +1220,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                     setActiveExam(null);
                     setCircleTab('leaderboard');
                   }}
-                  className="mt-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition"
+                  className="mt-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition cursor-pointer"
                 >
                   View Circle Leaderboard
                 </button>
@@ -1136,7 +1238,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                 <h3 className="text-base font-bold text-white">Add Question to Pool</h3>
                 <p className="text-[11px] text-slate-400">Questions added here automatically populate both test modes</p>
               </div>
-              <button onClick={() => setShowAddQuestionModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowAddQuestionModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1255,13 +1357,13 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                 <button
                   type="button"
                   onClick={() => setShowAddQuestionModal(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow"
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow cursor-pointer"
                 >
                   Save to Pool
                 </button>
@@ -1276,7 +1378,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
               <h3 className="text-base font-bold text-white">Create New Study Circle</h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1309,13 +1411,13 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold"
+                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold cursor-pointer"
                 >
                   Create
                 </button>
@@ -1330,7 +1432,7 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
               <h3 className="text-base font-bold text-white">Schedule Circle Mock Test</h3>
-              <button onClick={() => setShowScheduleModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowScheduleModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1423,14 +1525,14 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
                 <button
                   type="button"
                   onClick={() => setShowScheduleModal(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isGeneratingTest}
-                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold disabled:opacity-50 cursor-pointer"
                 >
                   {isGeneratingTest ? 'Generating Standard Paper...' : 'Schedule Test for All'}
                 </button>

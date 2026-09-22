@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, Filter, BookOpen, Plus, X } from 'lucide-react';
 import QuestionCard from './QuestionCard';
 import { getFilteredQuestions, getAllSubjects, appendQuestion } from '../../services/questionService';
@@ -125,7 +125,7 @@ export default function QuestionPool({ currentUser }) {
             No questions match your current search criteria.
           </div>
         ) : (
-          questions.map((q, idx) => <QuestionCard key={q.id} data={q} index={idx} />)
+          questions.map((q, idx) => <QuestionCard key={q.id} question={q} index={idx} />)
         )}
       </div>
 

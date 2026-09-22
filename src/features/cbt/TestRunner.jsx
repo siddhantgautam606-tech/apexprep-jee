@@ -1,14 +1,106 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { computeExamStats } from '../../services/testEngineService';
 import { saveTestAttempt } from '../../services/analyticsService';
 import { ShieldAlert } from 'lucide-react';
 
-export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
+export default function TestRunner({ testQuestions = [], durationMinutes = 180, onExit }) {
+  // Normalize question items so that all standard JEE question bank shapes work seamlessly
+  const normalizedQuestions = useMemo(() => {
+    if (!Array.isArray(testQuestions)) return [];
+    return testQuestions.map((rawQ, index) => {
+      const q = rawQ?.data || rawQ?.payload || rawQ || {};
+      const id = q.id !== undefined && q.id !== null ? q.id : index + 1;
+
+      // Question body / prompt
+      const text =
+        q.text ||
+        q.question ||
+        q.question_text ||
+        q.questionText ||
+        q.statement ||
+        q.problem ||
+        q.prompt ||
+        q.body ||
+        '';
+
+      // Options parsing
+      let options = [];
+      const rawOpts = q.options || q.choices || q.answers || [];
+
+      if (Array.isArray(rawOpts)) {
+        options = rawOpts.map((opt, optIdx) => {
+          const defaultKey = String.fromCharCode(65 + optIdx);
+          if (typeof opt === 'string' || typeof opt === 'number') {
+            return { key: defaultKey, text: String(opt) };
+          }
+          if (opt && typeof opt === 'object') {
+            return {
+              key: opt.key || opt.label || defaultKey,
+              text: opt.text || opt.option || opt.label || opt.value || JSON.stringify(opt)
+            };
+          }
+          return { key: defaultKey, text: String(opt) };
+        });
+      } else if (rawOpts && typeof rawOpts === 'object') {
+        options = Object.entries(rawOpts).map(([key, val]) => ({
+          key: String(key).toUpperCase(),
+          text: typeof val === 'object' ? (val.text || val.value || JSON.stringify(val)) : String(val)
+        }));
+      }
+
+      // Answer key — resolve to the *option key* (e.g. "A"/"B"/"C"/"D") regardless of
+      // whether the source data expresses the correct answer as a numeric index (0-3,
+      // as QUESTIONS_POOL's correctIndex does) or already as a letter. Answers are
+      // always stored (see selectOption below) as the option's letter key, so the
+      // correct-answer representation here must match that or nothing can ever score
+      // as correct.
+      const rawCorrect =
+        q.correct !== undefined
+          ? q.correct
+          : q.correctAnswer !== undefined
+          ? q.correctAnswer
+          : q.correct_answer !== undefined
+          ? q.correct_answer
+          : q.answer;
+
+      let correct = '';
+      if (rawCorrect !== undefined && rawCorrect !== null && rawCorrect !== '') {
+        const asString = String(rawCorrect).trim();
+        if (/^\d+$/.test(asString)) {
+          correct = options[Number(asString)]?.key || asString;
+        } else {
+          correct = asString.toUpperCase();
+        }
+      }
+
+      const subject = q.subject || 'Physics';
+      const section = q.section || (options.length > 0 ? 'Section A' : 'Section B');
+      const type = q.type || (options.length > 0 ? 'MCQ' : 'Numerical');
+      const solution = q.solution || q.explanation || 'No solution provided.';
+
+      return {
+        ...q,
+        id,
+        index,
+        text,
+        options,
+        correct,
+        subject,
+        section,
+        type,
+        solution,
+        meta: q.chapter || q.topic || q.meta || 'General'
+      };
+    });
+  }, [testQuestions]);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState({});
   const [markedForReview, setMarkedForReview] = useState(new Set());
-  const [visited, setVisited] = useState(new Set([testQuestions[0]?.id]));
-  const [timeLeft, setTimeLeft] = useState(durationMinutes * 60);
+  const [visited, setVisited] = useState(() =>
+    normalizedQuestions.length > 0 ? new Set([normalizedQuestions[0].id]) : new Set()
+  );
+  const [timeLeft, setTimeLeft] = useState((durationMinutes || 180) * 60);
   const [examSubmitted, setExamSubmitted] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [examResults, setExamResults] = useState(null);
@@ -18,28 +110,57 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
   const [showCheatWarning, setShowCheatWarning] = useState(false);
   const maxAllowedSwitches = 2;
 
-  const q = testQuestions[currentIndex];
+  const currentQ = normalizedQuestions[currentIndex] || null;
 
   const examSubmittedRef = useRef(examSubmitted);
-  examSubmittedRef.current = examSubmitted;
+  useEffect(() => {
+    examSubmittedRef.current = examSubmitted;
+  }, [examSubmitted]);
 
-  // Countdown timer
+  const handleSubmitExam = (confirmPrompt = true) => {
+    if (confirmPrompt) {
+      const answeredCount = Object.keys(userAnswers).length;
+      if (
+        !window.confirm(
+          `You have answered ${answeredCount} of ${normalizedQuestions.length} questions.\n\nAre you sure you want to submit your exam?`
+        )
+      ) {
+        return;
+      }
+    }
+    const res = computeExamStats(normalizedQuestions, userAnswers);
+    setExamResults(res);
+    setExamSubmitted(true);
+    setShowModal(true);
+
+    saveTestAttempt({
+      testQuestions: normalizedQuestions,
+      userAnswers,
+      examResults: res,
+      durationMinutes
+    });
+  };
+
+  // Countdown timer — the interval only ever decrements state here.
   useEffect(() => {
     if (examSubmitted || timeLeft <= 0) return;
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          handleSubmitExam(false);
-          return 0;
-        }
-        return prev - 1;
-      });
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(interval);
   }, [examSubmitted, timeLeft]);
 
-  // Tab-switch & page leave detection
+  // Auto-submit once time runs out. Kept as its own effect (rather than a side
+  // effect inside the setTimeLeft updater above) so it can't fire twice under
+  // React StrictMode's double-invocation of state updater functions, which
+  // was previously duplicating saved test attempts.
+  useEffect(() => {
+    if (!examSubmitted && timeLeft === 0) {
+      handleSubmitExam(false);
+    }
+  }, [timeLeft, examSubmitted]);
+
+  // Tab switch detection
   useEffect(() => {
     if (examSubmitted) return;
 
@@ -85,40 +206,41 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
   };
 
   const selectOption = (key) => {
-    if (examSubmitted) return;
-    setUserAnswers((prev) => ({ ...prev, [q.id]: key }));
+    if (examSubmitted || !currentQ) return;
+    setUserAnswers((prev) => ({ ...prev, [currentQ.id]: key }));
   };
 
   const saveNumericalAnswer = (val) => {
-    if (examSubmitted) return;
+    if (examSubmitted || !currentQ) return;
     setUserAnswers((prev) => {
       const updated = { ...prev };
-      if (!val || val.trim() === '') delete updated[q.id];
-      else updated[q.id] = val.trim();
+      if (!val || val.trim() === '') delete updated[currentQ.id];
+      else updated[currentQ.id] = val.trim();
       return updated;
     });
   };
 
   const clearResponse = () => {
-    if (examSubmitted) return;
+    if (examSubmitted || !currentQ) return;
     setUserAnswers((prev) => {
       const updated = { ...prev };
-      delete updated[q.id];
+      delete updated[currentQ.id];
       return updated;
     });
   };
 
   const toggleReview = () => {
+    if (!currentQ) return;
     setMarkedForReview((prev) => {
       const next = new Set(prev);
-      if (next.has(q.id)) next.delete(q.id);
-      else next.add(q.id);
+      if (next.has(currentQ.id)) next.delete(currentQ.id);
+      else next.add(currentQ.id);
       return next;
     });
   };
 
   const jumpToQuestion = (id) => {
-    const idx = testQuestions.findIndex((item) => item.id === id);
+    const idx = normalizedQuestions.findIndex((item) => item.id === id);
     if (idx !== -1) {
       setCurrentIndex(idx);
       markVisited(id);
@@ -126,35 +248,31 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
   };
 
   const switchSubject = (subj) => {
-    const target = testQuestions.find((item) => item.subject === subj);
+    const target = normalizedQuestions.find((item) =>
+      String(item.subject).toLowerCase().startsWith(subj.toLowerCase().slice(0, 4))
+    );
     if (target) {
       jumpToQuestion(target.id);
     }
   };
 
-  const handleSubmitExam = (confirmPrompt = true) => {
-    if (confirmPrompt) {
-      const answeredCount = Object.keys(userAnswers).length;
-      if (!window.confirm(`You have answered ${answeredCount} of ${testQuestions.length} questions.\n\nAre you sure you want to submit your exam?`)) {
-        return;
-      }
-    }
-    const res = computeExamStats(testQuestions, userAnswers);
-    setExamResults(res);
-    setExamSubmitted(true);
-    setShowModal(true);
-
-    saveTestAttempt({
-      testQuestions,
-      userAnswers,
-      examResults: res,
-      durationMinutes
-    });
-  };
+  if (!normalizedQuestions.length || !currentQ) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4">
+        <p className="text-slate-300 mb-4">No questions loaded for this test configuration.</p>
+        <button
+          onClick={onExit}
+          className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded text-xs"
+        >
+          Return to Config
+        </button>
+      </div>
+    );
+  }
 
   const answeredCount = Object.keys(userAnswers).length;
-  const unvisitedCount = testQuestions.length - visited.size;
-  const curAnswer = userAnswers[q?.id];
+  const unvisitedCount = Math.max(0, normalizedQuestions.length - visited.size);
+  const curAnswer = userAnswers[currentQ.id];
 
   return (
     <div className="w-full flex flex-col bg-slate-100 text-slate-800 min-h-screen">
@@ -170,7 +288,7 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
                 JEE (Main) Mock Exam - Proctored Session
               </div>
               <div className="text-xs text-slate-400">
-                Physics • Chemistry • Mathematics • {testQuestions.length} Questions • {testQuestions.length * 4} Marks
+                Physics • Chemistry • Mathematics • {normalizedQuestions.length} Questions • {normalizedQuestions.length * 4} Marks
               </div>
             </div>
           </div>
@@ -203,7 +321,7 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
         <div className="bg-slate-800 border-t border-slate-700 px-4">
           <div className="max-w-7xl mx-auto flex gap-2 overflow-x-auto">
             {['Physics', 'Chemistry', 'Math'].map((s) => {
-              const isActive = q.subject === s;
+              const isActive = String(currentQ.subject).toLowerCase().startsWith(s.toLowerCase().slice(0, 4));
               return (
                 <button
                   key={s}
@@ -229,12 +347,12 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
           <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center justify-between flex-wrap gap-2 text-xs">
             <div className="flex items-center gap-2">
               <span className="bg-indigo-600 text-white font-bold px-2 py-0.5 rounded text-[11px]">
-                Q. {q.id}
+                Q. {currentQ.id}
               </span>
               <span className="bg-indigo-50 text-indigo-800 border border-indigo-200 font-bold px-1.5 py-0.5 rounded text-[10px] uppercase">
-                {q.section}
+                {currentQ.section}
               </span>
-              <span className="text-slate-500 font-semibold">{q.meta}</span>
+              <span className="text-slate-500 font-semibold">{currentQ.meta}</span>
             </div>
             <div className="flex gap-2 font-mono text-[11px]">
               <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded">
@@ -247,49 +365,55 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
           </div>
 
           <div className="p-5 flex-1 overflow-y-auto flex flex-col">
+            {/* Question Prompt */}
             <div
-              className="text-base font-medium text-slate-900 leading-relaxed mb-4"
-              dangerouslySetInnerHTML={{ __html: q.text }}
+              className="text-base font-medium text-slate-900 leading-relaxed mb-4 whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: currentQ.text || 'No question text provided.' }}
             />
 
-            {q.graphicSvg && (
+            {currentQ.graphicSvg && (
               <div
                 className="flex justify-center my-3"
-                dangerouslySetInnerHTML={{ __html: q.graphicSvg }}
+                dangerouslySetInnerHTML={{ __html: currentQ.graphicSvg }}
               />
             )}
 
-            {q.type === 'MCQ' ? (
+            {currentQ.type === 'MCQ' || currentQ.options.length > 0 ? (
               <div className="flex flex-col gap-2.5 my-2">
-                {q.options.map((opt) => {
-                  const isChecked = curAnswer === opt.key;
+                {currentQ.options.map((opt, optIdx) => {
+                  const optKey = opt.key || String.fromCharCode(65 + optIdx);
+                  const isChecked = String(curAnswer).toUpperCase() === String(optKey).toUpperCase();
+                  const isCorrectKey =
+                    String(currentQ.correct).toUpperCase() === String(optKey).toUpperCase() ||
+                    String(currentQ.correct) === String(optIdx);
+
                   let itemStyle = 'border-slate-200 bg-white hover:bg-slate-50 text-slate-800';
 
                   if (examSubmitted) {
-                    if (opt.key === q.correct) itemStyle = 'bg-emerald-50 border-emerald-500 text-emerald-900 font-bold';
-                    else if (isChecked && opt.key !== q.correct) itemStyle = 'bg-rose-50 border-rose-500 text-rose-900 line-through';
+                    if (isCorrectKey) itemStyle = 'bg-emerald-50 border-emerald-500 text-emerald-900 font-bold';
+                    else if (isChecked && !isCorrectKey) itemStyle = 'bg-rose-50 border-rose-500 text-rose-900 line-through';
                   } else if (isChecked) {
                     itemStyle = 'bg-indigo-50 border-indigo-500 text-indigo-900 font-semibold';
                   }
 
                   return (
                     <label
-                      key={opt.key}
+                      key={optKey}
                       className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer text-sm transition ${itemStyle}`}
                     >
                       <input
                         type="radio"
-                        name={`q_${q.id}`}
-                        value={opt.key}
+                        name={`q_${currentQ.id}`}
+                        value={optKey}
                         checked={isChecked}
                         disabled={examSubmitted}
-                        onChange={() => selectOption(opt.key)}
+                        onChange={() => selectOption(optKey)}
                         className="hidden"
                       />
                       <span className="w-6 h-6 rounded-full bg-slate-100 border border-slate-300 font-bold text-xs flex items-center justify-center shrink-0">
-                        ({opt.key.toLowerCase()})
+                        ({String(optKey).toLowerCase()})
                       </span>
-                      <span dangerouslySetInnerHTML={{ __html: opt.text }} />
+                      <span className="flex-1" dangerouslySetInnerHTML={{ __html: opt.text }} />
                     </label>
                   );
                 })}
@@ -310,7 +434,7 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
                   />
                   {examSubmitted && (
                     <span className="font-mono font-bold text-xs p-2 bg-slate-200 rounded shrink-0">
-                      Key: {q.correct}
+                      Key: {currentQ.correct}
                     </span>
                   )}
                 </div>
@@ -323,9 +447,9 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
             {examSubmitted && (
               <div className="mt-5 bg-amber-50 border border-dashed border-amber-300 p-3.5 rounded-lg text-xs leading-relaxed text-amber-950">
                 <div className="font-bold uppercase text-[11px] text-amber-800 mb-1">
-                  • Solution & Key (Correct: {q.correct})
+                  • Solution & Key (Correct: {currentQ.correct || 'N/A'})
                 </div>
-                <div dangerouslySetInnerHTML={{ __html: q.solution }} />
+                <div dangerouslySetInnerHTML={{ __html: currentQ.solution }} />
               </div>
             )}
           </div>
@@ -342,33 +466,33 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
               <button
                 onClick={toggleReview}
                 className={`border font-semibold px-3 py-1.5 rounded transition cursor-pointer ${
-                  markedForReview.has(q.id)
+                  markedForReview.has(currentQ.id)
                     ? 'bg-purple-600 text-white border-purple-600'
                     : 'bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100'
                 }`}
               >
-                {markedForReview.has(q.id) ? 'Unmark Review' : 'Mark for Review'}
+                {markedForReview.has(currentQ.id) ? 'Unmark Review' : 'Mark for Review'}
               </button>
             </div>
             <div className="flex gap-2">
               <button
                 disabled={currentIndex === 0}
-                onClick={() => jumpToQuestion(testQuestions[currentIndex - 1].id)}
+                onClick={() => jumpToQuestion(normalizedQuestions[currentIndex - 1].id)}
                 className="bg-slate-200 text-slate-700 font-semibold px-4 py-1.5 rounded disabled:opacity-50 cursor-pointer"
               >
                 &larr; Previous
               </button>
               <button
                 onClick={() => {
-                  if (currentIndex < testQuestions.length - 1) {
-                    jumpToQuestion(testQuestions[currentIndex + 1].id);
+                  if (currentIndex < normalizedQuestions.length - 1) {
+                    jumpToQuestion(normalizedQuestions[currentIndex + 1].id);
                   } else {
                     handleSubmitExam(true);
                   }
                 }}
                 className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-1.5 rounded cursor-pointer"
               >
-                {currentIndex === testQuestions.length - 1 ? 'Save & Review' : 'Save & Next →'}
+                {currentIndex === normalizedQuestions.length - 1 ? 'Save & Review' : 'Save & Next →'}
               </button>
             </div>
           </div>
@@ -386,7 +510,7 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-5 h-5 rounded bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
-                  {testQuestions.length - answeredCount}
+                  {normalizedQuestions.length - answeredCount}
                 </span>
                 <span>Not Answered</span>
               </div>
@@ -405,22 +529,31 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
             </div>
 
             <div className="text-xs font-bold uppercase text-slate-600 flex justify-between mb-2">
-              <span>{q.subject === 'Math' ? 'Mathematics' : q.subject}</span>
-              <span>{testQuestions.filter((item) => item.subject === q.subject).length} Questions</span>
+              <span>{currentQ.subject === 'Math' ? 'Mathematics' : currentQ.subject}</span>
+              <span>
+                {
+                  normalizedQuestions.filter((item) =>
+                    String(item.subject).toLowerCase().startsWith(String(currentQ.subject).toLowerCase().slice(0, 4))
+                  ).length
+                }{' '}
+                Questions
+              </span>
             </div>
 
             <div className="grid grid-cols-5 gap-1.5 max-h-96 overflow-y-auto p-1">
-              {testQuestions
-                .filter((item) => item.subject === q.subject)
+              {normalizedQuestions
+                .filter((item) =>
+                  String(item.subject).toLowerCase().startsWith(String(currentQ.subject).toLowerCase().slice(0, 4))
+                )
                 .map((item) => {
-                  const isCurrent = item.id === q.id;
+                  const isCurrent = item.id === currentQ.id;
                   const isAns = userAnswers[item.id] !== undefined && userAnswers[item.id] !== '';
                   const isRev = markedForReview.has(item.id);
                   const isVis = visited.has(item.id);
 
                   let palCls = 'bg-slate-50 text-slate-700 border-slate-300';
                   if (examSubmitted) {
-                    const isCor = String(userAnswers[item.id]).trim().toLowerCase() === String(item.correct).trim().toLowerCase();
+                    const isCor = String(userAnswers[item.id]).trim().toUpperCase() === String(item.correct).trim().toUpperCase();
                     if (isAns) palCls = isCor ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white';
                   } else {
                     if (isRev) palCls = 'bg-purple-600 text-white border-purple-600';
@@ -475,60 +608,62 @@ export default function TestRunner({ testQuestions, durationMinutes, onExit }) {
           <div className="bg-white rounded-xl max-w-xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto text-slate-800">
             <h2 className="text-xl font-black text-center text-slate-900">Examination Results</h2>
             <p className="text-xs text-slate-500 text-center mt-1">
-              JEE Main Practice Test ({testQuestions.length} Questions • {testQuestions.length * 4} Marks)
+              JEE Main Practice Test ({normalizedQuestions.length} Questions • {normalizedQuestions.length * 4} Marks)
             </p>
 
             <div className="grid grid-cols-3 gap-3 my-5 text-center">
               <div className="p-3 rounded-lg border border-slate-200 bg-slate-50">
                 <span className="text-[10px] font-bold text-indigo-600 block">TOTAL SCORE</span>
                 <span className="text-2xl font-black text-slate-900 block my-1">
-                  {examResults.totalScore}
+                  {examResults.totalScore ?? 0}
                 </span>
-                <span className="text-[10px] text-slate-500">/ {testQuestions.length * 4}</span>
+                <span className="text-[10px] text-slate-500">/ {normalizedQuestions.length * 4}</span>
               </div>
               <div className="p-3 rounded-lg border border-slate-200 bg-slate-50">
                 <span className="text-[10px] font-bold text-emerald-600 block">ACCURACY</span>
                 <span className="text-2xl font-black text-slate-900 block my-1">
-                  {examResults.accuracy}%
+                  {examResults.accuracy ?? 0}%
                 </span>
                 <span className="text-[10px] text-slate-500">
-                  {examResults.totalCorrect} / {examResults.totalAttempted}
+                  {examResults.totalCorrect ?? 0} / {examResults.totalAttempted ?? 0}
                 </span>
               </div>
               <div className="p-3 rounded-lg border border-slate-200 bg-slate-50">
                 <span className="text-[10px] font-bold text-slate-600 block">ATTEMPTED</span>
                 <span className="text-2xl font-black text-slate-900 block my-1">
-                  {examResults.totalAttempted}
+                  {examResults.totalAttempted ?? 0}
                 </span>
-                <span className="text-[10px] text-slate-500">/ {testQuestions.length}</span>
+                <span className="text-[10px] text-slate-500">/ {normalizedQuestions.length}</span>
               </div>
             </div>
 
-            <table className="w-full border-collapse text-xs mb-5 text-left">
-              <thead>
-                <tr className="bg-slate-50 text-slate-600 border-b border-slate-200">
-                  <th className="p-2">Subject</th>
-                  <th className="p-2 text-center">Correct</th>
-                  <th className="p-2 text-center">Wrong</th>
-                  <th className="p-2 text-center">Unattempted</th>
-                  <th className="p-2 text-right">Marks</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.keys(examResults.subStats).map((k) => {
-                  const st = examResults.subStats[k];
-                  return (
-                    <tr key={k} className="border-b border-slate-200">
-                      <td className="p-2 font-bold">{k === 'Math' ? 'Mathematics' : k}</td>
-                      <td className="p-2 text-center text-emerald-600 font-bold">{st.correct}</td>
-                      <td className="p-2 text-center text-rose-600 font-bold">{st.wrong}</td>
-                      <td className="p-2 text-center text-slate-400">{st.unattempted}</td>
-                      <td className="p-2 text-right font-bold">{st.score}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            {examResults.subStats && (
+              <table className="w-full border-collapse text-xs mb-5 text-left">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-600 border-b border-slate-200">
+                    <th className="p-2">Subject</th>
+                    <th className="p-2 text-center">Correct</th>
+                    <th className="p-2 text-center">Wrong</th>
+                    <th className="p-2 text-center">Unattempted</th>
+                    <th className="p-2 text-right">Marks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.keys(examResults.subStats).map((k) => {
+                    const st = examResults.subStats[k];
+                    return (
+                      <tr key={k} className="border-b border-slate-200">
+                        <td className="p-2 font-bold">{k === 'Math' ? 'Mathematics' : k}</td>
+                        <td className="p-2 text-center text-emerald-600 font-bold">{st.correct}</td>
+                        <td className="p-2 text-center text-rose-600 font-bold">{st.wrong}</td>
+                        <td className="p-2 text-center text-slate-400">{st.unattempted}</td>
+                        <td className="p-2 text-right font-bold">{st.score}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
 
             <div className="flex gap-2">
               <button
