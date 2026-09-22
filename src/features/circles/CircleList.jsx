@@ -43,42 +43,47 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
   // Auto-scroll ref for announcements
   const chatBottomRef = useRef(null);
 
-  // Schedule Test Form State
+  // Schedule Test Form State (with multiple chapters array)
   const [newTest, setNewTest] = useState({
     title: '',
-    subject: 'Full Syllabus',
-    chapter: 'All',
+    subject: 'All',
+    selectedChapters: ['All'],
     durationMinutes: 60,
     questionCount: 5,
     windowStart: '',
     windowEnd: ''
   });
 
-  // Dynamically load chapters safely based on subject
+  // Extract all available chapters dynamically based on subject
   const availableChapters = useMemo(() => {
-    if (!newTest.subject || newTest.subject === 'Full Syllabus') {
-      return ['All'];
-    }
+    let list = [];
 
-    let chapters = [];
-    if (JEE_SYLLABUS && JEE_SYLLABUS[newTest.subject]) {
-      const subjectData = JEE_SYLLABUS[newTest.subject];
-
-      if (Array.isArray(subjectData)) {
-        chapters = subjectData;
-      } else if (typeof subjectData === 'object' && subjectData !== null) {
-        Object.values(subjectData).forEach((val) => {
-          if (Array.isArray(val)) {
-            chapters.push(...val);
-          } else if (typeof val === 'string') {
-            chapters.push(val);
-          }
+    const extractChaptersFromSubject = (subKey) => {
+      const subData = JEE_SYLLABUS?.[subKey];
+      if (!subData) return [];
+      const subChapters = [];
+      if (Array.isArray(subData)) {
+        subChapters.push(...subData);
+      } else if (typeof subData === 'object' && subData !== null) {
+        Object.values(subData).forEach((val) => {
+          if (Array.isArray(val)) subChapters.push(...val);
+          else if (typeof val === 'string') subChapters.push(val);
         });
       }
+      return subChapters;
+    };
+
+    if (newTest.subject === 'All') {
+      // Collect chapters from all 3 subjects
+      ['Physics', 'Chemistry', 'Mathematics'].forEach((s) => {
+        list.push(...extractChaptersFromSubject(s));
+      });
+    } else {
+      list.push(...extractChaptersFromSubject(newTest.subject));
     }
 
-    const unique = Array.from(new Set(chapters.filter((c) => c && c !== 'All')));
-    return ['All', ...unique];
+    const unique = Array.from(new Set(list.filter((c) => c && c !== 'All')));
+    return unique;
   }, [newTest.subject]);
 
   const loadCirclesData = async () => {
@@ -174,6 +179,27 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
     }
   };
 
+  // Multiple chapter selection toggler
+  const handleToggleChapter = (ch) => {
+    if (ch === 'All') {
+      setNewTest((prev) => ({ ...prev, selectedChapters: ['All'] }));
+      return;
+    }
+
+    setNewTest((prev) => {
+      let updated = prev.selectedChapters.filter((c) => c !== 'All');
+      if (updated.includes(ch)) {
+        updated = updated.filter((c) => c !== ch);
+      } else {
+        updated.push(ch);
+      }
+      if (updated.length === 0) {
+        updated = ['All'];
+      }
+      return { ...prev, selectedChapters: updated };
+    });
+  };
+
   const handleScheduleTest = async (e) => {
     e.preventDefault();
     if (!selectedCircle || !currentUser?.id) {
@@ -186,24 +212,32 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
 
     try {
       const qNum = Number(newTest.questionCount) || 5;
+      const chapterLabel = newTest.selectedChapters.includes('All')
+        ? 'All'
+        : newTest.selectedChapters.join(', ');
+
+      // Pick first chapter for specific question filtering if multiple chosen
+      const primaryChapter = newTest.selectedChapters.includes('All') 
+        ? 'All' 
+        : newTest.selectedChapters[0];
 
       try {
         if (typeof fetchQuestionsForTest === 'function') {
-          questions = await fetchQuestionsForTest(newTest.subject, newTest.chapter, qNum);
+          questions = await fetchQuestionsForTest(newTest.subject, primaryChapter, qNum);
         }
       } catch (err) {
-        console.warn('DB question fetch failed, using fallback bank:', err);
+        console.warn('DB question fetch fallback:', err);
       }
 
       if (!Array.isArray(questions) || questions.length === 0) {
-        const subForBank = newTest.subject === 'Full Syllabus' ? 'Physics' : newTest.subject;
-        questions = getStandardQuestions(subForBank, newTest.chapter, qNum);
+        const subForBank = newTest.subject === 'All' ? 'Physics' : newTest.subject;
+        questions = getStandardQuestions(subForBank, primaryChapter, qNum);
       }
 
       if (!Array.isArray(questions) || questions.length === 0) {
         questions = Array.from({ length: qNum }, (_, i) => ({
           id: i + 1,
-          question: `Sample Question ${i + 1} for ${newTest.subject} (${newTest.chapter})`,
+          question: `Sample Question ${i + 1} for ${newTest.subject} (${chapterLabel})`,
           options: ['Option A', 'Option B', 'Option C', 'Option D'],
           correctAnswer: 0,
           explanation: 'Standard concept application.'
@@ -212,7 +246,11 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
 
       const res = await scheduleCircleTest(
         selectedCircle.id,
-        { ...newTest, questions },
+        {
+          ...newTest,
+          chapter: chapterLabel,
+          questions
+        },
         currentUser.id
       );
 
@@ -222,8 +260,8 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
         setShowScheduleModal(false);
         setNewTest({
           title: '',
-          subject: 'Full Syllabus',
-          chapter: 'All',
+          subject: 'All',
+          selectedChapters: ['All'],
           durationMinutes: 60,
           questionCount: 5,
           windowStart: '',
@@ -444,7 +482,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                           <div className="flex items-center gap-3 text-[11px] text-slate-400">
                             <span className="text-indigo-400 font-semibold">{t.subject}</span>
                             <span>•</span>
-                            <span>{t.chapter}</span>
+                            <span className="max-w-[200px] truncate" title={t.chapter}>{t.chapter}</span>
                             <span>•</span>
                             <span>{t.question_count || t.total_questions || (t.questions ? t.questions.length : 5)} Questions</span>
                             <span>•</span>
@@ -696,10 +734,10 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
         </div>
       )}
 
-      {/* MODAL: SCHEDULE TEST (With Full Syllabus and Dynamic Chapter Select) */}
+      {/* MODAL: SCHEDULE TEST (With 'All' Subject & Multi-Chapter Selector) */}
       {showScheduleModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl">
             <h3 className="text-lg font-bold text-white mb-4">Schedule Circle Mock Test</h3>
             <form onSubmit={handleScheduleTest} className="flex flex-col gap-4">
               <div>
@@ -707,42 +745,75 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                 <input
                   type="text"
                   required
-                  placeholder="e.g., Weekly Full Mock Test"
+                  placeholder="e.g., Weekly Combined Mock Test"
                   value={newTest.title}
                   onChange={(e) => setNewTest({ ...newTest, title: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-indigo-500"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Subject</label>
-                  <select
-                    value={newTest.subject}
-                    onChange={(e) => setNewTest({ ...newTest, subject: e.target.value, chapter: 'All' })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
+              {/* Subject Selection */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Subject</label>
+                <select
+                  value={newTest.subject}
+                  onChange={(e) => setNewTest({ ...newTest, subject: e.target.value, selectedChapters: ['All'] })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500"
+                >
+                  <option value="All">All</option>
+                  <option value="Physics">Physics</option>
+                  <option value="Chemistry">Chemistry</option>
+                  <option value="Mathematics">Mathematics</option>
+                </select>
+              </div>
+
+              {/* Multi-Chapter Selection Area */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-slate-300">
+                    Chapters Selected ({newTest.selectedChapters.includes('All') ? 'All Chapters' : newTest.selectedChapters.length})
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleChapter('All')}
+                    className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold"
                   >
-                    <option value="Full Syllabus">Full Syllabus (P + C + M)</option>
-                    <option value="Physics">Physics</option>
-                    <option value="Chemistry">Chemistry</option>
-                    <option value="Mathematics">Mathematics</option>
-                  </select>
+                    Reset to All
+                  </button>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Chapter Selection</label>
-                  <select
-                    disabled={newTest.subject === 'Full Syllabus'}
-                    value={newTest.chapter}
-                    onChange={(e) => setNewTest({ ...newTest, chapter: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 disabled:opacity-40"
+                <div className="max-h-40 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl p-2.5 flex flex-wrap gap-1.5">
+                  {/* Option: All */}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleChapter('All')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                      newTest.selectedChapters.includes('All')
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                    }`}
                   >
-                    {availableChapters.map((ch, idx) => (
-                      <option key={idx} value={ch}>
-                        {ch === 'All' ? 'All Chapters' : ch}
-                      </option>
-                    ))}
-                  </select>
+                    All Chapters
+                  </button>
+
+                  {/* Dynamic Chapter Chips */}
+                  {availableChapters.map((ch, idx) => {
+                    const isSelected = !newTest.selectedChapters.includes('All') && newTest.selectedChapters.includes(ch);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleToggleChapter(ch)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                          isSelected
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                        }`}
+                      >
+                        {ch}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
