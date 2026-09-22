@@ -1,120 +1,45 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
-import {
-  Users,
-  Plus,
-  Calendar,
-  Clock,
-  BookOpen,
-  UserPlus,
-  CheckCircle2,
-  X,
-  Megaphone,
-  Trophy,
-  ShieldCheck,
-  LogOut,
-  Send,
-  UserCheck,
-  UserX,
-  Hourglass,
-  Lock,
-  Trash2,
-  CheckCircle,
-  ArrowRight,
-  ArrowLeft
-} from 'lucide-react';
-import * as MathHelper from '../../data/jeeQuestionBank';
-import {
-  getAllCircles,
-  getUserCircleMemberships,
-  createCircle,
-  deleteCircle,
-  requestJoinCircle,
-  leaveCircle,
-  getCircleMembers,
-  handleJoinRequest,
-  getCircleTests,
-  scheduleCircleTest,
-  deleteCircleTest,
-  getCircleAnnouncements,
-  postAnnouncement,
+﻿import React, { useState, useEffect } from 'react';
+import { Users, Plus, Shield, Check, X, MessageSquare, Trophy, Calendar, Clock, Trash2, ArrowRight } from 'lucide-react';
+import { 
+  getAllCircles, 
+  getUserCircleMemberships, 
+  createCircle, 
+  deleteCircle, 
+  requestJoinCircle, 
+  leaveCircle, 
+  getCircleMembers, 
+  handleJoinRequest, 
+  getCircleTests, 
+  scheduleCircleTest, 
+  deleteCircleTest, 
+  getCircleAnnouncements, 
+  postAnnouncement, 
   getCircleLeaderboard,
-  addCustomQuestionToDB,
   fetchQuestionsForTest
 } from '../../services/circleService';
-import { supabase } from '../../services/supabaseClient';
+import { getStandardQuestions } from '../../data/jeeQuestionBank';
 
-const safeFormatMath = (str) => {
-  if (str === null || str === undefined) return '';
-  const text = typeof str === 'string' ? str : String(str);
-  if (typeof MathHelper.formatMathSymbols === 'function') {
-    try {
-      return MathHelper.formatMathSymbols(text);
-    } catch {
-      return text;
-    }
-  }
-  return text;
-};
-
-function generateStandardQuestionSet(subject, chapter, count) {
-  if (typeof MathHelper.getStandardQuestions === 'function') {
-    try {
-      return MathHelper.getStandardQuestions(subject, chapter, count) || [];
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
-
-export default function CircleList({ currentUser, onStartTest, generateQuestionsForTest }) {
-  const currentUserId = currentUser?.id || currentUser?.user?.id || null;
-
+export default function CircleList({ currentUser, onSelectTestToTake }) {
   const [circles, setCircles] = useState([]);
-  const [membershipMap, setMembershipMap] = useState({});
+  const [userMemberships, setUserMemberships] = useState([]);
   const [selectedCircle, setSelectedCircle] = useState(null);
+  const [activeTab, setActiveTab] = useState('tests'); // tests, members, chat, leaderboard
 
-  const [circleMembers, setCircleMembers] = useState([]);
-  const [pendingRequests, setPendingRequests] = useState([]);
+  // Modals & form state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [newCircleName, setNewCircleName] = useState('');
+  const [newCircleDesc, setNewCircleDesc] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Active Circle Detailed Data
+  const [circleMembers, setCircleMembers] = useState({ approved: [], pending: [] });
   const [circleTests, setCircleTests] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
-
-  const [circleTab, setCircleTab] = useState('tests');
-  const [loading, setLoading] = useState(true);
-  const [processingId, setProcessingId] = useState(null);
-  const [isGeneratingTest, setIsGeneratingTest] = useState(false);
-
-  // Modals
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [showAddQuestionModal, setShowAddQuestionModal] = useState(false);
   const [announcementMsg, setAnnouncementMsg] = useState('');
 
-  // Add Question State
-  const [newQuestionData, setNewQuestionData] = useState({
-    subject: 'Physics',
-    chapter: 'All',
-    question: '',
-    optionA: '',
-    optionB: '',
-    optionC: '',
-    optionD: '',
-    correctAnswer: 0,
-    explanation: ''
-  });
-
-  // Exam Interface Modal
-  const [activeExam, setActiveExam] = useState(null);
-  const [examAnswers, setExamAnswers] = useState({});
-  const [currentQIndex, setCurrentQIndex] = useState(0);
-  const [examSubmitted, setExamSubmitted] = useState(false);
-  const [examScoreResult, setExamScoreResult] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(0);
-
-  const announcementsEndRef = useRef(null);
-
-  const [newCircle, setNewCircle] = useState({ name: '', description: '' });
+  // Schedule Test Form State
   const [newTest, setNewTest] = useState({
     title: '',
     subject: 'Physics',
@@ -125,1301 +50,592 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
     windowEnd: ''
   });
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadCirclesData = async () => {
     const all = await getAllCircles();
-    setCircles(all || []);
-
-    let uid = currentUserId;
-    if (!uid) {
-      const { data: authData } = await supabase.auth.getUser();
-      uid = authData?.user?.id;
+    setCircles(all);
+    if (currentUser?.id) {
+      const mems = await getUserCircleMemberships(currentUser.id);
+      setUserMemberships(mems);
     }
-
-    if (uid) {
-      const memberships = await getUserCircleMemberships(uid);
-      const mapping = {};
-      (memberships || []).forEach((m) => {
-        mapping[m.circle_id] = { status: m.status, role: m.role };
-      });
-      setMembershipMap(mapping);
-    }
-    setLoading(false);
   };
 
   useEffect(() => {
-    loadData();
-  }, [currentUserId]);
+    loadCirclesData();
+  }, [currentUser]);
 
   useEffect(() => {
-    if (circleTab === 'announcements') {
-      announcementsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [announcements, circleTab]);
+    if (!selectedCircle) return;
 
-  // Exam timer countdown
-  useEffect(() => {
-    if (!activeExam || examSubmitted || timeLeft <= 0) return;
+    const loadCircleDetails = async () => {
+      const [members, tests, ann, lb] = await Promise.all([
+        getCircleMembers(selectedCircle.id),
+        getCircleTests(selectedCircle.id),
+        getCircleAnnouncements(selectedCircle.id),
+        getCircleLeaderboard(selectedCircle.id)
+      ]);
+      setCircleMembers(members);
+      setCircleTests(tests);
+      setAnnouncements(ann);
+      setLeaderboard(lb);
+    };
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleExamSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    loadCircleDetails();
+  }, [selectedCircle]);
 
-    return () => clearInterval(timer);
-  }, [activeExam, examSubmitted, timeLeft]);
+  const isUserAdmin = (circle) => {
+    if (!currentUser) return false;
+    if (circle.created_by === currentUser.id) return true;
+    const mem = userMemberships.find((m) => m.circle_id === circle.id);
+    return mem?.role === 'admin' && mem?.status === 'approved';
+  };
 
-  const handleSelectCircle = async (circle) => {
-    setSelectedCircle(circle);
-    setCircleTab('tests');
-
-    const [membersRes, tests, ann, ranks] = await Promise.all([
-      getCircleMembers(circle.id),
-      getCircleTests(circle.id),
-      getCircleAnnouncements(circle.id),
-      getCircleLeaderboard(circle.id)
-    ]);
-
-    setCircleMembers(membersRes?.approved || []);
-    setPendingRequests(membersRes?.pending || []);
-    setCircleTests(tests || []);
-    const sortedAnn = Array.isArray(ann)
-      ? [...ann].sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
-      : [];
-    setAnnouncements(sortedAnn);
-    setLeaderboard(ranks || []);
+  const getMembershipStatus = (circleId) => {
+    const mem = userMemberships.find((m) => m.circle_id === circleId);
+    return mem ? mem.status : null; // approved, pending, null
   };
 
   const handleCreateCircle = async (e) => {
     e.preventDefault();
-    let uid = currentUserId;
-    if (!uid) {
-      const { data: authData } = await supabase.auth.getUser();
-      uid = authData?.user?.id;
-    }
-    if (!uid) return alert('Please sign in first.');
+    if (!newCircleName.trim() || !currentUser?.id) return;
 
-    const res = await createCircle(newCircle.name, newCircle.description, uid);
+    setIsSubmitting(true);
+    const res = await createCircle(newCircleName, newCircleDesc, currentUser.id);
+    setIsSubmitting(false);
+
     if (res.error) {
-      alert(res.error);
+      alert('Error creating circle: ' + res.error);
     } else {
       setShowCreateModal(false);
-      setNewCircle({ name: '', description: '' });
-      await loadData();
-      if (res.data) handleSelectCircle(res.data);
+      setNewCircleName('');
+      setNewCircleDesc('');
+      loadCirclesData();
     }
   };
 
-  const handleDeleteCircle = async () => {
-    if (!selectedCircle) return;
-    let uid = currentUserId;
-    if (!uid) {
-      const { data: authData } = await supabase.auth.getUser();
-      uid = authData?.user?.id;
-    }
-    const confirm = window.confirm(
-      `Are you sure you want to PERMANENTLY delete "${selectedCircle.name}"? This action cannot be undone.`
-    );
-    if (!confirm) return;
+  const handleJoin = async (circleId) => {
+    if (!currentUser?.id) return;
+    await requestJoinCircle(circleId, currentUser.id);
+    loadCirclesData();
+  };
 
-    const res = await deleteCircle(selectedCircle.id, uid);
-    if (res.error) {
-      alert(res.error);
-    } else {
+  const handleLeave = async (circleId) => {
+    if (!currentUser?.id) return;
+    if (window.confirm('Are you sure you want to leave this circle?')) {
+      await leaveCircle(circleId, currentUser.id);
       setSelectedCircle(null);
-      await loadData();
+      loadCirclesData();
     }
   };
 
-  const handleJoinRequestClick = async (circleId, e) => {
-    e?.stopPropagation();
-    let uid = currentUserId;
-    if (!uid) {
-      const { data: authData } = await supabase.auth.getUser();
-      uid = authData?.user?.id;
-    }
-    if (!uid) return alert('Please sign in to request joining.');
-
-    const res = await requestJoinCircle(circleId, uid);
-    if (res.error) {
-      alert(res.error);
-    } else {
-      setMembershipMap((prev) => ({
-        ...prev,
-        [circleId]: { status: 'pending', role: 'member' }
-      }));
-    }
-  };
-
-  const handleLeaveCircle = async () => {
-    if (!selectedCircle) return;
-    let uid = currentUserId;
-    if (!uid) {
-      const { data: authData } = await supabase.auth.getUser();
-      uid = authData?.user?.id;
-    }
-    const confirm = window.confirm(`Are you sure you want to leave ${selectedCircle.name}?`);
-    if (!confirm) return;
-
-    const res = await leaveCircle(selectedCircle.id, uid);
-    if (res.error) {
-      alert(res.error);
-    } else {
-      setMembershipMap((prev) => {
-        const next = { ...prev };
-        delete next[selectedCircle.id];
-        return next;
-      });
+  const handleDeleteCircle = async (circleId) => {
+    if (!currentUser?.id) return;
+    if (window.confirm('Delete this circle permanently?')) {
+      await deleteCircle(circleId, currentUser.id);
       setSelectedCircle(null);
-      await loadData();
-    }
-  };
-
-  const handleApproveReject = async (req, accept) => {
-    const targetUserId = req.user_id || req.user?.id;
-    const recordId = req.id;
-    setProcessingId(recordId || targetUserId);
-
-    const res = await handleJoinRequest({
-      circleId: selectedCircle.id,
-      userId: targetUserId,
-      memberRecordId: recordId,
-      accept
-    });
-
-    setProcessingId(null);
-
-    if (res.error) {
-      alert('Action failed: ' + res.error);
-    } else {
-      const refreshed = await getCircleMembers(selectedCircle.id);
-      setCircleMembers(refreshed?.approved || []);
-      setPendingRequests(refreshed?.pending || []);
-      await loadData();
+      loadCirclesData();
     }
   };
 
   const handleScheduleTest = async (e) => {
     e.preventDefault();
-    if (!selectedCircle) return alert('Please select a circle first.');
-
-    let uid = currentUserId;
-    if (!uid) {
-      const { data: authData } = await supabase.auth.getUser();
-      uid = authData?.user?.id;
+    if (!selectedCircle || !currentUser?.id) {
+      alert('You must be logged in and inside an active circle.');
+      return;
     }
-    if (!uid) return alert('Please sign in to schedule a test.');
 
-    setIsGeneratingTest(true);
+    setIsSubmitting(true);
     let questions = [];
 
-    const reqCount = Number(newTest.questionCount) || 5;
-
-    if (typeof generateQuestionsForTest === 'function') {
-      try {
-        questions = await generateQuestionsForTest({
-          subject: newTest.subject,
-          chapter: newTest.chapter,
-          count: reqCount
-        });
-      } catch (err) {
-        console.warn('generateQuestionsForTest prop fallback triggered:', err);
-      }
-    }
-
-    if (!Array.isArray(questions) || questions.length === 0) {
+    try {
+      // 1. Fetch from custom DB questions
       if (typeof fetchQuestionsForTest === 'function') {
-        try {
-          questions = await fetchQuestionsForTest(newTest.subject, newTest.chapter, reqCount);
-        } catch (err) {
-          console.warn('fetchQuestionsForTest failed, using standard generator:', err);
-        }
+        questions = await fetchQuestionsForTest(
+          newTest.subject,
+          newTest.chapter,
+          Number(newTest.questionCount) || 5
+        );
       }
-    }
 
-    if (!Array.isArray(questions) || questions.length === 0) {
-      questions = generateStandardQuestionSet(newTest.subject, newTest.chapter, reqCount);
-    }
+      // 2. Fallback to standard bank if needed
+      if (!Array.isArray(questions) || questions.length === 0) {
+        questions = getStandardQuestions(
+          newTest.subject === 'Full Syllabus' ? 'Physics' : newTest.subject,
+          newTest.chapter,
+          Number(newTest.questionCount) || 5
+        );
+      }
 
-    // Sanitize question items
-    const sanitizedQuestions = (questions || []).map((item, idx) => {
-      const prompt =
-        item.question ||
-        item.question_text ||
-        item.statement ||
-        item.text ||
-        item.problem ||
-        `Question ${idx + 1}`;
+      const res = await scheduleCircleTest(
+        selectedCircle.id,
+        { ...newTest, questions },
+        currentUser.id
+      );
 
-      const options = Array.isArray(item.options)
-        ? item.options.map((opt) => (typeof opt === 'object' ? opt.text || JSON.stringify(opt) : String(opt)))
-        : ['Option A', 'Option B', 'Option C', 'Option D'];
-
-      return {
-        id: item.id || idx + 1,
-        question: prompt,
-        options,
-        correctAnswer: item.correctAnswer !== undefined ? item.correctAnswer : item.correct || 0,
-        explanation: item.explanation || item.solution || ''
-      };
-    });
-
-    const res = await scheduleCircleTest(
-      selectedCircle.id,
-      { ...newTest, questions: sanitizedQuestions },
-      uid
-    );
-
-    setIsGeneratingTest(false);
-
-    if (res.error) {
-      alert('Could not schedule test: ' + res.error);
-    } else {
-      setShowScheduleModal(false);
-      setNewTest({
-        title: '',
-        subject: 'Physics',
-        chapter: 'All',
-        durationMinutes: 60,
-        questionCount: 5,
-        windowStart: '',
-        windowEnd: ''
-      });
-      const tests = await getCircleTests(selectedCircle.id);
-      setCircleTests(tests || []);
-    }
-  };
-
-  const handleCreateQuestionSubmit = async (e) => {
-    e.preventDefault();
-    let uid = currentUserId;
-    if (!uid) {
-      const { data: authData } = await supabase.auth.getUser();
-      uid = authData?.user?.id;
-    }
-    if (!uid) return alert('Please sign in first.');
-    if (!newQuestionData.question.trim()) return alert('Question text is required.');
-
-    const payload = {
-      subject: newQuestionData.subject,
-      chapter: newQuestionData.chapter,
-      question: newQuestionData.question,
-      options: [
-        newQuestionData.optionA,
-        newQuestionData.optionB,
-        newQuestionData.optionC,
-        newQuestionData.optionD
-      ],
-      correctAnswer: Number(newQuestionData.correctAnswer),
-      explanation: newQuestionData.explanation
-    };
-
-    if (typeof addCustomQuestionToDB === 'function') {
-      const res = await addCustomQuestionToDB(payload, uid);
       if (res.error) {
-        alert('Failed to save question: ' + res.error);
+        alert('Could not schedule test: ' + res.error);
       } else {
-        alert('Question added successfully to the question pool!');
-        setShowAddQuestionModal(false);
-        setNewQuestionData({
+        setShowScheduleModal(false);
+        setNewTest({
+          title: '',
           subject: 'Physics',
           chapter: 'All',
-          question: '',
-          optionA: '',
-          optionB: '',
-          optionC: '',
-          optionD: '',
-          correctAnswer: 0,
-          explanation: ''
+          durationMinutes: 60,
+          questionCount: 5,
+          windowStart: '',
+          windowEnd: ''
         });
+        const tests = await getCircleTests(selectedCircle.id);
+        setCircleTests(tests);
       }
-    } else {
-      alert('Question addition service is not configured.');
+    } catch (err) {
+      console.error('Test scheduling error:', err);
+      alert('An error occurred while creating the test.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleDeleteTest = async (testId, e) => {
-    e?.stopPropagation();
-    const confirm = window.confirm('Are you sure you want to delete this test?');
-    if (!confirm) return;
-
-    const res = await deleteCircleTest(testId);
-    if (res.error) {
-      alert(res.error);
-    } else {
-      setCircleTests((prev) => prev.filter((t) => t.id !== testId));
+  const handleDeleteTest = async (testId) => {
+    if (window.confirm('Delete this scheduled test?')) {
+      await deleteCircleTest(testId);
+      const tests = await getCircleTests(selectedCircle.id);
+      setCircleTests(tests);
     }
   };
 
-  const handleAttemptTest = (test) => {
-    let questions = [];
-
-    if (Array.isArray(test.questions) && test.questions.length > 0) {
-      questions = test.questions.map((q) => {
-        const promptRaw = q.question || q.question_text || q.text || q.statement || '';
-        const rawOpts = q.options || q.choices || [];
-        const options = Array.isArray(rawOpts)
-          ? rawOpts.map((opt) => safeFormatMath(typeof opt === 'object' ? opt.text : opt))
-          : [];
-
-        return {
-          ...q,
-          question: safeFormatMath(promptRaw),
-          options,
-          correctAnswer: q.correctAnswer !== undefined ? q.correctAnswer : q.correct || 0,
-          explanation: safeFormatMath(q.explanation || q.solution || '')
-        };
-      });
-    } else {
-      questions = generateStandardQuestionSet(
-        test.subject,
-        test.chapter,
-        Number(test.question_count || test.total_questions) || 5
-      );
-    }
-
-    const standardizedTest = {
-      ...test,
-      questions
-    };
-
-    setActiveExam(standardizedTest);
-    setExamAnswers({});
-    setCurrentQIndex(0);
-    setExamSubmitted(false);
-    setExamScoreResult(null);
-    setTimeLeft((Number(test.duration_minutes || test.duration) || 60) * 60);
-  };
-
-  const handleExamSubmit = async () => {
-    if (!activeExam) return;
-    let uid = currentUserId;
-    if (!uid) {
-      const { data: authData } = await supabase.auth.getUser();
-      uid = authData?.user?.id;
-    }
-
-    const questions = activeExam.questions || [];
-    let correctCount = 0;
-
-    questions.forEach((q, idx) => {
-      if (Number(examAnswers[idx]) === Number(q.correctAnswer)) {
-        correctCount += 1;
-      }
-    });
-
-    const attemptedCount = Object.keys(examAnswers).length;
-    const incorrectCount = Math.max(0, attemptedCount - correctCount);
-    const score = correctCount * 4 - incorrectCount * 1;
-    const finalScore = Math.max(0, score);
-    const accuracy = attemptedCount > 0 ? ((correctCount / attemptedCount) * 100).toFixed(1) : 0;
-
-    if (uid && selectedCircle) {
-      try {
-        await supabase.from('circle_test_submissions').upsert(
-          [
-            {
-              circle_id: selectedCircle.id,
-              test_id: activeExam.id,
-              user_id: uid,
-              score: finalScore,
-              total_marks: questions.length * 4,
-              accuracy_pct: Number(accuracy),
-              submitted_at: new Date().toISOString()
-            }
-          ],
-          { onConflict: 'test_id,user_id' }
-        );
-
-        const refreshedRanks = await getCircleLeaderboard(selectedCircle.id);
-        setLeaderboard(refreshedRanks || []);
-      } catch (err) {
-        console.error('Error submitting exam to leaderboard:', err);
-      }
-    }
-
-    setExamScoreResult({
-      correct: correctCount,
-      total: questions.length,
-      attempted: attemptedCount,
-      score: finalScore,
-      accuracy
-    });
-    setExamSubmitted(true);
-  };
-
-  const handleSendAnnouncement = async (e) => {
+  const handlePostAnnouncement = async (e) => {
     e.preventDefault();
-    if (!announcementMsg.trim() || !selectedCircle) return;
-    let uid = currentUserId;
-    if (!uid) {
-      const { data: authData } = await supabase.auth.getUser();
-      uid = authData?.user?.id;
-    }
-
-    const res = await postAnnouncement(selectedCircle.id, announcementMsg, uid);
-    if (res.error) {
-      alert(res.error);
-    } else {
-      setAnnouncementMsg('');
-      const ann = await getCircleAnnouncements(selectedCircle.id);
-      const sortedAnn = Array.isArray(ann)
-        ? [...ann].sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
-        : [];
-      setAnnouncements(sortedAnn);
-    }
+    if (!announcementMsg.trim() || !currentUser?.id) return;
+    await postAnnouncement(selectedCircle.id, announcementMsg, currentUser.id);
+    setAnnouncementMsg('');
+    const ann = await getCircleAnnouncements(selectedCircle.id);
+    setAnnouncements(ann);
   };
 
-  const formatTimer = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  const handleManageRequest = async (recordId, accept) => {
+    await handleJoinRequest({ memberRecordId: recordId, accept });
+    const members = await getCircleMembers(selectedCircle.id);
+    setCircleMembers(members);
   };
-
-  const isCircleAdmin =
-    selectedCircle &&
-    currentUserId &&
-    (selectedCircle.created_by === currentUserId ||
-      membershipMap[selectedCircle.id]?.role === 'admin');
-
-  const isCircleCreator = selectedCircle?.created_by === currentUserId;
-  const userStatus = selectedCircle ? membershipMap[selectedCircle.id]?.status : null;
-  const isApprovedMember = userStatus === 'approved' || isCircleAdmin;
 
   return (
-    <div className="w-full max-w-5xl flex flex-col gap-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="bg-indigo-600/20 text-indigo-400 p-2.5 rounded-xl border border-indigo-600/30">
-            <Users className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-white">Friend Circles & Cohorts</h2>
-            <p className="text-xs text-slate-400">Admin-gated study circles with uniform timed tests, notices & rank boards</p>
-          </div>
+    <div className="w-full max-w-6xl mx-auto px-4 py-6">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Users className="w-6 h-6 text-indigo-400" /> Study Circles
+          </h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Form private study circles, challenge friends with synchronized mock exams, and climb leaderboards.
+          </p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowAddQuestionModal(true)}
-            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-slate-700 transition shrink-0"
-          >
-            <Plus className="w-4 h-4 text-emerald-400" /> Add to Question Pool
-          </button>
-
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition shrink-0"
-          >
-            <Plus className="w-4 h-4" /> Create Circle
-          </button>
-        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition shadow-lg shadow-indigo-600/20"
+        >
+          <Plus className="w-4 h-4" /> Create New Circle
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-semibold text-slate-300">Available Circles</h3>
+        {/* Left: Circles Sidebar */}
+        <div className="lg:col-span-1 flex flex-col gap-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
+            Available Circles ({circles.length})
+          </h2>
 
-          {loading ? (
-            <div className="p-8 text-center text-slate-500 text-xs bg-slate-900/50 border border-slate-800 rounded-xl">
-              Loading circles...
-            </div>
-          ) : circles.length === 0 ? (
-            <div className="p-8 text-center text-slate-500 text-xs bg-slate-900/50 border border-slate-800 rounded-xl">
-              No circles yet. Be the first to create one!
-            </div>
-          ) : (
-            circles.map((circle) => {
-              const mem = membershipMap[circle.id];
-              const isSelected = selectedCircle?.id === circle.id;
-              const memberCount = circle.members?.[0]?.count || 1;
+          <div className="flex flex-col gap-2.5 max-h-[700px] overflow-y-auto pr-1">
+            {circles.map((c) => {
+              const status = getMembershipStatus(c.id);
+              const isSelected = selectedCircle?.id === c.id;
 
               return (
                 <div
-                  key={circle.id}
-                  onClick={() => handleSelectCircle(circle)}
+                  key={c.id}
+                  onClick={() => setSelectedCircle(c)}
                   className={`p-4 rounded-xl border cursor-pointer transition flex flex-col gap-2 ${
                     isSelected
-                      ? 'bg-slate-800/90 border-indigo-500/60 shadow-lg shadow-indigo-500/10'
-                      : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                      ? 'bg-slate-800/90 border-indigo-500 shadow-md'
+                      : 'bg-slate-900 border-slate-800 hover:border-slate-700'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-white text-sm">{circle.name}</h4>
-
-                    {mem?.status === 'approved' ? (
-                      <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                        <CheckCircle2 className="w-3 h-3" /> Joined
+                    <h3 className="text-sm font-semibold text-white">{c.name}</h3>
+                    {isUserAdmin(c) && (
+                      <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded flex items-center gap-1 font-semibold">
+                        <Shield className="w-3 h-3" /> Admin
                       </span>
-                    ) : mem?.status === 'pending' ? (
-                      <span className="flex items-center gap-1 text-[11px] font-medium text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                        <Hourglass className="w-3 h-3" /> Pending
-                      </span>
-                    ) : (
-                      <button
-                        onClick={(e) => handleJoinRequestClick(circle.id, e)}
-                        className="flex items-center gap-1 text-[11px] font-medium text-indigo-400 hover:text-white bg-indigo-600/20 hover:bg-indigo-600 px-2.5 py-1 rounded-md transition"
-                      >
-                        <UserPlus className="w-3 h-3" /> Request
-                      </button>
                     )}
                   </div>
 
-                  {circle.description && (
-                    <p className="text-xs text-slate-400 line-clamp-2">{circle.description}</p>
+                  {c.description && (
+                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                      {c.description}
+                    </p>
                   )}
 
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-800/80">
-                    <span>{memberCount} member{memberCount !== 1 ? 's' : ''}</span>
-                    <span>Admin: @{circle.creator?.username || 'user'}</span>
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-800/60 mt-1">
+                    <span>Admin: {c.creator?.username || 'Aspirant'}</span>
+                    <div className="flex items-center gap-2">
+                      {status === 'approved' && (
+                        <span className="text-emerald-400 font-medium">Joined</span>
+                      )}
+                      {status === 'pending' && (
+                        <span className="text-amber-400 font-medium">Request Pending</span>
+                      )}
+                      {!status && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleJoin(c.id);
+                          }}
+                          className="text-indigo-400 hover:text-indigo-300 font-semibold"
+                        >
+                          Join
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
 
-        <div className="lg:col-span-2 flex flex-col gap-5">
-          {selectedCircle ? (
-            <>
-              <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-bold text-white">{selectedCircle.name}</h3>
-                      {isCircleAdmin && (
-                        <span className="flex items-center gap-1 text-[10px] font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded">
-                          <ShieldCheck className="w-3 h-3" /> Admin
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {selectedCircle.description || 'No description provided.'}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {isCircleAdmin && (
-                      <button
-                        onClick={() => setShowScheduleModal(true)}
-                        className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium px-3 py-1.5 rounded-xl transition shadow"
-                      >
-                        <Calendar className="w-3.5 h-3.5" /> Schedule Test
-                      </button>
-                    )}
-
-                    {isApprovedMember && !isCircleCreator && (
-                      <button
-                        onClick={handleLeaveCircle}
-                        title="Leave this Circle"
-                        className="flex items-center gap-1 text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 px-3 py-1.5 rounded-xl transition"
-                      >
-                        <LogOut className="w-3.5 h-3.5" /> Leave
-                      </button>
-                    )}
-
-                    {isCircleCreator && (
-                      <button
-                        onClick={handleDeleteCircle}
-                        title="Permanently Delete Circle"
-                        className="flex items-center gap-1 text-xs text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-600 border border-rose-500/30 px-3 py-1.5 rounded-xl transition"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" /> Delete Circle
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 border-b border-slate-800 pb-2 text-xs">
-                  <button
-                    onClick={() => setCircleTab('tests')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
-                      circleTab === 'tests'
-                        ? 'bg-slate-800 text-white font-semibold'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <Calendar className="w-3.5 h-3.5" /> Tests ({circleTests.length})
-                  </button>
-
-                  <button
-                    onClick={() => setCircleTab('announcements')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
-                      circleTab === 'announcements'
-                        ? 'bg-slate-800 text-white font-semibold'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <Megaphone className="w-3.5 h-3.5" /> Announcements
-                  </button>
-
-                  <button
-                    onClick={() => setCircleTab('leaderboard')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
-                      circleTab === 'leaderboard'
-                        ? 'bg-slate-800 text-white font-semibold'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <Trophy className="w-3.5 h-3.5" /> Leaderboard
-                  </button>
-
-                  {isCircleAdmin && (
-                    <button
-                      onClick={() => setCircleTab('admin')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition ml-auto ${
-                        circleTab === 'admin'
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold'
-                          : 'text-amber-400/80 hover:text-amber-300'
-                      }`}
-                    >
-                      <UserPlus className="w-3.5 h-3.5" /> Requests ({pendingRequests.length})
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {!isApprovedMember ? (
-                <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-2xl text-center flex flex-col items-center justify-center gap-2">
-                  <Lock className="w-8 h-8 text-amber-400/60 mb-1" />
-                  <h4 className="text-sm font-semibold text-slate-200">Gated Circle</h4>
-                  <p className="text-xs text-slate-400 max-w-sm">
-                    {userStatus === 'pending'
-                      ? 'Your join request is awaiting circle admin authorization. You will gain full access as soon as it is approved.'
-                      : 'You must request and be granted admission by the circle admin to view tests, announcements, and ranks.'}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {circleTab === 'tests' && (
-                    <div className="flex flex-col gap-3">
-                      {circleTests.length === 0 ? (
-                        <div className="p-8 text-center text-slate-500 text-xs bg-slate-900/50 border border-slate-800 rounded-xl">
-                          No tests scheduled yet. {isCircleAdmin ? 'Click "Schedule Test" above to configure a test for all members.' : 'Circle admin has not scheduled any exams yet.'}
-                        </div>
-                      ) : (
-                        circleTests.map((test) => {
-                          const now = new Date();
-                          const start = test.window_start ? new Date(test.window_start) : null;
-                          const end = test.window_end ? new Date(test.window_end) : null;
-
-                          const isUpcoming = start && now < start;
-                          const isOpen = (!start || now >= start) && (!end || now <= end);
-
-                          return (
-                            <div
-                              key={test.id}
-                              className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4"
-                            >
-                              <div className="flex flex-col gap-1">
-                                <div className="flex items-center gap-2">
-                                  <h5 className="font-semibold text-white text-sm">{test.title}</h5>
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
-                                    {test.subject}
-                                  </span>
-                                  <span className="text-[10px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2 py-0.5 rounded">
-                                    {Array.isArray(test.questions) && test.questions.length > 0 ? test.questions.length : (test.question_count || test.total_questions || 5)} Qs
-                                  </span>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
-                                  <span className="flex items-center gap-1">
-                                    <BookOpen className="w-3.5 h-3.5 text-slate-500" /> {test.chapter}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <Clock className="w-3.5 h-3.5 text-slate-500" /> {test.duration_minutes || test.duration || 60} mins
-                                  </span>
-                                  {start && end && (
-                                    <span className="text-[11px] text-indigo-400 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-800/40">
-                                      Window: {start.toLocaleDateString()} {start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2 shrink-0">
-                                {isOpen ? (
-                                  <button
-                                    onClick={() => handleAttemptTest(test)}
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow cursor-pointer"
-                                  >
-                                    Attempt Test
-                                  </button>
-                                ) : isUpcoming ? (
-                                  <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg">
-                                    Opens at {start?.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                  </span>
-                                ) : (
-                                  <span className="text-xs text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-lg">
-                                    Window Closed
-                                  </span>
-                                )}
-
-                                {isCircleAdmin && (
-                                  <button
-                                    onClick={(e) => handleDeleteTest(test.id, e)}
-                                    title="Delete this test"
-                                    className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 rounded-xl transition cursor-pointer"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  )}
-
-                  {circleTab === 'announcements' && (
-                    <div className="bg-slate-950 border border-slate-800 rounded-2xl flex flex-col h-[calc(100vh-250px)] min-h-[560px] max-h-[780px] overflow-hidden shadow-2xl">
-                      <div className="p-4 px-5 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-                            <Megaphone className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-bold text-white tracking-wide">
-                                #{selectedCircle.name} Announcements
-                              </h4>
-                              <span className="text-[10px] font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded">
-                                Official Notice Board
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-slate-400">
-                              Admin broadcasts, test schedules, and cohort updates
-                            </p>
-                          </div>
-                        </div>
-
-                        <span className="text-xs text-slate-400 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/60 hidden sm:inline-block">
-                          {circleMembers.length} Subscriber{circleMembers.length !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-
-                      <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-4">
-                        {announcements.length === 0 ? (
-                          <div className="m-auto text-center flex flex-col items-center gap-2 text-slate-500 text-xs py-12">
-                            <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600">
-                              <Megaphone className="w-6 h-6" />
-                            </div>
-                            <p className="font-medium text-slate-400">No announcements posted yet.</p>
-                            <p className="text-[11px] text-slate-500 max-w-xs">
-                              {isCircleAdmin
-                                ? 'Broadcast schedules, test links, or motivation messages below.'
-                                : 'Check back later for updates from your circle admin.'}
-                            </p>
-                          </div>
-                        ) : (
-                          announcements.map((a) => {
-                            const authorName = a.author?.username || 'Circle Admin';
-                            const initial = authorName[0]?.toUpperCase() || 'A';
-                            const timeStr = a.created_at
-                              ? new Date(a.created_at).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })
-                              : '';
-                            const dateStr = a.created_at
-                              ? new Date(a.created_at).toLocaleDateString([], {
-                                  month: 'short',
-                                  day: 'numeric'
-                                })
-                              : '';
-
-                            return (
-                              <div
-                                key={a.id}
-                                className="bg-slate-900/90 border border-slate-800 p-4 md:p-5 rounded-2xl max-w-2xl self-start flex gap-3.5 shadow-md"
-                              >
-                                <div className="w-9 h-9 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold text-xs shrink-0">
-                                  {initial}
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1.5">
-                                    <span className="text-xs font-bold text-indigo-400">
-                                      @{authorName}
-                                    </span>
-                                    <span className="text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.2 rounded">
-                                      Admin
-                                    </span>
-                                    <span className="text-[10px] text-slate-500 ml-auto">
-                                      {dateStr} - {timeStr}
-                                    </span>
-                                  </div>
-
-                                  <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap">
-                                    {a.message}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                        <div ref={announcementsEndRef} />
-                      </div>
-
-                      {isCircleAdmin ? (
-                        <form
-                          onSubmit={handleSendAnnouncement}
-                          className="p-3 md:p-4 border-t border-slate-800 bg-slate-900/95 flex items-center gap-2.5"
-                        >
-                          <input
-                            type="text"
-                            placeholder={`Broadcast an announcement to #${selectedCircle.name}...`}
-                            value={announcementMsg}
-                            onChange={(e) => setAnnouncementMsg(e.target.value)}
-                            className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-200 outline-none focus:border-indigo-500 transition placeholder:text-slate-500"
-                          />
-                          <button
-                            type="submit"
-                            disabled={!announcementMsg.trim()}
-                            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white px-5 py-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow cursor-pointer"
-                          >
-                            <Send className="w-3.5 h-3.5" /> Broadcast
-                          </button>
-                        </form>
-                      ) : (
-                        <div className="p-3 text-center text-[11px] text-slate-500 border-t border-slate-800 bg-slate-950/80">
-                          Broadcasts are exclusive to the Circle Admin. Members receive notifications in read-only mode.
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {circleTab === 'leaderboard' && (
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-                      {leaderboard.length === 0 ? (
-                        <div className="p-8 text-center text-slate-500 text-xs">
-                          No test submissions yet. Complete scheduled circle exams to populate ranks!
-                        </div>
-                      ) : (
-                        <table className="w-full text-left text-xs">
-                          <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 uppercase tracking-wider text-[10px]">
-                            <tr>
-                              <th className="py-2.5 px-4">Rank</th>
-                              <th className="py-2.5 px-4">Candidate</th>
-                              <th className="py-2.5 px-4">Target Exam</th>
-                              <th className="py-2.5 px-4 text-center">Tests</th>
-                              <th className="py-2.5 px-4 text-right">Avg Accuracy</th>
-                              <th className="py-2.5 px-4 text-right">Total Score</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-800">
-                            {leaderboard.map((row, idx) => (
-                              <tr key={row.userId} className="hover:bg-slate-800/40 transition">
-                                <td className="py-3 px-4 font-bold text-slate-300">
-                                  {idx === 0 ? '1' : idx === 1 ? '2' : idx === 2 ? '3' : `#${idx + 1}`}
-                                </td>
-                                <td className="py-3 px-4 font-medium text-white">@{row.username}</td>
-                                <td className="py-3 px-4 text-slate-400">{row.targetExam}</td>
-                                <td className="py-3 px-4 text-center text-slate-300">{row.testsTaken}</td>
-                                <td className="py-3 px-4 text-right text-emerald-400 font-semibold">{row.avgAccuracy}%</td>
-                                <td className="py-3 px-4 text-right font-bold text-indigo-400">{row.totalScore} pts</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-                    </div>
-                  )}
-
-                  {circleTab === 'admin' && isCircleAdmin && (
-                    <div className="flex flex-col gap-3">
-                      <h4 className="text-xs font-semibold text-slate-400">
-                        Pending Membership Requests ({pendingRequests.length})
-                      </h4>
-
-                      {pendingRequests.length === 0 ? (
-                        <div className="p-8 text-center text-slate-500 text-xs bg-slate-900/50 border border-slate-800 rounded-xl">
-                          No pending join requests at this time.
-                        </div>
-                      ) : (
-                        pendingRequests.map((req) => {
-                          const isActing = processingId === (req.id || req.user_id || req.user?.id);
-
-                          return (
-                            <div
-                              key={req.id || req.user_id || req.user?.id}
-                              className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl flex items-center justify-between gap-4"
-                            >
-                              <div>
-                                <span className="font-semibold text-white text-xs">@{req.user?.username || 'Aspirant'}</span>
-                                <span className="text-[11px] text-slate-400 block">
-                                  Target: {req.user?.target_exam || 'JEE Main'}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                <button
-                                  disabled={isActing}
-                                  onClick={() => handleApproveReject(req, true)}
-                                  className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[11px] font-medium px-3 py-1.5 rounded-lg transition cursor-pointer"
-                                >
-                                  <UserCheck className="w-3.5 h-3.5" /> {isActing ? 'Updating...' : 'Accept'}
-                                </button>
-                                <button
-                                  disabled={isActing}
-                                  onClick={() => handleApproveReject(req, false)}
-                                  className="flex items-center gap-1 bg-slate-800 hover:bg-rose-600/80 disabled:opacity-50 text-slate-300 hover:text-white text-[11px] font-medium px-3 py-1.5 rounded-lg transition cursor-pointer"
-                                >
-                                  <UserX className="w-3.5 h-3.5" /> {isActing ? '...' : 'Decline'}
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-            </>
-          ) : (
-            <div className="p-16 text-center text-slate-500 bg-slate-900/30 border border-dashed border-slate-800 rounded-2xl flex flex-col items-center justify-center gap-2">
-              <Users className="w-8 h-8 text-slate-600" />
-              <p className="text-sm">Select a circle from the list to view its tests, announcements, and leaderboard</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {activeExam && (
-        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl p-6 shadow-2xl flex flex-col gap-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div>
-                <h3 className="text-base font-bold text-white">{activeExam.title}</h3>
-                <span className="text-[11px] text-slate-400">
-                  Standardized Exam - {activeExam.questions?.length || 0} Questions - Marking: +4, -1
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                {!examSubmitted && (
-                  <div className="flex items-center gap-1.5 bg-slate-800 text-amber-400 font-mono text-xs px-3 py-1 rounded-lg border border-slate-700">
-                    <Clock className="w-3.5 h-3.5" /> {formatTimer(timeLeft)}
-                  </div>
-                )}
-                <button
-                  onClick={() => setActiveExam(null)}
-                  className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {!examSubmitted ? (
-              activeExam.questions && activeExam.questions.length > 0 && (
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between text-xs text-indigo-400 font-semibold">
-                    <span>Question {currentQIndex + 1} of {activeExam.questions.length}</span>
-                    <span className="text-slate-400">{activeExam.subject} - {activeExam.chapter}</span>
-                  </div>
-
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-sm text-slate-200 font-medium whitespace-pre-wrap">
-                    {activeExam.questions[currentQIndex]?.question || 'No question prompt provided.'}
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-2.5">
-                    {activeExam.questions[currentQIndex]?.options?.map((opt, optIdx) => {
-                      const isChosen = Number(examAnswers[currentQIndex]) === optIdx;
-                      return (
-                        <button
-                          key={optIdx}
-                          onClick={() =>
-                            setExamAnswers((prev) => ({ ...prev, [currentQIndex]: optIdx }))
-                          }
-                          className={`p-3 rounded-xl border text-left text-xs transition flex items-center gap-3 cursor-pointer ${
-                            isChosen
-                              ? 'bg-indigo-600/20 border-indigo-500 text-white font-semibold'
-                              : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'
-                          }`}
-                        >
-                          <span
-                            className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold border ${
-                              isChosen
-                                ? 'bg-indigo-600 border-indigo-400 text-white'
-                                : 'bg-slate-900 border-slate-700 text-slate-400'
-                            }`}
-                          >
-                            {String.fromCharCode(65 + optIdx)}
-                          </span>
-                          <span>{opt}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-                    <button
-                      disabled={currentQIndex === 0}
-                      onClick={() => setCurrentQIndex((prev) => prev - 1)}
-                      className="flex items-center gap-1 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs disabled:opacity-40 transition cursor-pointer"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" /> Previous
-                    </button>
-
-                    {currentQIndex < activeExam.questions.length - 1 ? (
-                      <button
-                        onClick={() => setCurrentQIndex((prev) => prev + 1)}
-                        className="flex items-center gap-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition cursor-pointer"
-                      >
-                        Next <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={handleExamSubmit}
-                        className="flex items-center gap-1 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow cursor-pointer"
-                      >
-                        Submit Test Paper
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-4 py-6 text-center">
-                <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="text-lg font-bold text-white">Test Submitted Successfully!</h4>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Your result has been registered to the Circle Leaderboard.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4 w-full max-w-md bg-slate-950 p-4 rounded-xl border border-slate-800 mt-2">
-                  <div>
-                    <span className="text-[10px] text-slate-500 uppercase block">Score</span>
-                    <span className="text-base font-bold text-indigo-400">{examScoreResult?.score} pts</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-500 uppercase block">Correct</span>
-                    <span className="text-base font-bold text-emerald-400">
-                      {examScoreResult?.correct} / {examScoreResult?.total}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-500 uppercase block">Accuracy</span>
-                    <span className="text-base font-bold text-amber-400">{examScoreResult?.accuracy}%</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    setActiveExam(null);
-                    setCircleTab('leaderboard');
-                  }}
-                  className="mt-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition cursor-pointer"
-                >
-                  View Circle Leaderboard
-                </button>
+            {circles.length === 0 && (
+              <div className="p-8 text-center bg-slate-900/50 border border-slate-800 rounded-xl text-xs text-slate-500">
+                No circles available yet. Create the first one!
               </div>
             )}
           </div>
         </div>
-      )}
 
-      {showAddQuestionModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl my-8">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-              <div>
-                <h3 className="text-base font-bold text-white">Add Question to Pool</h3>
-                <p className="text-[11px] text-slate-400">Questions added here automatically populate both test modes</p>
+        {/* Right: Selected Circle Content */}
+        <div className="lg:col-span-2">
+          {selectedCircle ? (
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl flex flex-col gap-6">
+              {/* Circle Info Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+                <div>
+                  <h2 className="text-xl font-bold text-white">{selectedCircle.name}</h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {selectedCircle.description || 'Private peer study circle for JEE prep.'}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {isUserAdmin(selectedCircle) && (
+                    <button
+                      onClick={() => handleDeleteCircle(selectedCircle.id)}
+                      className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete Circle
+                    </button>
+                  )}
+                  {getMembershipStatus(selectedCircle.id) === 'approved' && !isUserAdmin(selectedCircle) && (
+                    <button
+                      onClick={() => handleLeave(selectedCircle.id)}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition"
+                    >
+                      Leave Circle
+                    </button>
+                  )}
+                </div>
               </div>
-              <button onClick={() => setShowAddQuestionModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
+
+              {/* Navigation Tabs inside Circle */}
+              <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                {[
+                  { id: 'tests', label: 'Circle Tests', icon: Calendar },
+                  { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+                  { id: 'members', label: `Members (${circleMembers.approved.length})`, icon: Users },
+                  { id: 'chat', label: 'Announcements', icon: MessageSquare }
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                        isActive
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* TAB 1: TESTS */}
+              {activeTab === 'tests' && (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400">Scheduled Mock Tests</span>
+                    {isUserAdmin(selectedCircle) && (
+                      <button
+                        onClick={() => setShowScheduleModal(true)}
+                        className="px-3 py-1.5 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Schedule Test
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    {circleTests.map((t) => (
+                      <div
+                        key={t.id}
+                        className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-700 transition"
+                      >
+                        <div className="flex flex-col gap-1">
+                          <h4 className="text-sm font-semibold text-white">{t.title}</h4>
+                          <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                            <span className="text-indigo-400 font-semibold">{t.subject}</span>
+                            <span>•</span>
+                            <span>{t.chapter}</span>
+                            <span>•</span>
+                            <span>{t.question_count || t.total_questions || 5} Questions</span>
+                            <span>•</span>
+                            <span>{t.duration_minutes || 60} Mins</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              if (typeof onSelectTestToTake === 'function') {
+                                onSelectTestToTake(t);
+                              } else {
+                                alert('Launching exam runner for ' + t.title);
+                              }
+                            }}
+                            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shadow-sm"
+                          >
+                            Take Test <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+
+                          {isUserAdmin(selectedCircle) && (
+                            <button
+                              onClick={() => handleDeleteTest(t.id)}
+                              className="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
+                              title="Delete Test"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {circleTests.length === 0 && (
+                      <div className="py-12 text-center text-xs text-slate-500">
+                        No tests have been scheduled in this circle yet.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: LEADERBOARD */}
+              {activeTab === 'leaderboard' && (
+                <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-12 text-[11px] font-semibold text-slate-400 px-4 py-2 border-b border-slate-800">
+                    <span className="col-span-2">Rank</span>
+                    <span className="col-span-5">Aspirant</span>
+                    <span className="col-span-3 text-right">Tests Taken</span>
+                    <span className="col-span-2 text-right">Total Score</span>
+                  </div>
+
+                  {leaderboard.map((u, idx) => (
+                    <div
+                      key={u.userId}
+                      className="grid grid-cols-12 items-center text-xs px-4 py-3 bg-slate-950/40 border border-slate-800 rounded-xl"
+                    >
+                      <span className="col-span-2 font-bold text-indigo-400">#{idx + 1}</span>
+                      <span className="col-span-5 font-medium text-white">{u.username}</span>
+                      <span className="col-span-3 text-right text-slate-400">{u.testsTaken}</span>
+                      <span className="col-span-2 text-right font-bold text-emerald-400">
+                        {u.totalScore}
+                      </span>
+                    </div>
+                  ))}
+
+                  {leaderboard.length === 0 && (
+                    <div className="py-12 text-center text-xs text-slate-500">
+                      No test submissions yet. Take tests to generate rankings!
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 3: MEMBERS */}
+              {activeTab === 'members' && (
+                <div className="flex flex-col gap-6">
+                  {/* Pending Requests for Admins */}
+                  {isUserAdmin(selectedCircle) && circleMembers.pending.length > 0 && (
+                    <div className="flex flex-col gap-2.5">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                        Pending Join Requests ({circleMembers.pending.length})
+                      </span>
+                      <div className="flex flex-col gap-2">
+                        {circleMembers.pending.map((m) => (
+                          <div
+                            key={m.id}
+                            className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center justify-between"
+                          >
+                            <span className="text-xs font-semibold text-white">
+                              {m.user?.username || 'Aspirant'}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleManageRequest(m.id, true)}
+                                className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 transition"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleManageRequest(m.id, false)}
+                                className="p-1.5 bg-rose-500/20 text-rose-400 rounded-lg hover:bg-rose-500/30 transition"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Approved Members */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Circle Members ({circleMembers.approved.length})
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {circleMembers.approved.map((m) => (
+                        <div
+                          key={m.id}
+                          className="p-3 bg-slate-950/40 border border-slate-800 rounded-xl flex items-center justify-between"
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-xs font-semibold text-white">
+                              {m.user?.username || 'Aspirant'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              Target: {m.user?.target_exam || 'JEE Main'}
+                            </span>
+                          </div>
+                          <span className="text-[10px] uppercase font-semibold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                            {m.role}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: ANNOUNCEMENTS */}
+              {activeTab === 'chat' && (
+                <div className="flex flex-col gap-4">
+                  <form onSubmit={handlePostAnnouncement} className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Post an announcement or challenge..."
+                      value={announcementMsg}
+                      onChange={(e) => setAnnouncementMsg(e.target.value)}
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition"
+                    >
+                      Post
+                    </button>
+                  </form>
+
+                  <div className="flex flex-col gap-2.5 max-h-96 overflow-y-auto">
+                    {announcements.map((a) => (
+                      <div
+                        key={a.id}
+                        className="p-3 bg-slate-950/40 border border-slate-800 rounded-xl flex flex-col gap-1"
+                      >
+                        <div className="flex items-center justify-between text-[10px] text-slate-500">
+                          <span className="font-semibold text-indigo-400">
+                            {a.author?.username || 'Member'}
+                          </span>
+                          <span>{new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <p className="text-xs text-slate-300">{a.message}</p>
+                      </div>
+                    ))}
+                    {announcements.length === 0 && (
+                      <div className="py-8 text-center text-xs text-slate-500">
+                        No announcements posted yet.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-
-            <form onSubmit={handleCreateQuestionSubmit} className="flex flex-col gap-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-slate-400 block mb-1">Subject</label>
-                  <select
-                    value={newQuestionData.subject}
-                    onChange={(e) => setNewQuestionData({ ...newQuestionData, subject: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
-                  >
-                    <option value="Physics">Physics</option>
-                    <option value="Chemistry">Chemistry</option>
-                    <option value="Mathematics">Mathematics</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-slate-400 block mb-1">Chapter</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Thermodynamics or All"
-                    value={newQuestionData.chapter}
-                    onChange={(e) => setNewQuestionData({ ...newQuestionData, chapter: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Question Prompt</label>
-                <textarea
-                  rows={3}
-                  required
-                  placeholder="e.g. A particle moves with velocity v = k*sqrt(x)..."
-                  value={newQuestionData.question}
-                  onChange={(e) => setNewQuestionData({ ...newQuestionData, question: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 font-mono text-[11px]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="text-slate-400 block mb-1">Option A</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Option A"
-                    value={newQuestionData.optionA}
-                    onChange={(e) => setNewQuestionData({ ...newQuestionData, optionA: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 block mb-1">Option B</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Option B"
-                    value={newQuestionData.optionB}
-                    onChange={(e) => setNewQuestionData({ ...newQuestionData, optionB: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 block mb-1">Option C</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Option C"
-                    value={newQuestionData.optionC}
-                    onChange={(e) => setNewQuestionData({ ...newQuestionData, optionC: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 block mb-1">Option D</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Option D"
-                    value={newQuestionData.optionD}
-                    onChange={(e) => setNewQuestionData({ ...newQuestionData, optionD: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Correct Answer</label>
-                <select
-                  value={newQuestionData.correctAnswer}
-                  onChange={(e) => setNewQuestionData({ ...newQuestionData, correctAnswer: Number(e.target.value) })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
-                >
-                  <option value={0}>Option A</option>
-                  <option value={1}>Option B</option>
-                  <option value={2}>Option C</option>
-                  <option value={3}>Option D</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Explanation (Optional)</label>
-                <textarea
-                  rows={2}
-                  placeholder="Solution steps or key formula..."
-                  value={newQuestionData.explanation}
-                  onChange={(e) => setNewQuestionData({ ...newQuestionData, explanation: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 text-[11px]"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowAddQuestionModal(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow cursor-pointer"
-                >
-                  Save to Pool
-                </button>
-              </div>
-            </form>
-          </div>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center p-12 bg-slate-900 border border-slate-800 rounded-2xl text-center">
+              <Users className="w-12 h-12 text-slate-700 mb-3" />
+              <h3 className="text-sm font-semibold text-slate-300">Select a Circle</h3>
+              <p className="text-xs text-slate-500 max-w-sm mt-1">
+                Choose a study circle from the left column to view scheduled mock tests, leaderboards, and peer discussions.
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
+      {/* MODAL: CREATE CIRCLE */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-              <h3 className="text-base font-bold text-white">Create New Study Circle</h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateCircle} className="flex flex-col gap-4 text-xs">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-4">Create New Circle</h3>
+            <form onSubmit={handleCreateCircle} className="flex flex-col gap-4">
               <div>
-                <label className="text-slate-400 block mb-1">Circle Name</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Circle Name</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Apex 99 Percentile Batch"
-                  value={newCircle.name}
-                  onChange={(e) => setNewCircle({ ...newCircle, name: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
+                  placeholder="e.g., Kota Aspirants 2026"
+                  value={newCircleName}
+                  onChange={(e) => setNewCircleName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="text-slate-400 block mb-1">Target / Focus Description</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Description</label>
                 <textarea
-                  rows={2}
-                  placeholder="e.g. Daily chapterwise problem tests & rank analysis..."
-                  value={newCircle.description}
-                  onChange={(e) => setNewCircle({ ...newCircle, description: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
+                  rows="3"
+                  placeholder="Target goal, discussion focus, or test schedule..."
+                  value={newCircleDesc}
+                  onChange={(e) => setNewCircleDesc(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white outline-none focus:border-indigo-500"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer"
+                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold cursor-pointer"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition"
                 >
-                  Create
+                  {isSubmitting ? 'Creating...' : 'Create Circle'}
                 </button>
               </div>
             </form>
@@ -1427,114 +643,90 @@ export default function CircleList({ currentUser, onStartTest, generateQuestions
         </div>
       )}
 
+      {/* MODAL: SCHEDULE TEST */}
       {showScheduleModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-              <h3 className="text-base font-bold text-white">Schedule Circle Mock Test</h3>
-              <button onClick={() => setShowScheduleModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleScheduleTest} className="flex flex-col gap-4 text-xs">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-4">Schedule Circle Mock Test</h3>
+            <form onSubmit={handleScheduleTest} className="flex flex-col gap-4">
               <div>
-                <label className="text-slate-400 block mb-1">Test Title</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Test Title</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Electrostatics Full Sprint"
+                  placeholder="e.g., Weekly Physics Sprint"
                   value={newTest.title}
                   onChange={(e) => setNewTest({ ...newTest, title: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-400 block mb-1">Subject</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Subject</label>
                   <select
                     value={newTest.subject}
                     onChange={(e) => setNewTest({ ...newTest, subject: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none"
                   >
                     <option value="Physics">Physics</option>
                     <option value="Chemistry">Chemistry</option>
                     <option value="Mathematics">Mathematics</option>
                   </select>
                 </div>
-                <div>
-                  <label className="text-slate-400 block mb-1">Duration (Mins)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="180"
-                    value={newTest.durationMinutes}
-                    onChange={(e) => setNewTest({ ...newTest, durationMinutes: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
-                  />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-400 block mb-1">Chapter Focus</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Current Electricity (or 'All')"
-                    value={newTest.chapter}
-                    onChange={(e) => setNewTest({ ...newTest, chapter: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 block mb-1">Number of Questions</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Question Count</label>
                   <input
                     type="number"
                     min="5"
-                    max="30"
+                    max="75"
                     value={newTest.questionCount}
                     onChange={(e) => setNewTest({ ...newTest, questionCount: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-400 block mb-1">Window Starts</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Duration (Mins)</label>
                   <input
-                    type="datetime-local"
-                    value={newTest.windowStart}
-                    onChange={(e) => setNewTest({ ...newTest, windowStart: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
+                    type="number"
+                    min="5"
+                    max="180"
+                    value={newTest.durationMinutes}
+                    onChange={(e) => setNewTest({ ...newTest, durationMinutes: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white outline-none"
                   />
                 </div>
+
                 <div>
-                  <label className="text-slate-400 block mb-1">Window Ends</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Chapter Filter</label>
                   <input
-                    type="datetime-local"
-                    value={newTest.windowEnd}
-                    onChange={(e) => setNewTest({ ...newTest, windowEnd: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
+                    type="text"
+                    placeholder="All or Chapter name"
+                    value={newTest.chapter}
+                    onChange={(e) => setNewTest({ ...newTest, chapter: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white outline-none"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowScheduleModal(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer"
+                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isGeneratingTest}
-                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold disabled:opacity-50 cursor-pointer"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition"
                 >
-                  {isGeneratingTest ? 'Generating Standard Paper...' : 'Schedule Test for All'}
+                  {isSubmitting ? 'Scheduling...' : 'Save & Schedule'}
                 </button>
               </div>
             </form>
