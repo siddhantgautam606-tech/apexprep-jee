@@ -16,8 +16,29 @@ export default function TestOrganizer({ currentUser }) {
 
   const [activeTest, setActiveTest] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showLimitModal, setShowLimitModal] = useState(false);
 
   const handleStartTest = async () => {
+    // ==========================================
+    // CREATOR BYPASS & DAILY LIMIT GUARDRAIL
+    // ==========================================
+    const isCreator = true; // As requested, no restrictions for you as the creator!
+    
+    if (!isCreator) {
+      const today = new Date().toISOString().split('T')[0];
+      const storageKey = `prepxai_tests_${today}`;
+      const testsTakenToday = parseInt(localStorage.getItem(storageKey) || '0', 10);
+
+      if (testsTakenToday >= 4) {
+        setShowLimitModal(true);
+        return; // Block test launch
+      }
+
+      // Increment count for regular users
+      localStorage.setItem(storageKey, testsTakenToday + 1);
+    }
+    // ==========================================
+
     setIsSubmitting(true);
     let loadedQuestions = [];
 
@@ -89,13 +110,45 @@ export default function TestOrganizer({ currentUser }) {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto py-4">
+    <div className="w-full max-w-4xl mx-auto py-4 relative">
       <TestConfig
         config={config}
         onChangeConfig={(newCfg) => setConfig(newCfg)}
         onStartTest={handleStartTest}
         isSubmitting={isSubmitting}
       />
+
+      {/* Upgrade / Daily Limit Modal */}
+      {showLimitModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 text-center shadow-2xl shadow-indigo-500/10">
+            <div className="w-12 h-12 rounded-full bg-indigo-600/20 text-indigo-400 flex items-center justify-center mx-auto mb-4 border border-indigo-500/30 font-bold text-lg">
+              4/4
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">Daily Free Limit Reached</h3>
+            <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+              You've completed your 4 free practice tests for today. Upgrade to Premium to unlock unlimited daily mock tests, handwritten revision notes, and exclusive Friend Circles!
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLimitModal(false)}
+                className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  alert('Redirecting to Premium Upgrade Tiers...');
+                  setShowLimitModal(false);
+                }}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/30"
+              >
+                Unlock Premium
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
