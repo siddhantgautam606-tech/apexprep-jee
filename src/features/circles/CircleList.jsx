@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Users, Plus, Shield, Check, X, MessageSquare, Trophy, Calendar, Clock, Trash2, ArrowRight, Send } from 'lucide-react';
 import { 
   getAllCircles, 
@@ -18,6 +18,7 @@ import {
   fetchQuestionsForTest
 } from '../../services/circleService';
 import { getStandardQuestions } from '../../data/jeeQuestionBank';
+import { JEE_SYLLABUS } from '../../data/syllabusData';
 
 export default function CircleList({ currentUser, onSelectTestToTake }) {
   const [circles, setCircles] = useState([]);
@@ -45,13 +46,40 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
   // Schedule Test Form State
   const [newTest, setNewTest] = useState({
     title: '',
-    subject: 'Physics',
+    subject: 'Full Syllabus',
     chapter: 'All',
     durationMinutes: 60,
     questionCount: 5,
     windowStart: '',
     windowEnd: ''
   });
+
+  // Dynamically load chapters safely based on subject
+  const availableChapters = useMemo(() => {
+    if (!newTest.subject || newTest.subject === 'Full Syllabus') {
+      return ['All'];
+    }
+
+    let chapters = [];
+    if (JEE_SYLLABUS && JEE_SYLLABUS[newTest.subject]) {
+      const subjectData = JEE_SYLLABUS[newTest.subject];
+
+      if (Array.isArray(subjectData)) {
+        chapters = subjectData;
+      } else if (typeof subjectData === 'object' && subjectData !== null) {
+        Object.values(subjectData).forEach((val) => {
+          if (Array.isArray(val)) {
+            chapters.push(...val);
+          } else if (typeof val === 'string') {
+            chapters.push(val);
+          }
+        });
+      }
+    }
+
+    const unique = Array.from(new Set(chapters.filter((c) => c && c !== 'All')));
+    return ['All', ...unique];
+  }, [newTest.subject]);
 
   const loadCirclesData = async () => {
     const all = await getAllCircles();
@@ -168,11 +196,8 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
       }
 
       if (!Array.isArray(questions) || questions.length === 0) {
-        questions = getStandardQuestions(
-          newTest.subject === 'Full Syllabus' ? 'Physics' : newTest.subject,
-          newTest.chapter,
-          qNum
-        );
+        const subForBank = newTest.subject === 'Full Syllabus' ? 'Physics' : newTest.subject;
+        questions = getStandardQuestions(subForBank, newTest.chapter, qNum);
       }
 
       if (!Array.isArray(questions) || questions.length === 0) {
@@ -197,7 +222,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
         setShowScheduleModal(false);
         setNewTest({
           title: '',
-          subject: 'Physics',
+          subject: 'Full Syllabus',
           chapter: 'All',
           durationMinutes: 60,
           questionCount: 5,
@@ -244,7 +269,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-6">
-      {/* Header */}
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -263,7 +288,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sidebar */}
+        {/* Left: Circles Sidebar */}
         <div className="lg:col-span-1 flex flex-col gap-3">
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
             Available Circles ({circles.length})
@@ -333,11 +358,11 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
           </div>
         </div>
 
-        {/* Selected Circle Active Details */}
+        {/* Right: Selected Circle Content */}
         <div className="lg:col-span-2">
           {selectedCircle ? (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl flex flex-col gap-6">
-              {/* Header */}
+              {/* Circle Info Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
                 <div>
                   <h2 className="text-xl font-bold text-white">{selectedCircle.name}</h2>
@@ -366,7 +391,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                 </div>
               </div>
 
-              {/* Navigation Tabs */}
+              {/* Navigation Tabs inside Circle */}
               <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
                 {[
                   { id: 'tests', label: 'Circle Tests', icon: Calendar },
@@ -671,7 +696,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
         </div>
       )}
 
-      {/* MODAL: SCHEDULE TEST */}
+      {/* MODAL: SCHEDULE TEST (With Full Syllabus and Dynamic Chapter Select) */}
       {showScheduleModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
@@ -682,7 +707,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                 <input
                   type="text"
                   required
-                  placeholder="e.g., Weekly Physics Sprint"
+                  placeholder="e.g., Weekly Full Mock Test"
                   value={newTest.title}
                   onChange={(e) => setNewTest({ ...newTest, title: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-indigo-500"
@@ -694,15 +719,34 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                   <label className="block text-xs font-semibold text-slate-300 mb-1">Subject</label>
                   <select
                     value={newTest.subject}
-                    onChange={(e) => setNewTest({ ...newTest, subject: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                    onChange={(e) => setNewTest({ ...newTest, subject: e.target.value, chapter: 'All' })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
                   >
+                    <option value="Full Syllabus">Full Syllabus (P + C + M)</option>
                     <option value="Physics">Physics</option>
                     <option value="Chemistry">Chemistry</option>
                     <option value="Mathematics">Mathematics</option>
                   </select>
                 </div>
 
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Chapter Selection</label>
+                  <select
+                    disabled={newTest.subject === 'Full Syllabus'}
+                    value={newTest.chapter}
+                    onChange={(e) => setNewTest({ ...newTest, chapter: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 disabled:opacity-40"
+                  >
+                    {availableChapters.map((ch, idx) => (
+                      <option key={idx} value={ch}>
+                        {ch === 'All' ? 'All Chapters' : ch}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">Question Count</label>
                   <input
@@ -711,12 +755,10 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                     max="75"
                     value={newTest.questionCount}
                     onChange={(e) => setNewTest({ ...newTest, questionCount: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white outline-none focus:border-indigo-500"
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">Duration (Mins)</label>
                   <input
@@ -725,18 +767,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                     max="180"
                     value={newTest.durationMinutes}
                     onChange={(e) => setNewTest({ ...newTest, durationMinutes: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Chapter Filter</label>
-                  <input
-                    type="text"
-                    placeholder="All or Chapter name"
-                    value={newTest.chapter}
-                    onChange={(e) => setNewTest({ ...newTest, chapter: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white outline-none focus:border-indigo-500"
                   />
                 </div>
               </div>
