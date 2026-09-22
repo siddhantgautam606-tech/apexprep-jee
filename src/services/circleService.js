@@ -165,44 +165,48 @@ export async function getCircleTests(circleId) {
   }
 }
 
-// Schedule a circle test
+// Schedule a circle test (Bulletproof with sanitized questions and schema retry)
 export async function scheduleCircleTest(circleId, testData, userId) {
   try {
     const qCount = Number(testData.questionCount) || Number(testData.question_count) || 5;
 
-    // Convert blank inputs to null so Postgres timestamp doesn't crash
-    const windowStart = testData.windowStart && String(testData.windowStart).trim() !== '' 
-      ? new Date(testData.windowStart).toISOString() 
-      : null;
-    const windowEnd = testData.windowEnd && String(testData.windowEnd).trim() !== '' 
-      ? new Date(testData.windowEnd).toISOString() 
-      : null;
+    // Sanitize questions array into clean JSON-serializable objects
+    let sanitizedQuestions = [];
+    if (Array.isArray(testData.questions)) {
+      sanitizedQuestions = testData.questions.map((q, idx) => ({
+        id: q.id || idx + 1,
+        question: String(q.question || q.question_text || q.text || `Question ${idx + 1}`),
+        options: Array.isArray(q.options)
+          ? q.options.map((opt) => (typeof opt === 'string' ? opt : opt?.text || String(opt)))
+          : ['A', 'B', 'C', 'D'],
+        correctAnswer: q.correctAnswer !== undefined ? Number(q.correctAnswer) : 0,
+        explanation: String(q.explanation || '')
+      }));
+    }
 
-    const basePayload = {
+    const payload = {
       circle_id: circleId,
-      title: testData.title || 'Untitled Circle Test',
+      title: String(testData.title || 'Untitled Test').trim(),
       subject: testData.subject || 'Physics',
       chapter: testData.chapter || 'All',
       duration_minutes: Number(testData.durationMinutes) || 60,
-      questions: Array.isArray(testData.questions) ? testData.questions : [],
-      window_start: windowStart,
-      window_end: windowEnd,
+      questions: sanitizedQuestions,
       created_by: userId
     };
 
-    // Attempt 1: Try insert with question_count
+    // Attempt 1: Standard table with question_count
     let { data, error } = await supabase
       .from('circle_tests')
-      .insert([{ ...basePayload, question_count: qCount }])
+      .insert([{ ...payload, question_count: qCount }])
       .select()
       .single();
 
-    // Attempt 2: If question_count doesn't exist, try total_questions
+    // Attempt 2: If question_count fails, try total_questions
     if (error) {
-      console.warn('Retrying circle test insert with total_questions...');
+      console.warn('Attempt 1 failed, trying total_questions column:', error.message);
       const retry = await supabase
         .from('circle_tests')
-        .insert([{ ...basePayload, total_questions: qCount }])
+        .insert([{ ...payload, total_questions: qCount }])
         .select()
         .single();
 
@@ -210,11 +214,28 @@ export async function scheduleCircleTest(circleId, testData, userId) {
       error = retry.error;
     }
 
-    if (error) throw error;
+    // Attempt 3: If both column names fail, try inserting without either count column
+    if (error) {
+      console.warn('Attempt 2 failed, trying without count column:', error.message);
+      const retryWithoutCount = await supabase
+        .from('circle_tests')
+        .insert([payload])
+        .select()
+        .single();
+
+      data = retryWithoutCount.data;
+      error = retryWithoutCount.error;
+    }
+
+    if (error) {
+      console.error('Supabase insert error details:', error);
+      throw error;
+    }
+
     return { data, error: null };
   } catch (err) {
     console.error('Error scheduling circle test:', err);
-    return { data: null, error: err.message || 'Failed to schedule test' };
+    return { data: null, error: err.message || 'Unknown database error' };
   }
 }
 
