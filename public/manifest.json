@@ -1,0 +1,21 @@
+{
+  "name": "PrepXAI - JEE Mock Test & Study Circles",
+  "short_name": "PrepXAI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#030712",
+  "theme_color": "#4f46e5",
+  "description": "Professional-grade JEE preparation platform with randomized CBT simulator and peer study circles.",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
