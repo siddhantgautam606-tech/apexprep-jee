@@ -1,40 +1,84 @@
 import React, { useMemo } from 'react';
-import { Play, Settings2 } from 'lucide-react';
+import { Play, Settings2, RotateCcw } from 'lucide-react';
 import { JEE_SYLLABUS } from '../../data/syllabusData';
 
 export default function TestConfig({ config, onChangeConfig, onStartTest, isSubmitting }) {
-  // Safe chapter retrieval that handles array, nested object, or undefined
+  const safeSubject = config?.subject || 'All';
+  const selectedChapters = Array.isArray(config?.selectedChapters) 
+    ? config.selectedChapters 
+    : ['All'];
+
+  // Dynamically extract all available chapters for the selected subject
   const availableChapters = useMemo(() => {
-    try {
-      if (!config.subject || config.subject === 'All' || config.subject === 'Full Syllabus') {
-        return ['All'];
-      }
+    let list = [];
 
-      if (!JEE_SYLLABUS) return ['All'];
-      const data = JEE_SYLLABUS[config.subject];
-      if (!data) return ['All'];
+    const getChaptersForSubject = (subKey) => {
+      try {
+        if (!JEE_SYLLABUS) return [];
+        const data = JEE_SYLLABUS[subKey];
+        if (!data) return [];
 
-      if (Array.isArray(data)) {
-        return ['All', ...data.filter(c => c && c !== 'All')];
-      }
+        if (Array.isArray(data)) {
+          return data;
+        }
 
-      if (typeof data === 'object') {
-        const list = [];
-        Object.keys(data).forEach(key => {
-          const item = data[key];
-          if (Array.isArray(item)) {
-            list.push(...item);
-          } else if (typeof item === 'string') {
-            list.push(item);
-          }
-        });
-        return ['All', ...Array.from(new Set(list.filter(c => c && c !== 'All')))];
+        if (typeof data === 'object') {
+          let nested = [];
+          Object.keys(data).forEach((k) => {
+            const val = data[k];
+            if (Array.isArray(val)) {
+              nested.push(...val);
+            } else if (typeof val === 'string') {
+              nested.push(val);
+            }
+          });
+          return nested;
+        }
+      } catch (err) {
+        console.warn('Error reading syllabus for ' + subKey, err);
       }
-    } catch (e) {
-      console.warn('Error reading chapters in TestConfig:', e);
+      return [];
+    };
+
+    if (safeSubject === 'All' || safeSubject === 'Full Syllabus') {
+      ['Physics', 'Chemistry', 'Mathematics'].forEach((s) => {
+        list.push(...getChaptersForSubject(s));
+      });
+    } else {
+      list.push(...getChaptersForSubject(safeSubject));
     }
-    return ['All'];
-  }, [config.subject]);
+
+    return Array.from(new Set(list.filter((c) => c && typeof c === 'string' && c !== 'All')));
+  }, [safeSubject]);
+
+  // Handle multi-chapter chip toggling
+  const handleToggleChapter = (ch) => {
+    if (ch === 'All') {
+      onChangeConfig({
+        ...config,
+        selectedChapters: ['All'],
+        chapter: 'All'
+      });
+      return;
+    }
+
+    let updated = selectedChapters.filter((c) => c !== 'All');
+    if (updated.includes(ch)) {
+      updated = updated.filter((c) => c !== ch);
+    } else {
+      updated.push(ch);
+    }
+
+    if (updated.length === 0) {
+      updated = ['All'];
+    }
+
+    onChangeConfig({
+      ...config,
+      selectedChapters: updated,
+      chapter: updated.includes('All') ? 'All' : updated.join(', ')
+    });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -51,7 +95,7 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
         </div>
         <div>
           <h2 className="text-lg font-bold text-white">Configure Practice Exam</h2>
-          <p className="text-xs text-slate-400">Select your target subject, chapters, and test duration.</p>
+          <p className="text-xs text-slate-400">Select target subjects, multiple chapters, question count, and duration.</p>
         </div>
       </div>
 
@@ -60,35 +104,76 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
         <div>
           <label className="block text-xs font-semibold text-slate-300 mb-1.5">Subject</label>
           <select
-            value={config.subject || 'All'}
-            onChange={(e) => onChangeConfig({ ...config, subject: e.target.value, chapter: 'All' })}
+            value={safeSubject}
+            onChange={(e) => {
+              const newSub = e.target.value;
+              onChangeConfig({
+                ...config,
+                subject: newSub,
+                selectedChapters: ['All'],
+                chapter: 'All'
+              });
+            }}
             className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition"
           >
-            <option value="All">All Subjects (P + C + M)</option>
+            <option value="All">All Subjects (Physics + Chemistry + Mathematics)</option>
             <option value="Physics">Physics</option>
             <option value="Chemistry">Chemistry</option>
             <option value="Mathematics">Mathematics</option>
           </select>
         </div>
 
-        {/* Chapter Selection */}
+        {/* Multi-Chapter Selector */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-1.5">Chapter</label>
-          <select
-            disabled={config.subject === 'All' || config.subject === 'Full Syllabus'}
-            value={config.chapter || 'All'}
-            onChange={(e) => onChangeConfig({ ...config, chapter: e.target.value })}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 disabled:opacity-40 transition"
-          >
-            {availableChapters.map((ch, idx) => (
-              <option key={idx} value={ch}>
-                {ch === 'All' ? 'All Chapters' : ch}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-semibold text-slate-300">
+              Chapters Selected ({selectedChapters.includes('All') ? 'All Chapters' : selectedChapters.length})
+            </label>
+            <button
+              type="button"
+              onClick={() => handleToggleChapter('All')}
+              className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 transition"
+            >
+              <RotateCcw className="w-3 h-3" /> Reset to All
+            </button>
+          </div>
+
+          <div className="max-h-48 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-wrap gap-1.5">
+            {/* All Chapters Chip */}
+            <button
+              type="button"
+              onClick={() => handleToggleChapter('All')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                selectedChapters.includes('All')
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              All Chapters
+            </button>
+
+            {/* Individual Chapter Chips */}
+            {availableChapters.map((ch, idx) => {
+              const isSelected = !selectedChapters.includes('All') && selectedChapters.includes(ch);
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleToggleChapter(ch)}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+                    isSelected
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                  }`}
+                >
+                  {ch}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Grid: Question Count & Duration */}
+        {/* Question Count & Duration */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5">Question Count</label>
@@ -96,7 +181,7 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
               type="number"
               min="5"
               max="75"
-              value={config.questionCount || 10}
+              value={config?.questionCount || 10}
               onChange={(e) => onChangeConfig({ ...config, questionCount: Number(e.target.value) })}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition"
             />
@@ -108,7 +193,7 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
               type="number"
               min="5"
               max="180"
-              value={config.durationMinutes || 30}
+              value={config?.durationMinutes || 30}
               onChange={(e) => onChangeConfig({ ...config, durationMinutes: Number(e.target.value) })}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition"
             />
@@ -118,9 +203,9 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
         <button
           type="submit"
           disabled={isSubmitting}
-          className="mt-4 w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25"
+          className="mt-2 w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25"
         >
-          <Play className="w-4 h-4 fill-current" /> {isSubmitting ? 'Preparing Exam...' : 'Start Practice CBT'}
+          <Play className="w-4 h-4 fill-current" /> {isSubmitting ? 'Preparing Practice CBT...' : 'Start Practice CBT'}
         </button>
       </form>
     </div>

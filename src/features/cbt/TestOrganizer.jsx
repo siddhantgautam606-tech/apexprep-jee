@@ -5,9 +5,10 @@ import { getStandardQuestions } from '../../data/jeeQuestionBank';
 import { fetchQuestionsForTest } from '../../services/circleService';
 
 export default function TestOrganizer({ currentUser }) {
-  // Always initialize config with safe default values
+  // Config with full multi-chapter state
   const [config, setConfig] = useState({
     subject: 'All',
+    selectedChapters: ['All'],
     chapter: 'All',
     durationMinutes: 30,
     questionCount: 10
@@ -21,7 +22,11 @@ export default function TestOrganizer({ currentUser }) {
     let loadedQuestions = [];
 
     const safeSubject = config?.subject || 'All';
-    const safeChapter = config?.chapter || 'All';
+    const chaptersList = Array.isArray(config?.selectedChapters) 
+      ? config.selectedChapters 
+      : ['All'];
+    const safeChapterLabel = chaptersList.includes('All') ? 'All' : chaptersList.join(', ');
+    const primaryChapter = chaptersList.includes('All') ? 'All' : chaptersList[0];
     const safeCount = Number(config?.questionCount) || 10;
     const safeDuration = Number(config?.durationMinutes) || 30;
 
@@ -31,25 +36,25 @@ export default function TestOrganizer({ currentUser }) {
         if (typeof fetchQuestionsForTest === 'function') {
           loadedQuestions = await fetchQuestionsForTest(
             safeSubject,
-            safeChapter,
+            primaryChapter,
             safeCount
           );
         }
       } catch (err) {
-        console.warn('DB fetch failed, falling back to standard bank:', err);
+        console.warn('DB fetch failed, using standard bank:', err);
       }
 
-      // 2. Standard Question Bank fallback
+      // 2. Standard JEE question bank fallback
       if (!Array.isArray(loadedQuestions) || loadedQuestions.length === 0) {
         const subForBank = safeSubject === 'All' || safeSubject === 'Full Syllabus' ? 'Physics' : safeSubject;
-        loadedQuestions = getStandardQuestions(subForBank, safeChapter, safeCount);
+        loadedQuestions = getStandardQuestions(subForBank, primaryChapter, safeCount);
       }
 
       // 3. Absolute failsafe generator
       if (!Array.isArray(loadedQuestions) || loadedQuestions.length === 0) {
         loadedQuestions = Array.from({ length: safeCount }, (_, i) => ({
           id: i + 1,
-          question: `Sample Practice Question ${i + 1} (${safeSubject} - ${safeChapter})`,
+          question: `Sample Practice Question ${i + 1} (${safeSubject} - ${safeChapterLabel})`,
           options: ['Option A', 'Option B', 'Option C', 'Option D'],
           correctAnswer: 0,
           explanation: 'Standard JEE concept application.'
@@ -58,9 +63,9 @@ export default function TestOrganizer({ currentUser }) {
 
       setActiveTest({
         id: 'practice-' + Date.now(),
-        title: `${safeSubject} Practice Test`,
+        title: `${safeSubject === 'All' ? 'Full Syllabus' : safeSubject} Practice CBT`,
         subject: safeSubject,
-        chapter: safeChapter,
+        chapter: safeChapterLabel,
         durationMinutes: safeDuration,
         questions: loadedQuestions
       });
@@ -86,7 +91,7 @@ export default function TestOrganizer({ currentUser }) {
   return (
     <div className="w-full max-w-4xl mx-auto py-4">
       <TestConfig
-        config={config || { subject: 'All', chapter: 'All', durationMinutes: 30, questionCount: 10 }}
+        config={config}
         onChangeConfig={(newCfg) => setConfig(newCfg)}
         onStartTest={handleStartTest}
         isSubmitting={isSubmitting}
