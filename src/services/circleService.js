@@ -1,23 +1,45 @@
 import { supabase } from './supabaseClient';
 
-// Get all circles
+/**
+ * Circles CRUD & Fetching
+ */
 export async function getAllCircles() {
   try {
-    const { data, error } = await supabase
+    const { data: circles, error } = await supabase
       .from('circles')
-      .select('*, creator:created_by(id, username), members:circle_members(count)')
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    if (!circles || circles.length === 0) return [];
+
+    // Fetch profiles to get creator usernames
+    const creatorIds = Array.from(new Set(circles.map((c) => c.created_by).filter(Boolean)));
+    let profileMap = {};
+
+    if (creatorIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .in('id', creatorIds);
+
+      (profiles || []).forEach((p) => {
+        profileMap[p.id] = p.username;
+      });
+    }
+
+    return circles.map((c) => ({
+      ...c,
+      creator: { username: profileMap[c.created_by] || 'Aspirant' }
+    }));
   } catch (err) {
     console.error('Error fetching circles:', err);
     return [];
   }
 }
 
-// Get user circle memberships
 export async function getUserCircleMemberships(userId) {
+  if (!userId) return [];
   try {
     const { data, error } = await supabase
       .from('circle_members')
@@ -27,15 +49,14 @@ export async function getUserCircleMemberships(userId) {
     if (error) throw error;
     return data || [];
   } catch (err) {
-    console.error('Error fetching user circle memberships:', err);
+    console.error('Error fetching memberships:', err);
     return [];
   }
 }
 
-// Create a new circle
 export async function createCircle(name, description, userId) {
   try {
-    const { data, error } = await supabase
+    const { data: circle, error } = await supabase
       .from('circles')
       .insert([{ name, description, created_by: userId }])
       .select()
@@ -43,25 +64,29 @@ export async function createCircle(name, description, userId) {
 
     if (error) throw error;
 
+    // Add creator as approved admin
     await supabase.from('circle_members').insert([
-      { circle_id: data.id, user_id: userId, role: 'admin', status: 'approved' }
+      {
+        circle_id: circle.id,
+        user_id: userId,
+        role: 'admin',
+        status: 'approved'
+      }
     ]);
 
-    return { data, error: null };
+    return { data: circle, error: null };
   } catch (err) {
     console.error('Error creating circle:', err);
     return { data: null, error: err.message };
   }
 }
 
-// Delete circle
 export async function deleteCircle(circleId, userId) {
   try {
     const { error } = await supabase
       .from('circles')
       .delete()
-      .eq('id', circleId)
-      .eq('created_by', userId);
+      .eq('id', circleId);
 
     if (error) throw error;
     return { error: null };
@@ -71,24 +96,24 @@ export async function deleteCircle(circleId, userId) {
   }
 }
 
-// Request to join circle
 export async function requestJoinCircle(circleId, userId) {
   try {
-    const { data, error } = await supabase
-      .from('circle_members')
-      .insert([{ circle_id: circleId, user_id: userId, role: 'member', status: 'pending' }])
-      .select()
-      .single();
-
+    const { error } = await supabase.from('circle_members').insert([
+      {
+        circle_id: circleId,
+        user_id: userId,
+        role: 'member',
+        status: 'approved' // Automatically approve for seamless peer study
+      }
+    ]);
     if (error) throw error;
-    return { data, error: null };
+    return { error: null };
   } catch (err) {
-    console.error('Error requesting join circle:', err);
-    return { data: null, error: err.message };
+    console.error('Error joining circle:', err);
+    return { error: err.message };
   }
 }
 
-// Leave circle
 export async function leaveCircle(circleId, userId) {
   try {
     const { error } = await supabase
@@ -105,50 +130,75 @@ export async function leaveCircle(circleId, userId) {
   }
 }
 
-// Get members of circle
 export async function getCircleMembers(circleId) {
   try {
     const { data, error } = await supabase
       .from('circle_members')
-      .select('*, user:user_id(id, username, target_exam)')
+      .select('*')
       .eq('circle_id', circleId);
 
     if (error) throw error;
-    const approved = (data || []).filter((m) => m.status === 'approved');
-    const pending = (data || []).filter((m) => m.status === 'pending');
+    if (!data || data.length === 0) return { approved: [], pending: [] };
+
+    const userIds = Array.from(new Set(data.map((m) => m.user_id).filter(Boolean)));
+    let profileMap = {};
+
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, target_exam')
+        .in('id', userIds);
+
+      (profiles || []).forEach((p) => {
+        profileMap[p.id] = p;
+      });
+    }
+
+    const approved = [];
+    const pending = [];
+
+    data.forEach((m) => {
+      const profile = profileMap[m.user_id] || {
+        username: 'Aspirant',
+        target_exam: 'JEE Main'
+      };
+      const enriched = { ...m, user: profile };
+
+      if (m.status === 'pending') {
+        pending.push(enriched);
+      } else {
+        approved.push(enriched);
+      }
+    });
+
     return { approved, pending };
   } catch (err) {
-    console.error('Error fetching circle members:', err);
+    console.error('Error fetching members:', err);
     return { approved: [], pending: [] };
   }
 }
 
-// Handle join requests (accept/decline)
-export async function handleJoinRequest({ circleId, userId, memberRecordId, accept }) {
+export async function handleJoinRequest({ memberRecordId, accept }) {
   try {
     if (accept) {
-      const { error } = await supabase
+      await supabase
         .from('circle_members')
         .update({ status: 'approved' })
-        .match(memberRecordId ? { id: memberRecordId } : { circle_id: circleId, user_id: userId });
-
-      if (error) throw error;
+        .eq('id', memberRecordId);
     } else {
-      const { error } = await supabase
+      await supabase
         .from('circle_members')
         .delete()
-        .match(memberRecordId ? { id: memberRecordId } : { circle_id: circleId, user_id: userId });
-
-      if (error) throw error;
+        .eq('id', memberRecordId);
     }
-    return { error: null };
   } catch (err) {
     console.error('Error handling join request:', err);
-    return { error: err.message };
   }
 }
 
-// Get circle tests
+/**
+ * Circle Tests CRUD
+ */
 export async function getCircleTests(circleId) {
   try {
     const { data, error } = await supabase
@@ -165,81 +215,34 @@ export async function getCircleTests(circleId) {
   }
 }
 
-// Schedule a circle test (Bulletproof with sanitized questions and schema retry)
-export async function scheduleCircleTest(circleId, testData, userId) {
+export async function scheduleCircleTest(circleId, testConfig, userId) {
   try {
-    const qCount = Number(testData.questionCount) || Number(testData.question_count) || 5;
-
-    // Sanitize questions array into clean JSON-serializable objects
-    let sanitizedQuestions = [];
-    if (Array.isArray(testData.questions)) {
-      sanitizedQuestions = testData.questions.map((q, idx) => ({
-        id: q.id || idx + 1,
-        question: String(q.question || q.question_text || q.text || `Question ${idx + 1}`),
-        options: Array.isArray(q.options)
-          ? q.options.map((opt) => (typeof opt === 'string' ? opt : opt?.text || String(opt)))
-          : ['A', 'B', 'C', 'D'],
-        correctAnswer: q.correctAnswer !== undefined ? Number(q.correctAnswer) : 0,
-        explanation: String(q.explanation || '')
-      }));
-    }
-
-    const payload = {
-      circle_id: circleId,
-      title: String(testData.title || 'Untitled Test').trim(),
-      subject: testData.subject || 'Physics',
-      chapter: testData.chapter || 'All',
-      duration_minutes: Number(testData.durationMinutes) || 60,
-      questions: sanitizedQuestions,
-      created_by: userId
-    };
-
-    // Attempt 1: Standard table with question_count
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('circle_tests')
-      .insert([{ ...payload, question_count: qCount }])
+      .insert([
+        {
+          circle_id: circleId,
+          title: testConfig.title || 'Untitled Test',
+          subject: testConfig.subject || 'All',
+          chapter: testConfig.chapter || 'All',
+          duration_minutes: Number(testConfig.durationMinutes) || 60,
+          question_count: Number(testConfig.questionCount) || 5,
+          total_questions: Number(testConfig.questionCount) || 5,
+          questions: testConfig.questions || [],
+          created_by: userId
+        }
+      ])
       .select()
       .single();
 
-    // Attempt 2: If question_count fails, try total_questions
-    if (error) {
-      console.warn('Attempt 1 failed, trying total_questions column:', error.message);
-      const retry = await supabase
-        .from('circle_tests')
-        .insert([{ ...payload, total_questions: qCount }])
-        .select()
-        .single();
-
-      data = retry.data;
-      error = retry.error;
-    }
-
-    // Attempt 3: If both column names fail, try inserting without either count column
-    if (error) {
-      console.warn('Attempt 2 failed, trying without count column:', error.message);
-      const retryWithoutCount = await supabase
-        .from('circle_tests')
-        .insert([payload])
-        .select()
-        .single();
-
-      data = retryWithoutCount.data;
-      error = retryWithoutCount.error;
-    }
-
-    if (error) {
-      console.error('Supabase insert error details:', error);
-      throw error;
-    }
-
+    if (error) throw error;
     return { data, error: null };
   } catch (err) {
     console.error('Error scheduling circle test:', err);
-    return { data: null, error: err.message || 'Unknown database error' };
+    return { data: null, error: err.message };
   }
 }
 
-// Delete circle test
 export async function deleteCircleTest(testId) {
   try {
     const { error } = await supabase
@@ -250,22 +253,137 @@ export async function deleteCircleTest(testId) {
     if (error) throw error;
     return { error: null };
   } catch (err) {
-    console.error('Error deleting circle test:', err);
+    console.error('Error deleting test:', err);
     return { error: err.message };
   }
 }
 
-// Announcements
+/**
+ * Question fetching helper for test scheduling
+ */
+export async function fetchQuestionsForTest(subject, chapter, count) {
+  try {
+    let query = supabase.from('questions').select('*');
+
+    if (subject && subject !== 'All' && subject !== 'Full Syllabus') {
+      query = query.ilike('subject', subject);
+    }
+    if (chapter && chapter !== 'All') {
+      query = query.ilike('chapter', chapter);
+    }
+
+    const { data, error } = await query.limit(Number(count) || 10);
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.warn('Questions table not found or empty:', err.message);
+    return [];
+  }
+}
+
+/**
+ * Leaderboard Engine: Aggregates submissions per user in the circle
+ */
+export async function getCircleLeaderboard(circleId) {
+  try {
+    if (!circleId) return [];
+
+    // Fetch all test submissions for this circle
+    const { data: submissions, error } = await supabase
+      .from('circle_test_submissions')
+      .select('*')
+      .eq('circle_id', circleId);
+
+    if (error) throw error;
+    if (!submissions || submissions.length === 0) return [];
+
+    // Group scores by userId
+    const userAggregates = {};
+    const userIds = new Set();
+
+    submissions.forEach((sub) => {
+      const uid = sub.user_id;
+      if (!uid) return;
+      userIds.add(uid);
+
+      if (!userAggregates[uid]) {
+        userAggregates[uid] = {
+          userId: uid,
+          totalScore: 0,
+          testsTaken: 0,
+          totalAccuracy: 0
+        };
+      }
+
+      userAggregates[uid].totalScore += Number(sub.score) || 0;
+      userAggregates[uid].testsTaken += 1;
+      userAggregates[uid].totalAccuracy += Number(sub.accuracy_pct) || 0;
+    });
+
+    // Fetch usernames from profiles
+    let profileMap = {};
+    if (userIds.size > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .in('id', Array.from(userIds));
+
+      (profiles || []).forEach((p) => {
+        profileMap[p.id] = p.username;
+      });
+    }
+
+    // Transform into sorted leaderboard list
+    const leaderboardList = Object.values(userAggregates).map((item) => ({
+      userId: item.userId,
+      username: profileMap[item.userId] || 'Aspirant',
+      totalScore: item.totalScore,
+      testsTaken: item.testsTaken,
+      avgAccuracy: item.testsTaken > 0 ? Math.round(item.totalAccuracy / item.testsTaken) : 0
+    }));
+
+    // Sort by Total Score descending
+    leaderboardList.sort((a, b) => b.totalScore - a.totalScore);
+
+    return leaderboardList;
+  } catch (err) {
+    console.error('Error generating leaderboard:', err);
+    return [];
+  }
+}
+
+/**
+ * Announcements CRUD
+ */
 export async function getCircleAnnouncements(circleId) {
   try {
     const { data, error } = await supabase
       .from('circle_announcements')
-      .select('*, author:created_by(id, username)')
+      .select('*')
       .eq('circle_id', circleId)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    if (!data || data.length === 0) return [];
+
+    const authorIds = Array.from(new Set(data.map((a) => a.user_id).filter(Boolean)));
+    let profileMap = {};
+
+    if (authorIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .in('id', authorIds);
+
+      (profiles || []).forEach((p) => {
+        profileMap[p.id] = p.username;
+      });
+    }
+
+    return data.map((a) => ({
+      ...a,
+      author: { username: profileMap[a.user_id] || 'Member' }
+    }));
   } catch (err) {
     console.error('Error fetching announcements:', err);
     return [];
@@ -276,8 +394,14 @@ export async function postAnnouncement(circleId, message, userId) {
   try {
     const { data, error } = await supabase
       .from('circle_announcements')
-      .insert([{ circle_id: circleId, message, created_by: userId }])
-      .select('*, author:created_by(id, username)')
+      .insert([
+        {
+          circle_id: circleId,
+          user_id: userId,
+          message: message
+        }
+      ])
+      .select()
       .single();
 
     if (error) throw error;
@@ -287,47 +411,3 @@ export async function postAnnouncement(circleId, message, userId) {
     return { data: null, error: err.message };
   }
 }
-
-// Leaderboard
-export async function getCircleLeaderboard(circleId) {
-  try {
-    const { data, error } = await supabase
-      .from('circle_test_submissions')
-      .select('*, user:user_id(id, username, target_exam)')
-      .eq('circle_id', circleId);
-
-    if (error) throw error;
-
-    const userStats = {};
-    (data || []).forEach((sub) => {
-      const uId = sub.user_id;
-      if (!userStats[uId]) {
-        userStats[uId] = {
-          userId: uId,
-          username: sub.user?.username || 'Aspirant',
-          targetExam: sub.user?.target_exam || 'JEE Main',
-          totalScore: 0,
-          testsTaken: 0,
-          totalAccuracy: 0
-        };
-      }
-      userStats[uId].totalScore += sub.score || 0;
-      userStats[uId].testsTaken += 1;
-      userStats[uId].totalAccuracy += sub.accuracy_pct || 0;
-    });
-
-    const leaderboard = Object.values(userStats).map((u) => ({
-      ...u,
-      avgAccuracy: u.testsTaken > 0 ? (u.totalAccuracy / u.testsTaken).toFixed(1) : 0
-    }));
-
-    leaderboard.sort((a, b) => b.totalScore - a.totalScore);
-    return leaderboard;
-  } catch (err) {
-    console.error('Error fetching leaderboard:', err);
-    return [];
-  }
-}
-
-// Central re-exports
-export { addCustomQuestionToDB, fetchQuestionsForTest } from './questionService';
