@@ -165,27 +165,41 @@ export async function getCircleTests(circleId) {
   }
 }
 
-// Schedule a circle test
+// Schedule a circle test (with schema fallback)
 export async function scheduleCircleTest(circleId, testData, userId) {
   try {
-    const { data, error } = await supabase
+    const qCount = Number(testData.questionCount) || Number(testData.question_count) || 5;
+
+    const payload = {
+      circle_id: circleId,
+      title: testData.title,
+      subject: testData.subject,
+      chapter: testData.chapter || 'All',
+      duration_minutes: Number(testData.durationMinutes) || 60,
+      question_count: qCount,
+      questions: testData.questions,
+      window_start: testData.windowStart || null,
+      window_end: testData.windowEnd || null,
+      created_by: userId
+    };
+
+    let { data, error } = await supabase
       .from('circle_tests')
-      .insert([
-        {
-          circle_id: circleId,
-          title: testData.title,
-          subject: testData.subject,
-          chapter: testData.chapter || 'All',
-          duration_minutes: Number(testData.durationMinutes) || 60,
-          question_count: Number(testData.questionCount) || 5,
-          questions: testData.questions,
-          window_start: testData.windowStart || null,
-          window_end: testData.windowEnd || null,
-          created_by: userId
-        }
-      ])
+      .insert([payload])
       .select()
       .single();
+
+    if (error && error.message && error.message.includes('question_count')) {
+      delete payload.question_count;
+      payload.total_questions = qCount;
+      const retry = await supabase
+        .from('circle_tests')
+        .insert([payload])
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) throw error;
     return { data, error: null };
