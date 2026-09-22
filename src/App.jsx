@@ -67,7 +67,7 @@ export default function App() {
     setActiveCircleTest({
       id: testRecord.id,
       title: testRecord.title || 'Circle Mock Test',
-      subject: testRecord.subject || 'Physics',
+      subject: testRecord.subject || 'All',
       chapter: testRecord.chapter || 'All',
       durationMinutes: Number(testRecord.duration_minutes) || 60,
       questions: formattedQuestions,
@@ -98,7 +98,7 @@ export default function App() {
             </div>
             <div>
               <span className="font-black text-lg tracking-tight text-white flex items-center gap-1.5">
-                JEE PREP <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">CBT</span>
+                PrepXAI <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">CBT</span>
               </span>
               <p className="text-[10px] text-slate-400 font-medium">Peer Study & CBT Simulator</p>
             </div>
