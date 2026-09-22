@@ -159,16 +159,14 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
     try {
       const qNum = Number(newTest.questionCount) || 5;
 
-      // 1. Try DB question pool
       try {
         if (typeof fetchQuestionsForTest === 'function') {
           questions = await fetchQuestionsForTest(newTest.subject, newTest.chapter, qNum);
         }
       } catch (err) {
-        console.warn('DB question fetch failed, using fallback generator:', err);
+        console.warn('DB question fetch failed, using fallback bank:', err);
       }
 
-      // 2. Guaranteed fallback question bank
       if (!Array.isArray(questions) || questions.length === 0) {
         questions = getStandardQuestions(
           newTest.subject === 'Full Syllabus' ? 'Physics' : newTest.subject,
@@ -177,7 +175,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
         );
       }
 
-      // 3. Absolute failsafe: generate dummy standard questions if pool was somehow empty
       if (!Array.isArray(questions) || questions.length === 0) {
         questions = Array.from({ length: qNum }, (_, i) => ({
           id: i + 1,
@@ -266,7 +263,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Circles Sidebar */}
+        {/* Sidebar */}
         <div className="lg:col-span-1 flex flex-col gap-3">
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
             Available Circles ({circles.length})
@@ -340,7 +337,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
         <div className="lg:col-span-2">
           {selectedCircle ? (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl flex flex-col gap-6">
-              {/* Info Header */}
+              {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
                 <div>
                   <h2 className="text-xl font-bold text-white">{selectedCircle.name}</h2>
@@ -424,7 +421,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                             <span>•</span>
                             <span>{t.chapter}</span>
                             <span>•</span>
-                            <span>{t.question_count || t.total_questions || 5} Questions</span>
+                            <span>{t.question_count || t.total_questions || (t.questions ? t.questions.length : 5)} Questions</span>
                             <span>•</span>
                             <span>{t.duration_minutes || 60} Mins</span>
                           </div>
@@ -435,8 +432,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                             onClick={() => {
                               if (typeof onSelectTestToTake === 'function') {
                                 onSelectTestToTake(t);
-                              } else {
-                                alert('Launching exam runner for ' + t.title);
                               }
                             }}
                             className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shadow-sm"
@@ -563,10 +558,9 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                 </div>
               )}
 
-              {/* TAB 4: ANNOUNCEMENTS (Fixed height container with message box docked at bottom) */}
+              {/* TAB 4: ANNOUNCEMENTS */}
               {activeTab === 'chat' && (
                 <div className="flex flex-col h-[520px] bg-slate-950/50 border border-slate-800/80 rounded-2xl overflow-hidden">
-                  {/* Announcements Feed */}
                   <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
                     {announcements.map((a) => (
                       <div
@@ -594,7 +588,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                     <div ref={chatBottomRef} />
                   </div>
 
-                  {/* Docked Message Input Box at the Bottom */}
                   <div className="p-3 bg-slate-900 border-t border-slate-800/80">
                     <form onSubmit={handlePostAnnouncement} className="flex items-center gap-2">
                       <input

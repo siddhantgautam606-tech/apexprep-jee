@@ -1,167 +1,229 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Sparkles,
-  BookOpen,
-  Layers,
-  BarChart3,
-  Users,
-  MessageSquare,
-  LogIn,
-  LogOut,
-  User as UserIcon,
+import { 
+  BookOpen, 
+  Users, 
+  HelpCircle, 
+  BarChart2, 
+  MessageSquare, 
+  LogOut, 
+  LogIn, 
+  Flame
 } from 'lucide-react';
+
+import CircleList from './features/circles/CircleList';
 import QuestionPool from './features/question-pool/QuestionPool';
 import TestOrganizer from './features/cbt/TestOrganizer';
+import TestRunner from './features/cbt/TestRunner';
 import AnalyticsDashboard from './features/analytics/AnalyticsDashboard';
-import AuthModal from './features/auth/AuthModal';
-import CircleList from './features/circles/CircleList';
 import ChatWindow from './features/social/ChatWindow';
-import { getCurrentUserProfile, signOutUser } from './services/authService';
+import FriendList from './features/social/FriendList';
+import AuthModal from './features/auth/AuthModal';
+
+import { supabase } from './services/supabaseClient';
+import { getCurrentUser, signOutUser } from './services/authService';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('pool');
-  const [isTestActive, setIsTestActive] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-
-  const fetchUser = async () => {
-    try {
-      const profile = await getCurrentUserProfile();
-      setCurrentUser(profile);
-    } catch {
-      setCurrentUser(null);
-    }
-  };
+  const [activeTab, setActiveTab] = useState('cbt'); // 'cbt', 'circles', 'pool', 'analytics', 'social'
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  
+  // Dedicated state for active circle test taking
+  const [activeCircleTest, setActiveCircleTest] = useState(null);
 
   useEffect(() => {
-    fetchUser();
+    async function checkAuth() {
+      const user = await getCurrentUser();
+      setCurrentUser(user);
+    }
+    checkAuth();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const user = await getCurrentUser();
+        setCurrentUser(user);
+      } else {
+        setCurrentUser(null);
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
 
-  const handleLogout = async () => {
+  const handleSignOut = async () => {
     await signOutUser();
     setCurrentUser(null);
   };
 
-  const navItems = [
-    { id: 'pool', label: 'Question Pool', icon: BookOpen },
-    { id: 'cbt', label: 'CBT Tests', icon: Layers },
-    { id: 'analytics', label: 'Growth', icon: BarChart3 },
-    { id: 'circles', label: 'Friend Circles', icon: Users },
-    { id: 'chat', label: 'Chat', icon: MessageSquare },
-  ];
+  // Launch test runner directly for a Circle mock test
+  const handleLaunchCircleTest = (testRecord) => {
+    if (!testRecord) return;
+    
+    const formattedQuestions = Array.isArray(testRecord.questions)
+      ? testRecord.questions
+      : [];
 
-  const handleTabChange = (targetTab) => {
-    if (isTestActive && targetTab !== 'cbt') {
-      const confirmLeave = window.confirm(
-        'An active examination is in progress. Leaving this tab will submit your test or forfeit your attempt. Do you wish to leave?'
-      );
-      if (!confirmLeave) return;
-      setIsTestActive(false);
-    }
-    setActiveTab(targetTab);
+    setActiveCircleTest({
+      id: testRecord.id,
+      title: testRecord.title || 'Circle Mock Test',
+      subject: testRecord.subject || 'Physics',
+      chapter: testRecord.chapter || 'All',
+      durationMinutes: Number(testRecord.duration_minutes) || 60,
+      questions: formattedQuestions,
+      circleId: testRecord.circle_id
+    });
   };
 
+  // If a Circle Test is being taken, show TestRunner full screen
+  if (activeCircleTest) {
+    return (
+      <TestRunner
+        test={activeCircleTest}
+        currentUser={currentUser}
+        onComplete={() => setActiveCircleTest(null)}
+        onExit={() => setActiveCircleTest(null)}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center p-3 md:p-6 font-sans">
-      {/* Top Header */}
-      <header className="w-full max-w-6xl flex flex-col sm:flex-row items-center justify-between pb-5 mb-6 border-b border-slate-800 gap-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-indigo-600 p-2.5 rounded-xl shadow-lg shadow-indigo-600/30">
-            <Sparkles className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-white">ApexPrep</h1>
-            <p className="text-xs text-slate-400">JEE & NEET CBT Exam System</p>
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <nav className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl overflow-x-auto max-w-full">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleTabChange(item.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer shrink-0 ${
-                  isActive
-                    ? 'bg-indigo-600 text-white shadow'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* User Auth Action */}
-        <div className="flex items-center gap-2">
-          {currentUser ? (
-            <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 py-1.5 px-3 rounded-xl">
-              <UserIcon className="w-4 h-4 text-indigo-400" />
-              <span className="text-xs font-medium text-slate-200">@{currentUser.username}</span>
-              <button
-                onClick={handleLogout}
-                title="Log Out"
-                className="ml-1 p-1 hover:text-rose-400 transition"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+      {/* Navigation Header */}
+      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+              <Flame className="w-6 h-6 text-white" />
             </div>
-          ) : (
-            <button
-              onClick={() => setIsAuthOpen(true)}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium py-1.5 px-3.5 rounded-xl transition shadow"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Log In</span>
-            </button>
-          )}
-        </div>
-      </header>
+            <div>
+              <span className="font-black text-lg tracking-tight text-white flex items-center gap-1.5">
+                JEE PREP <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">CBT</span>
+              </span>
+              <p className="text-[10px] text-slate-400 font-medium">Peer Study & CBT Simulator</p>
+            </div>
+          </div>
 
-      {/* Main Content Area */}
-      <main className="w-full max-w-6xl flex justify-center">
-        {activeTab === 'pool' && <QuestionPool currentUser={currentUser} />}
-        {activeTab === 'cbt' && <TestOrganizer onExamActiveStateChange={setIsTestActive} />}
-        {activeTab === 'analytics' && <AnalyticsDashboard />}
-
-        {activeTab === 'chat' && (
-          <div className="w-full flex-1 flex flex-col">
-            {!currentUser ? (
-              <div className="flex flex-col items-center justify-center p-12 bg-slate-900/40 border border-slate-800 rounded-2xl text-center">
-                <MessageSquare className="w-12 h-12 text-slate-600 mb-3" />
-                <h3 className="text-base font-semibold text-slate-200">Log In to Chat</h3>
-                <p className="text-xs text-slate-400 max-w-xs mt-1 mb-4">
-                  Connect with peer aspirants, build study partnerships, and discuss problems in real time.
-                </p>
+          {/* Navigation Tabs */}
+          <nav className="hidden md:flex items-center gap-1 bg-slate-950/60 p-1.5 rounded-2xl border border-slate-800/80">
+            {[
+              { id: 'cbt', label: 'Practice CBT', icon: BookOpen },
+              { id: 'circles', label: 'Study Circles', icon: Users },
+              { id: 'pool', label: 'Question Pool', icon: HelpCircle },
+              { id: 'analytics', label: 'Analytics', icon: BarChart2 },
+              { id: 'social', label: 'Friends & Chat', icon: MessageSquare }
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
                 <button
-                  onClick={() => setIsAuthOpen(true)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2 px-4 rounded-xl transition"
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+                    isActive 
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                  }`}
                 >
-                  Sign In / Create Account
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* User Profile / Auth Button */}
+          <div className="flex items-center gap-3">
+            {currentUser ? (
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col text-right">
+                  <span className="text-xs font-bold text-white">{currentUser.username || 'Aspirant'}</span>
+                  <span className="text-[10px] text-indigo-400 font-medium">{currentUser.target_exam || 'JEE Main'}</span>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="p-2 hover:bg-slate-800 text-slate-400 hover:text-rose-400 rounded-xl transition"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
                 </button>
               </div>
             ) : (
-              <ChatWindow currentUser={currentUser} />
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-indigo-600/20"
+              >
+                <LogIn className="w-4 h-4" /> Sign In / Sign Up
+              </button>
             )}
           </div>
-        )}
+        </div>
+
+        {/* Mobile Navigation */}
+        <div className="flex md:hidden border-t border-slate-800/80 px-2 py-1.5 overflow-x-auto gap-1">
+          {[
+            { id: 'cbt', label: 'CBT', icon: BookOpen },
+            { id: 'circles', label: 'Circles', icon: Users },
+            { id: 'pool', label: 'Pool', icon: HelpCircle },
+            { id: 'analytics', label: 'Analytics', icon: BarChart2 },
+            { id: 'social', label: 'Social', icon: MessageSquare }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
+                  isActive ? 'bg-indigo-600 text-white' : 'text-slate-400'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+        {activeTab === 'cbt' && <TestOrganizer currentUser={currentUser} />}
 
         {activeTab === 'circles' && (
-          <CircleList currentUser={currentUser} />
+          <CircleList
+            currentUser={currentUser}
+            onSelectTestToTake={handleLaunchCircleTest}
+          />
+        )}
+
+        {activeTab === 'pool' && <QuestionPool currentUser={currentUser} />}
+
+        {activeTab === 'analytics' && <AnalyticsDashboard currentUser={currentUser} />}
+
+        {activeTab === 'social' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-1">
+              <FriendList currentUser={currentUser} />
+            </div>
+            <div className="md:col-span-2">
+              <ChatWindow currentUser={currentUser} />
+            </div>
+          </div>
         )}
       </main>
 
       {/* Auth Modal */}
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        onAuthSuccess={fetchUser}
-      />
+      {showAuthModal && (
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={(u) => {
+            setCurrentUser(u);
+            setShowAuthModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
