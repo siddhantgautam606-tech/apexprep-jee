@@ -43,7 +43,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
   // Auto-scroll ref for announcements
   const chatBottomRef = useRef(null);
 
-  // Schedule Test Form State (with multiple chapters array)
+  // Schedule Test Form State
   const [newTest, setNewTest] = useState({
     title: '',
     subject: 'All',
@@ -54,35 +54,47 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
     windowEnd: ''
   });
 
-  // Extract all available chapters dynamically based on subject
+  // Safely extract chapters with complete error-protection
   const availableChapters = useMemo(() => {
     let list = [];
 
-    const extractChaptersFromSubject = (subKey) => {
-      const subData = JEE_SYLLABUS?.[subKey];
-      if (!subData) return [];
-      const subChapters = [];
-      if (Array.isArray(subData)) {
-        subChapters.push(...subData);
-      } else if (typeof subData === 'object' && subData !== null) {
-        Object.values(subData).forEach((val) => {
-          if (Array.isArray(val)) subChapters.push(...val);
-          else if (typeof val === 'string') subChapters.push(val);
-        });
+    const getChaptersForSubject = (subKey) => {
+      try {
+        if (!JEE_SYLLABUS) return [];
+        const data = JEE_SYLLABUS[subKey];
+        if (!data) return [];
+
+        if (Array.isArray(data)) {
+          return data;
+        }
+
+        if (typeof data === 'object') {
+          let nested = [];
+          Object.keys(data).forEach((k) => {
+            const val = data[k];
+            if (Array.isArray(val)) {
+              nested.push(...val);
+            } else if (typeof val === 'string') {
+              nested.push(val);
+            }
+          });
+          return nested;
+        }
+      } catch (err) {
+        console.warn('Error reading syllabus for ' + subKey, err);
       }
-      return subChapters;
+      return [];
     };
 
     if (newTest.subject === 'All') {
-      // Collect chapters from all 3 subjects
       ['Physics', 'Chemistry', 'Mathematics'].forEach((s) => {
-        list.push(...extractChaptersFromSubject(s));
+        list.push(...getChaptersForSubject(s));
       });
     } else {
-      list.push(...extractChaptersFromSubject(newTest.subject));
+      list.push(...getChaptersForSubject(newTest.subject));
     }
 
-    const unique = Array.from(new Set(list.filter((c) => c && c !== 'All')));
+    const unique = Array.from(new Set(list.filter((c) => c && typeof c === 'string' && c !== 'All')));
     return unique;
   }, [newTest.subject]);
 
@@ -179,7 +191,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
     }
   };
 
-  // Multiple chapter selection toggler
+  // Chapter Toggle (Supports single or multi selection)
   const handleToggleChapter = (ch) => {
     if (ch === 'All') {
       setNewTest((prev) => ({ ...prev, selectedChapters: ['All'] }));
@@ -216,7 +228,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
         ? 'All'
         : newTest.selectedChapters.join(', ');
 
-      // Pick first chapter for specific question filtering if multiple chosen
       const primaryChapter = newTest.selectedChapters.includes('All') 
         ? 'All' 
         : newTest.selectedChapters[0];
