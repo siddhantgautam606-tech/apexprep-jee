@@ -1,687 +1,406 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Clock, 
+  AlertCircle, 
+  CheckCircle2, 
+  HelpCircle, 
+  ChevronLeft, 
+  ChevronRight, 
+  Send, 
+  BookOpen, 
+  X 
+} from 'lucide-react';
 import { computeExamStats } from '../../services/testEngineService';
-import { saveTestAttempt } from '../../services/analyticsService';
-import { ShieldAlert } from 'lucide-react';
+import { getStandardQuestions, formatMathSymbols } from '../../data/jeeQuestionBank';
+import { supabase } from '../../services/supabaseClient';
 
-export default function TestRunner({ testQuestions = [], durationMinutes = 180, onExit }) {
-  // Normalize question items so that all standard JEE question bank shapes work seamlessly
-  const normalizedQuestions = useMemo(() => {
-    if (!Array.isArray(testQuestions)) return [];
-    return testQuestions.map((rawQ, index) => {
-      const q = rawQ?.data || rawQ?.payload || rawQ || {};
-      const id = q.id !== undefined && q.id !== null ? q.id : index + 1;
+export default function TestRunner({ test, currentUser, onComplete, onExit }) {
+  // Guarantee questions exist: if test.questions is empty, generate them immediately
+  const initialQuestions = useMemo(() => {
+    let list = [];
+    if (test && Array.isArray(test.questions) && test.questions.length > 0) {
+      list = test.questions;
+    } else {
+      const sub = test?.subject || 'Physics';
+      const ch = test?.chapter || 'All';
+      const count = Number(test?.duration_minutes ? Math.min(25, Math.floor(test.duration_minutes / 2)) : 5) || 5;
+      list = getStandardQuestions(sub === 'Full Syllabus' ? 'Physics' : sub, ch, count);
+    }
 
-      // Question body / prompt
-      const text =
-        q.text ||
-        q.question ||
-        q.question_text ||
-        q.questionText ||
-        q.statement ||
-        q.problem ||
-        q.prompt ||
-        q.body ||
-        '';
+    return list.map((q, idx) => ({
+      ...q,
+      id: q.id || idx + 1,
+      question: formatMathSymbols(q.question || q.question_text || q.text || `Question ${idx + 1}`),
+      options: Array.isArray(q.options) 
+        ? q.options.map(opt => typeof opt === 'string' ? formatMathSymbols(opt) : opt?.text ? formatMathSymbols(opt.text) : String(opt))
+        : ['Option A', 'Option B', 'Option C', 'Option D'],
+      correctAnswer: q.correctAnswer !== undefined ? Number(q.correctAnswer) : q.correct_answer !== undefined ? Number(q.correct_answer) : 0,
+      explanation: formatMathSymbols(q.explanation || q.solution || '')
+    }));
+  }, [test]);
 
-      // Options parsing
-      let options = [];
-      const rawOpts = q.options || q.choices || q.answers || [];
+  const [questions] = useState(initialQuestions);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [markedForReview, setMarkedForReview] = useState({});
+  const [timeRemaining, setTimeRemaining] = useState((test?.durationMinutes || test?.duration_minutes || 60) * 60);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [examResult, setExamResult] = useState(null);
 
-      if (Array.isArray(rawOpts)) {
-        options = rawOpts.map((opt, optIdx) => {
-          const defaultKey = String.fromCharCode(65 + optIdx);
-          if (typeof opt === 'string' || typeof opt === 'number') {
-            return { key: defaultKey, text: String(opt) };
-          }
-          if (opt && typeof opt === 'object') {
-            return {
-              key: opt.key || opt.label || defaultKey,
-              text: opt.text || opt.option || opt.label || opt.value || JSON.stringify(opt)
-            };
-          }
-          return { key: defaultKey, text: String(opt) };
-        });
-      } else if (rawOpts && typeof rawOpts === 'object') {
-        options = Object.entries(rawOpts).map(([key, val]) => ({
-          key: String(key).toUpperCase(),
-          text: typeof val === 'object' ? (val.text || val.value || JSON.stringify(val)) : String(val)
-        }));
-      }
+  // Timer Countdown
+  useEffect(() => {
+    if (isSubmitted || timeRemaining <= 0) return;
+    const timer = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleSubmitExam();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
 
-      // Answer key — resolve to the *option key* (e.g. "A"/"B"/"C"/"D") regardless of
-      // whether the source data expresses the correct answer as a numeric index (0-3,
-      // as QUESTIONS_POOL's correctIndex does) or already as a letter. Answers are
-      // always stored (see selectOption below) as the option's letter key, so the
-      // correct-answer representation here must match that or nothing can ever score
-      // as correct.
-      const rawCorrect =
-        q.correct !== undefined
-          ? q.correct
-          : q.correctAnswer !== undefined
-          ? q.correctAnswer
-          : q.correct_answer !== undefined
-          ? q.correct_answer
-          : q.answer;
+    return () => clearInterval(timer);
+  }, [isSubmitted, timeRemaining]);
 
-      let correct = '';
-      if (rawCorrect !== undefined && rawCorrect !== null && rawCorrect !== '') {
-        const asString = String(rawCorrect).trim();
-        if (/^\d+$/.test(asString)) {
-          correct = options[Number(asString)]?.key || asString;
-        } else {
-          correct = asString.toUpperCase();
+  const currentQ = questions[currentIdx];
+
+  const handleSelectOption = (optIdx) => {
+    if (isSubmitted) return;
+    setAnswers((prev) => ({
+      ...prev,
+      [currentIdx]: optIdx
+    }));
+  };
+
+  const handleClearResponse = () => {
+    if (isSubmitted) return;
+    setAnswers((prev) => {
+      const copy = { ...prev };
+      delete copy[currentIdx];
+      return copy;
+    });
+  };
+
+  const handleToggleMarkReview = () => {
+    if (isSubmitted) return;
+    setMarkedForReview((prev) => ({
+      ...prev,
+      [currentIdx]: !prev[currentIdx]
+    }));
+  };
+
+  const handleSubmitExam = async () => {
+    if (isSubmitted) return;
+    const totalTimeTaken = ((test?.durationMinutes || test?.duration_minutes || 60) * 60) - timeRemaining;
+    const stats = computeExamStats(questions, answers, totalTimeTaken);
+    setExamResult(stats);
+    setIsSubmitted(true);
+
+    // If this test belongs to a study circle, save submission to Supabase
+    if (test?.circleId || test?.circle_id) {
+      const circleId = test.circleId || test.circle_id;
+      if (currentUser?.id) {
+        try {
+          await supabase.from('circle_test_submissions').insert([
+            {
+              circle_id: circleId,
+              test_id: test.id,
+              user_id: currentUser.id,
+              score: stats.score,
+              accuracy_pct: stats.accuracy,
+              answers: answers
+            }
+          ]);
+        } catch (e) {
+          console.warn('Could not save circle test score:', e);
         }
       }
-
-      const subject = q.subject || 'Physics';
-      const section = q.section || (options.length > 0 ? 'Section A' : 'Section B');
-      const type = q.type || (options.length > 0 ? 'MCQ' : 'Numerical');
-      const solution = q.solution || q.explanation || 'No solution provided.';
-
-      return {
-        ...q,
-        id,
-        index,
-        text,
-        options,
-        correct,
-        subject,
-        section,
-        type,
-        solution,
-        meta: q.chapter || q.topic || q.meta || 'General'
-      };
-    });
-  }, [testQuestions]);
-
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState({});
-  const [markedForReview, setMarkedForReview] = useState(new Set());
-  const [visited, setVisited] = useState(() =>
-    normalizedQuestions.length > 0 ? new Set([normalizedQuestions[0].id]) : new Set()
-  );
-  const [timeLeft, setTimeLeft] = useState((durationMinutes || 180) * 60);
-  const [examSubmitted, setExamSubmitted] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [examResults, setExamResults] = useState(null);
-
-  // Anti-cheat state
-  const [tabSwitchWarnings, setTabSwitchWarnings] = useState(0);
-  const [showCheatWarning, setShowCheatWarning] = useState(false);
-  const maxAllowedSwitches = 2;
-
-  const currentQ = normalizedQuestions[currentIndex] || null;
-
-  const examSubmittedRef = useRef(examSubmitted);
-  useEffect(() => {
-    examSubmittedRef.current = examSubmitted;
-  }, [examSubmitted]);
-
-  const handleSubmitExam = (confirmPrompt = true) => {
-    if (confirmPrompt) {
-      const answeredCount = Object.keys(userAnswers).length;
-      if (
-        !window.confirm(
-          `You have answered ${answeredCount} of ${normalizedQuestions.length} questions.\n\nAre you sure you want to submit your exam?`
-        )
-      ) {
-        return;
-      }
-    }
-    const res = computeExamStats(normalizedQuestions, userAnswers);
-    setExamResults(res);
-    setExamSubmitted(true);
-    setShowModal(true);
-
-    saveTestAttempt({
-      testQuestions: normalizedQuestions,
-      userAnswers,
-      examResults: res,
-      durationMinutes
-    });
-  };
-
-  // Countdown timer — the interval only ever decrements state here.
-  useEffect(() => {
-    if (examSubmitted || timeLeft <= 0) return;
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [examSubmitted, timeLeft]);
-
-  // Auto-submit once time runs out. Kept as its own effect (rather than a side
-  // effect inside the setTimeLeft updater above) so it can't fire twice under
-  // React StrictMode's double-invocation of state updater functions, which
-  // was previously duplicating saved test attempts.
-  useEffect(() => {
-    if (!examSubmitted && timeLeft === 0) {
-      handleSubmitExam(false);
-    }
-  }, [timeLeft, examSubmitted]);
-
-  // Tab switch detection
-  useEffect(() => {
-    if (examSubmitted) return;
-
-    const handleBeforeUnload = (e) => {
-      if (!examSubmittedRef.current) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden && !examSubmittedRef.current) {
-        setTabSwitchWarnings((prev) => {
-          const nextCount = prev + 1;
-          if (nextCount > maxAllowedSwitches) {
-            handleSubmitExam(false);
-          } else {
-            setShowCheatWarning(true);
-          }
-          return nextCount;
-        });
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [examSubmitted]);
-
-  const formatTimer = (seconds) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
-  const markVisited = (id) => {
-    setVisited((prev) => new Set(prev).add(id));
-  };
-
-  const selectOption = (key) => {
-    if (examSubmitted || !currentQ) return;
-    setUserAnswers((prev) => ({ ...prev, [currentQ.id]: key }));
-  };
-
-  const saveNumericalAnswer = (val) => {
-    if (examSubmitted || !currentQ) return;
-    setUserAnswers((prev) => {
-      const updated = { ...prev };
-      if (!val || val.trim() === '') delete updated[currentQ.id];
-      else updated[currentQ.id] = val.trim();
-      return updated;
-    });
-  };
-
-  const clearResponse = () => {
-    if (examSubmitted || !currentQ) return;
-    setUserAnswers((prev) => {
-      const updated = { ...prev };
-      delete updated[currentQ.id];
-      return updated;
-    });
-  };
-
-  const toggleReview = () => {
-    if (!currentQ) return;
-    setMarkedForReview((prev) => {
-      const next = new Set(prev);
-      if (next.has(currentQ.id)) next.delete(currentQ.id);
-      else next.add(currentQ.id);
-      return next;
-    });
-  };
-
-  const jumpToQuestion = (id) => {
-    const idx = normalizedQuestions.findIndex((item) => item.id === id);
-    if (idx !== -1) {
-      setCurrentIndex(idx);
-      markVisited(id);
     }
   };
 
-  const switchSubject = (subj) => {
-    const target = normalizedQuestions.find((item) =>
-      String(item.subject).toLowerCase().startsWith(subj.toLowerCase().slice(0, 4))
-    );
-    if (target) {
-      jumpToQuestion(target.id);
-    }
+  // Format seconds to HH:MM:SS
+  const formatTime = (secs) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    return `${h > 0 ? `${h}:` : ''}${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  if (!normalizedQuestions.length || !currentQ) {
+  // View Results Screen
+  if (isSubmitted && examResult) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4">
-        <p className="text-slate-300 mb-4">No questions loaded for this test configuration.</p>
-        <button
-          onClick={onExit}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded text-xs"
-        >
-          Return to Config
-        </button>
+      <div className="max-w-4xl mx-auto py-8 px-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-2xl flex flex-col gap-6">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-white">Test Completed!</h2>
+              <p className="text-xs text-slate-400 mt-1">{test?.title || 'Practice Examination'}</p>
+            </div>
+            <button
+              onClick={onComplete || onExit}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition"
+            >
+              Exit to Dashboard
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-xl text-center">
+              <span className="text-xs text-slate-400">Total Score</span>
+              <p className="text-2xl font-black text-indigo-400 mt-1">{examResult.score} / {examResult.maxScore}</p>
+            </div>
+            <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-xl text-center">
+              <span className="text-xs text-slate-400">Accuracy</span>
+              <p className="text-2xl font-black text-emerald-400 mt-1">{examResult.accuracy}%</p>
+            </div>
+            <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-xl text-center">
+              <span className="text-xs text-slate-400">Correct Answers</span>
+              <p className="text-2xl font-black text-emerald-400 mt-1">{examResult.correct}</p>
+            </div>
+            <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-xl text-center">
+              <span className="text-xs text-slate-400">Incorrect Answers</span>
+              <p className="text-2xl font-black text-rose-400 mt-1">{examResult.incorrect}</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4 mt-2">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Question Review & Solutions</h3>
+            <div className="flex flex-col gap-4 max-h-[500px] overflow-y-auto pr-2">
+              {questions.map((q, idx) => {
+                const userAns = answers[idx];
+                const isCorrect = userAns !== undefined && Number(userAns) === Number(q.correctAnswer);
+                const isUnanswered = userAns === undefined;
+
+                return (
+                  <div key={idx} className="bg-slate-950/50 border border-slate-800 rounded-xl p-4 flex flex-col gap-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-indigo-400">Q{idx + 1}</span>
+                      <span className={`font-semibold px-2 py-0.5 rounded text-[11px] ${
+                        isCorrect ? 'bg-emerald-500/10 text-emerald-400' : isUnanswered ? 'bg-slate-800 text-slate-400' : 'bg-rose-500/10 text-rose-400'
+                      }`}>
+                        {isCorrect ? 'Correct (+4)' : isUnanswered ? 'Unattempted (0)' : 'Incorrect (-1)'}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-200">{q.question}</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                      {q.options.map((opt, oIdx) => {
+                        const isChosen = userAns === oIdx;
+                        const isRightOpt = Number(q.correctAnswer) === oIdx;
+                        return (
+                          <div
+                            key={oIdx}
+                            className={`p-2.5 rounded-lg border flex items-center gap-2 ${
+                              isRightOpt 
+                                ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 font-semibold' 
+                                : isChosen 
+                                ? 'bg-rose-500/10 border-rose-500/40 text-rose-300' 
+                                : 'bg-slate-900 border-slate-800 text-slate-400'
+                            }`}
+                          >
+                            <span className="w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] bg-slate-800">
+                              {String.fromCharCode(65 + oIdx)}
+                            </span>
+                            <span>{opt}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {q.explanation && (
+                      <div className="mt-1 p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-400">
+                        <span className="font-semibold text-slate-300">Explanation: </span>
+                        {q.explanation}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  const answeredCount = Object.keys(userAnswers).length;
-  const unvisitedCount = Math.max(0, normalizedQuestions.length - visited.size);
-  const curAnswer = userAnswers[currentQ.id];
-
+  // Active CBT Exam Runner
   return (
-    <div className="w-full flex flex-col bg-slate-100 text-slate-800 min-h-screen">
-      {/* Header */}
-      <header className="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-600 text-white rounded font-black flex items-center justify-center text-base">
-              NTA
-            </div>
-            <div>
-              <div className="text-sm md:text-base font-bold leading-tight">
-                JEE (Main) Mock Exam - Proctored Session
-              </div>
-              <div className="text-xs text-slate-400">
-                Physics • Chemistry • Mathematics • {normalizedQuestions.length} Questions • {normalizedQuestions.length * 4} Marks
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="bg-slate-950 border border-slate-700 px-3 py-1 rounded text-right">
-              <span className="text-[9px] uppercase text-slate-400 font-bold block">Time Remaining</span>
-              <span className="font-mono text-base md:text-lg font-bold text-amber-500">
-                {formatTimer(timeLeft)}
-              </span>
-            </div>
-            {!examSubmitted ? (
-              <button
-                onClick={() => handleSubmitExam(true)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded text-xs font-bold transition cursor-pointer"
-              >
-                Submit Exam
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowModal(true)}
-                className="bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 rounded text-xs font-bold transition cursor-pointer"
-              >
-                View Scorecard
-              </button>
-            )}
+    <div className="max-w-7xl mx-auto py-4 px-4 flex flex-col gap-4">
+      {/* Top Status Bar */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              if (window.confirm('Are you sure you want to exit the exam? Your progress will be lost.')) {
+                onExit();
+              }
+            }}
+            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition"
+            title="Exit Exam"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div>
+            <h2 className="text-sm font-bold text-white">{test?.title || 'JEE CBT Examination'}</h2>
+            <span className="text-[10px] text-indigo-400 font-semibold">{test?.subject || 'Practice'} • {test?.chapter || 'All'}</span>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="bg-slate-800 border-t border-slate-700 px-4">
-          <div className="max-w-7xl mx-auto flex gap-2 overflow-x-auto">
-            {['Physics', 'Chemistry', 'Math'].map((s) => {
-              const isActive = String(currentQ.subject).toLowerCase().startsWith(s.toLowerCase().slice(0, 4));
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-slate-950 px-3.5 py-1.5 rounded-xl border border-slate-800">
+            <Clock className="w-4 h-4 text-amber-400" />
+            <span className="font-mono text-xs font-bold text-white tracking-wider">
+              {formatTime(timeRemaining)}
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              if (window.confirm('Are you ready to submit your test?')) {
+                handleSubmitExam();
+              }
+            }}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20"
+          >
+            <Send className="w-3.5 h-3.5" /> Submit Exam
+          </button>
+        </div>
+      </div>
+
+      {/* Main Grid: Question Panel & Palette */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Left: Question Content */}
+        <div className="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between min-h-[520px]">
+          <div>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+              <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">
+                Question {currentIdx + 1} of {questions.length}
+              </span>
+              <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                <span>Marking: <strong className="text-emerald-400">+4</strong> / <strong className="text-rose-400">-1</strong></span>
+              </div>
+            </div>
+
+            <div className="text-sm font-medium text-slate-100 leading-relaxed whitespace-pre-wrap mb-6">
+              {currentQ?.question}
+            </div>
+
+            {/* Options List */}
+            <div className="flex flex-col gap-3">
+              {currentQ?.options?.map((opt, optIdx) => {
+                const isSelected = answers[currentIdx] === optIdx;
+                return (
+                  <button
+                    key={optIdx}
+                    onClick={() => handleSelectOption(optIdx)}
+                    className={`p-3.5 rounded-xl border text-xs text-left flex items-center gap-3 transition ${
+                      isSelected
+                        ? 'bg-indigo-600/20 border-indigo-500 text-white font-semibold'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'
+                    }`}
+                  >
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 border ${
+                      isSelected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'
+                    }`}>
+                      {String.fromCharCode(65 + optIdx)}
+                    </span>
+                    <span className="flex-1">{opt}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Bottom Action Buttons */}
+          <div className="flex items-center justify-between border-t border-slate-800 pt-4 mt-6">
+            <button
+              onClick={handleToggleMarkReview}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition ${
+                markedForReview[currentIdx]
+                  ? 'bg-purple-600/20 border-purple-500 text-purple-300'
+                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              {markedForReview[currentIdx] ? 'Marked for Review' : 'Mark for Review'}
+            </button>
+
+            <button
+              onClick={handleClearResponse}
+              className="px-3.5 py-2 text-xs font-semibold text-slate-400 hover:text-rose-400 transition"
+            >
+              Clear Response
+            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                disabled={currentIdx === 0}
+                onClick={() => setCurrentIdx((prev) => Math.max(0, prev - 1))}
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 rounded-xl text-xs font-semibold text-white transition flex items-center gap-1"
+              >
+                <ChevronLeft className="w-4 h-4" /> Previous
+              </button>
+              <button
+                disabled={currentIdx === questions.length - 1}
+                onClick={() => setCurrentIdx((prev) => Math.min(questions.length - 1, prev + 1))}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 rounded-xl text-xs font-semibold text-white transition flex items-center gap-1"
+              >
+                Next <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Question Palette */}
+        <div className="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Question Palette</h3>
+          
+          <div className="grid grid-cols-5 gap-2 max-h-72 overflow-y-auto pr-1">
+            {questions.map((_, idx) => {
+              const isAnswered = answers[idx] !== undefined;
+              const isMarked = markedForReview[idx];
+              const isCurrent = currentIdx === idx;
+
+              let style = 'bg-slate-950 border-slate-800 text-slate-400';
+              if (isMarked) {
+                style = 'bg-purple-600 text-white border-purple-500';
+              } else if (isAnswered) {
+                style = 'bg-emerald-600 text-white border-emerald-500';
+              } else if (isCurrent) {
+                style = 'bg-indigo-600 text-white border-indigo-400';
+              }
+
               return (
                 <button
-                  key={s}
-                  onClick={() => switchSubject(s)}
-                  className={`py-2 px-4 text-xs font-semibold border-b-2 whitespace-nowrap cursor-pointer transition ${
-                    isActive
-                      ? 'bg-slate-900 text-indigo-400 border-indigo-400'
-                      : 'text-slate-400 border-transparent hover:text-slate-200'
+                  key={idx}
+                  onClick={() => setCurrentIdx(idx)}
+                  className={`h-9 rounded-lg border text-xs font-bold transition flex items-center justify-center ${style} ${
+                    isCurrent ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-900' : ''
                   }`}
                 >
-                  Part {s === 'Physics' ? 'I' : s === 'Chemistry' ? 'II' : 'III'}: {s === 'Math' ? 'Mathematics' : s}
+                  {idx + 1}
                 </button>
               );
             })}
           </div>
-        </div>
-      </header>
 
-      {/* Main Workspace */}
-      <main className="max-w-7xl w-full mx-auto p-4 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left Question Panel */}
-        <section className="lg:col-span-8 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-          <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center justify-between flex-wrap gap-2 text-xs">
+          <div className="border-t border-slate-800 pt-3 flex flex-col gap-2 text-[11px] text-slate-400">
             <div className="flex items-center gap-2">
-              <span className="bg-indigo-600 text-white font-bold px-2 py-0.5 rounded text-[11px]">
-                Q. {currentQ.id}
-              </span>
-              <span className="bg-indigo-50 text-indigo-800 border border-indigo-200 font-bold px-1.5 py-0.5 rounded text-[10px] uppercase">
-                {currentQ.section}
-              </span>
-              <span className="text-slate-500 font-semibold">{currentQ.meta}</span>
+              <span className="w-3 h-3 rounded bg-emerald-600 shrink-0" />
+              <span>Answered</span>
             </div>
-            <div className="flex gap-2 font-mono text-[11px]">
-              <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded">
-                +4 Correct
-              </span>
-              <span className="bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.5 rounded">
-                -1 Wrong
-              </span>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded bg-purple-600 shrink-0" />
+              <span>Marked for Review</span>
             </div>
-          </div>
-
-          <div className="p-5 flex-1 overflow-y-auto flex flex-col">
-            {/* Question Prompt */}
-            <div
-              className="text-base font-medium text-slate-900 leading-relaxed mb-4 whitespace-pre-wrap"
-              dangerouslySetInnerHTML={{ __html: currentQ.text || 'No question text provided.' }}
-            />
-
-            {currentQ.graphicSvg && (
-              <div
-                className="flex justify-center my-3"
-                dangerouslySetInnerHTML={{ __html: currentQ.graphicSvg }}
-              />
-            )}
-
-            {currentQ.type === 'MCQ' || currentQ.options.length > 0 ? (
-              <div className="flex flex-col gap-2.5 my-2">
-                {currentQ.options.map((opt, optIdx) => {
-                  const optKey = opt.key || String.fromCharCode(65 + optIdx);
-                  const isChecked = String(curAnswer).toUpperCase() === String(optKey).toUpperCase();
-                  const isCorrectKey =
-                    String(currentQ.correct).toUpperCase() === String(optKey).toUpperCase() ||
-                    String(currentQ.correct) === String(optIdx);
-
-                  let itemStyle = 'border-slate-200 bg-white hover:bg-slate-50 text-slate-800';
-
-                  if (examSubmitted) {
-                    if (isCorrectKey) itemStyle = 'bg-emerald-50 border-emerald-500 text-emerald-900 font-bold';
-                    else if (isChecked && !isCorrectKey) itemStyle = 'bg-rose-50 border-rose-500 text-rose-900 line-through';
-                  } else if (isChecked) {
-                    itemStyle = 'bg-indigo-50 border-indigo-500 text-indigo-900 font-semibold';
-                  }
-
-                  return (
-                    <label
-                      key={optKey}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer text-sm transition ${itemStyle}`}
-                    >
-                      <input
-                        type="radio"
-                        name={`q_${currentQ.id}`}
-                        value={optKey}
-                        checked={isChecked}
-                        disabled={examSubmitted}
-                        onChange={() => selectOption(optKey)}
-                        className="hidden"
-                      />
-                      <span className="w-6 h-6 rounded-full bg-slate-100 border border-slate-300 font-bold text-xs flex items-center justify-center shrink-0">
-                        ({String(optKey).toLowerCase()})
-                      </span>
-                      <span className="flex-1" dangerouslySetInnerHTML={{ __html: opt.text }} />
-                    </label>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="max-w-md bg-slate-50 border border-slate-200 rounded-lg p-4 my-2">
-                <label className="block text-[11px] uppercase font-bold text-slate-600 mb-2">
-                  Enter Integer Answer:
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    value={curAnswer || ''}
-                    disabled={examSubmitted}
-                    onChange={(e) => saveNumericalAnswer(e.target.value)}
-                    placeholder="e.g. 5"
-                    className="w-full text-lg font-mono font-bold p-2 border border-slate-300 rounded bg-white outline-none focus:border-indigo-500"
-                  />
-                  {examSubmitted && (
-                    <span className="font-mono font-bold text-xs p-2 bg-slate-200 rounded shrink-0">
-                      Key: {currentQ.correct}
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-500 mt-2">
-                  Marking: +4 for correct, -1 for incorrect.
-                </p>
-              </div>
-            )}
-
-            {examSubmitted && (
-              <div className="mt-5 bg-amber-50 border border-dashed border-amber-300 p-3.5 rounded-lg text-xs leading-relaxed text-amber-950">
-                <div className="font-bold uppercase text-[11px] text-amber-800 mb-1">
-                  • Solution & Key (Correct: {currentQ.correct || 'N/A'})
-                </div>
-                <div dangerouslySetInnerHTML={{ __html: currentQ.solution }} />
-              </div>
-            )}
-          </div>
-
-          <div className="bg-slate-50 border-t border-slate-200 px-4 py-3 flex items-center justify-between flex-wrap gap-2 text-xs">
-            <div className="flex gap-2">
-              <button
-                onClick={clearResponse}
-                disabled={examSubmitted}
-                className="bg-white border border-slate-300 text-slate-700 font-semibold px-3 py-1.5 rounded hover:bg-slate-100 cursor-pointer disabled:opacity-50"
-              >
-                Clear Response
-              </button>
-              <button
-                onClick={toggleReview}
-                className={`border font-semibold px-3 py-1.5 rounded transition cursor-pointer ${
-                  markedForReview.has(currentQ.id)
-                    ? 'bg-purple-600 text-white border-purple-600'
-                    : 'bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100'
-                }`}
-              >
-                {markedForReview.has(currentQ.id) ? 'Unmark Review' : 'Mark for Review'}
-              </button>
-            </div>
-            <div className="flex gap-2">
-              <button
-                disabled={currentIndex === 0}
-                onClick={() => jumpToQuestion(normalizedQuestions[currentIndex - 1].id)}
-                className="bg-slate-200 text-slate-700 font-semibold px-4 py-1.5 rounded disabled:opacity-50 cursor-pointer"
-              >
-                &larr; Previous
-              </button>
-              <button
-                onClick={() => {
-                  if (currentIndex < normalizedQuestions.length - 1) {
-                    jumpToQuestion(normalizedQuestions[currentIndex + 1].id);
-                  } else {
-                    handleSubmitExam(true);
-                  }
-                }}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-1.5 rounded cursor-pointer"
-              >
-                {currentIndex === normalizedQuestions.length - 1 ? 'Save & Review' : 'Save & Next →'}
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* Right Question Palette */}
-        <aside className="lg:col-span-4 flex flex-col gap-4">
-          <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
-            <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 mb-3 pb-3 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center">
-                  {answeredCount}
-                </span>
-                <span>Answered</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
-                  {normalizedQuestions.length - answeredCount}
-                </span>
-                <span>Not Answered</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded bg-purple-600 text-white text-[10px] font-bold flex items-center justify-center">
-                  {markedForReview.size}
-                </span>
-                <span>Review</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded bg-slate-200 text-slate-700 text-[10px] font-bold flex items-center justify-center">
-                  {unvisitedCount}
-                </span>
-                <span>Not Visited</span>
-              </div>
-            </div>
-
-            <div className="text-xs font-bold uppercase text-slate-600 flex justify-between mb-2">
-              <span>{currentQ.subject === 'Math' ? 'Mathematics' : currentQ.subject}</span>
-              <span>
-                {
-                  normalizedQuestions.filter((item) =>
-                    String(item.subject).toLowerCase().startsWith(String(currentQ.subject).toLowerCase().slice(0, 4))
-                  ).length
-                }{' '}
-                Questions
-              </span>
-            </div>
-
-            <div className="grid grid-cols-5 gap-1.5 max-h-96 overflow-y-auto p-1">
-              {normalizedQuestions
-                .filter((item) =>
-                  String(item.subject).toLowerCase().startsWith(String(currentQ.subject).toLowerCase().slice(0, 4))
-                )
-                .map((item) => {
-                  const isCurrent = item.id === currentQ.id;
-                  const isAns = userAnswers[item.id] !== undefined && userAnswers[item.id] !== '';
-                  const isRev = markedForReview.has(item.id);
-                  const isVis = visited.has(item.id);
-
-                  let palCls = 'bg-slate-50 text-slate-700 border-slate-300';
-                  if (examSubmitted) {
-                    const isCor = String(userAnswers[item.id]).trim().toUpperCase() === String(item.correct).trim().toUpperCase();
-                    if (isAns) palCls = isCor ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white';
-                  } else {
-                    if (isRev) palCls = 'bg-purple-600 text-white border-purple-600';
-                    else if (isAns) palCls = 'bg-emerald-600 text-white border-emerald-600';
-                    else if (isVis) palCls = 'bg-rose-500 text-white border-rose-500';
-                  }
-
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => jumpToQuestion(item.id)}
-                      className={`h-9 rounded text-xs font-mono font-bold border transition flex items-center justify-center cursor-pointer ${palCls} ${
-                        isCurrent ? 'ring-2 ring-slate-900 scale-105' : ''
-                      }`}
-                    >
-                      {item.id}
-                    </button>
-                  );
-                })}
-            </div>
-          </div>
-        </aside>
-      </main>
-
-      {/* Tab Switch Warning Modal */}
-      {showCheatWarning && !examSubmitted && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl border-2 border-rose-500 text-slate-800">
-            <div className="flex items-center gap-3 text-rose-600 mb-3">
-              <ShieldAlert className="w-7 h-7 shrink-0" />
-              <h3 className="text-lg font-bold">Tab Switch Detected!</h3>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed mb-4">
-              Switching tabs, windows, or opening external applications during the exam is strictly prohibited under exam conditions.
-            </p>
-            <div className="bg-rose-50 border border-rose-200 text-rose-900 p-3 rounded-lg text-xs font-semibold mb-4">
-              Warning {tabSwitchWarnings} of {maxAllowedSwitches}. If you switch tabs again, your examination will be <strong>automatically submitted</strong>.
-            </div>
-            <button
-              onClick={() => setShowCheatWarning(false)}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-lg text-xs transition cursor-pointer"
-            >
-              I Understand, Resume Test
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Result Modal */}
-      {showModal && examResults && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto text-slate-800">
-            <h2 className="text-xl font-black text-center text-slate-900">Examination Results</h2>
-            <p className="text-xs text-slate-500 text-center mt-1">
-              JEE Main Practice Test ({normalizedQuestions.length} Questions • {normalizedQuestions.length * 4} Marks)
-            </p>
-
-            <div className="grid grid-cols-3 gap-3 my-5 text-center">
-              <div className="p-3 rounded-lg border border-slate-200 bg-slate-50">
-                <span className="text-[10px] font-bold text-indigo-600 block">TOTAL SCORE</span>
-                <span className="text-2xl font-black text-slate-900 block my-1">
-                  {examResults.totalScore ?? 0}
-                </span>
-                <span className="text-[10px] text-slate-500">/ {normalizedQuestions.length * 4}</span>
-              </div>
-              <div className="p-3 rounded-lg border border-slate-200 bg-slate-50">
-                <span className="text-[10px] font-bold text-emerald-600 block">ACCURACY</span>
-                <span className="text-2xl font-black text-slate-900 block my-1">
-                  {examResults.accuracy ?? 0}%
-                </span>
-                <span className="text-[10px] text-slate-500">
-                  {examResults.totalCorrect ?? 0} / {examResults.totalAttempted ?? 0}
-                </span>
-              </div>
-              <div className="p-3 rounded-lg border border-slate-200 bg-slate-50">
-                <span className="text-[10px] font-bold text-slate-600 block">ATTEMPTED</span>
-                <span className="text-2xl font-black text-slate-900 block my-1">
-                  {examResults.totalAttempted ?? 0}
-                </span>
-                <span className="text-[10px] text-slate-500">/ {normalizedQuestions.length}</span>
-              </div>
-            </div>
-
-            {examResults.subStats && (
-              <table className="w-full border-collapse text-xs mb-5 text-left">
-                <thead>
-                  <tr className="bg-slate-50 text-slate-600 border-b border-slate-200">
-                    <th className="p-2">Subject</th>
-                    <th className="p-2 text-center">Correct</th>
-                    <th className="p-2 text-center">Wrong</th>
-                    <th className="p-2 text-center">Unattempted</th>
-                    <th className="p-2 text-right">Marks</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.keys(examResults.subStats).map((k) => {
-                    const st = examResults.subStats[k];
-                    return (
-                      <tr key={k} className="border-b border-slate-200">
-                        <td className="p-2 font-bold">{k === 'Math' ? 'Mathematics' : k}</td>
-                        <td className="p-2 text-center text-emerald-600 font-bold">{st.correct}</td>
-                        <td className="p-2 text-center text-rose-600 font-bold">{st.wrong}</td>
-                        <td className="p-2 text-center text-slate-400">{st.unattempted}</td>
-                        <td className="p-2 text-right font-bold">{st.score}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded text-xs transition cursor-pointer"
-              >
-                Review Solutions
-              </button>
-              <button
-                onClick={onExit}
-                className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold px-4 py-2 rounded text-xs transition cursor-pointer"
-              >
-                Exit / Reconfigure
-              </button>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded bg-slate-950 border border-slate-800 shrink-0" />
+              <span>Unattempted</span>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
