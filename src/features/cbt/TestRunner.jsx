@@ -71,27 +71,68 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
   }, [isSubmitted, timeRemaining]);
 
   const subjectSections = useMemo(() => {
-    const sections = [];
-    const seen = new Set();
-    questions.forEach((q, idx) => {
-      const subject = q.subject || q.subjectId || test?.subject || (exam === 'NEET' ? 'Biology' : 'Physics');
-      if (!seen.has(subject)) {
-        seen.add(subject);
-        sections.push({ subject, firstIndex: idx });
-      }
-    });
-    return sections;
-  }, [questions, test, exam]);
+    const isFullSyllabus = test?.subject === 'All' || test?.subject === 'Full Syllabus';
+    if (!isFullSyllabus || questions.length < 2) {
+      return [];
+    }
 
-  const activeSubject = subjectSections.find((section) => section.subject === (questions[currentIdx]?.subject || questions[currentIdx]?.subjectId))?.subject
-    || subjectSections[0]?.subject;
+    const count = questions.length;
+    const counts = exam === 'NEET'
+      ? [
+          { subject: 'Physics', count: Math.ceil(count * 0.25) },
+          { subject: 'Chemistry', count: Math.ceil(count * 0.25) },
+          { subject: 'Biology', count: count - Math.ceil(count * 0.25) * 2 }
+        ]
+      : [
+          { subject: 'Physics', count: Math.ceil(count / 3) },
+          { subject: 'Chemistry', count: Math.ceil((count - Math.ceil(count / 3)) / 2) },
+          { subject: 'Mathematics', count: count - Math.ceil(count / 3) - Math.ceil((count - Math.ceil(count / 3)) / 2) }
+        ];
+
+    let cursor = 0;
+    return counts.map(({ subject, count: sectionCount }) => {
+      const indices = Array.from(
+        { length: Math.max(0, Math.min(sectionCount, count - cursor)) },
+        (_, offset) => cursor + offset
+      );
+      const section = { subject, indices, firstIndex: indices[0] ?? cursor };
+      cursor += sectionCount;
+      return section;
+    }).filter(section => section.indices.length > 0);
+  }, [questions.length, test?.subject, exam]);
+
+  const isSectionedTest = subjectSections.length > 1;
+
+  const activeSubject = isSectionedTest
+    ? (subjectSections.find((section) => section.indices.includes(currentIdx))?.subject || subjectSections[0].subject)
+    : null;
+
+  const activeSection = isSectionedTest
+    ? (subjectSections.find((section) => section.subject === activeSubject) || subjectSections[0])
+    : null;
 
   const jumpToSubject = (subject) => {
     const target = subjectSections.find((section) => section.subject === subject);
     if (target) setCurrentIdx(target.firstIndex);
   };
 
-  const currentQ = questions[currentIdx];
+  const goToPrevious = () => {
+    if (!isSectionedTest) {
+      setCurrentIdx((prev) => Math.max(0, prev - 1));
+      return;
+    }
+    const pos = activeSection.indices.indexOf(currentIdx);
+    setCurrentIdx(activeSection.indices[Math.max(0, pos - 1)] ?? activeSection.firstIndex);
+  };
+
+  const goToNext = () => {
+    if (!isSectionedTest) {
+      setCurrentIdx((prev) => Math.min(questions.length - 1, prev + 1));
+      return;
+    }
+    const pos = activeSection.indices.indexOf(currentIdx);
+    setCurrentIdx(activeSection.indices[Math.min(activeSection.indices.length - 1, pos + 1)] ?? activeSection.firstIndex);
+  };
 
   const handleSelectOption = (optIdx) => {
     if (isSubmitted) return;
@@ -387,14 +428,14 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
             <div className="flex items-center gap-2">
               <button
                 disabled={currentIdx === 0}
-                onClick={() => setCurrentIdx((prev) => Math.max(0, prev - 1))}
+                onClick={goToPrevious}
                 className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 rounded-xl text-xs font-semibold text-white transition flex items-center gap-1"
               >
                 <ChevronLeft className="w-4 h-4" /> Previous
               </button>
               <button
                 disabled={currentIdx === questions.length - 1}
-                onClick={() => setCurrentIdx((prev) => Math.min(questions.length - 1, prev + 1))}
+                onClick={goToNext}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 rounded-xl text-xs font-semibold text-white transition flex items-center gap-1"
               >
                 Next <ChevronRight className="w-4 h-4" />
@@ -408,7 +449,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Question Palette</h3>
           
           <div className="grid grid-cols-5 gap-2 max-h-72 overflow-y-auto pr-1">
-            {questions.map((_, idx) => {
+            {(isSectionedTest ? activeSection.indices : questions.map((_, idx) => idx)).map((idx) => {
               const isAnswered = answers[idx] !== undefined;
               const isMarked = markedForReview[idx];
               const isCurrent = currentIdx === idx;
