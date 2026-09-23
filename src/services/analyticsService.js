@@ -1,9 +1,12 @@
-const ANALYTICS_STORAGE_KEY = 'apexprep_test_history_v2';
+const ANALYTICS_STORAGE_PREFIX = 'apexprep_test_history_v3_';
 const LEGACY_ANALYTICS_STORAGE_KEY = 'apexprep_test_history';
 
-export function clearTestHistory() {
+const storageKey = (userId) => userId ? `${ANALYTICS_STORAGE_PREFIX}${userId}` : null;
+
+export function clearTestHistory(userId) {
   try {
-    localStorage.removeItem(ANALYTICS_STORAGE_KEY);
+    if (userId) localStorage.removeItem(storageKey(userId));
+    localStorage.removeItem(LEGACY_ANALYTICS_STORAGE_KEY);
     return true;
   } catch (err) {
     console.error('Failed to clear test history:', err);
@@ -12,12 +15,10 @@ export function clearTestHistory() {
 }
 
 
-export function getTestHistory() {
-  // The previous analytics store was global to the browser. Never reuse it
-  // for a new account; remove it once the new store is initialized.
-  try { localStorage.removeItem(LEGACY_ANALYTICS_STORAGE_KEY); } catch {}
+export function getTestHistory(userId) {
+  if (!userId) return [];
   try {
-    const data = localStorage.getItem(ANALYTICS_STORAGE_KEY);
+    const data = localStorage.getItem(storageKey(userId));
     return data ? JSON.parse(data) : [];
   } catch (err) {
     console.error('Failed to load test history:', err);
@@ -25,19 +26,21 @@ export function getTestHistory() {
   }
 }
 
-export function saveTestAttempt({ testQuestions, userAnswers, examResults, durationMinutes }) {
+export function saveTestAttempt({ userId, testQuestions, userAnswers, examResults, durationMinutes }) {
+  if (!userId) return false;
   try {
-    const history = getTestHistory();
+    const history = getTestHistory(userId);
     const newAttempt = {
-      id: `attempt_${Date.now()}`,
+      id: `personal_${Date.now()}`,
+      source: 'Personal Test',
       timestamp: new Date().toISOString(),
       questionCount: testQuestions.length,
       durationMinutes,
-      score: examResults.totalScore,
-      totalPossibleScore: testQuestions.length * 4,
+      score: examResults.score,
+      totalPossibleScore: examResults.maxScore,
       accuracy: examResults.accuracy,
-      correctCount: examResults.totalCorrect,
-      attemptedCount: examResults.totalAttempted,
+      correctCount: examResults.correct,
+      attemptedCount: examResults.attempted,
       subjectBreakdown: examResults.subStats,
       // Record chapter-level stats for weak-area detection
       chapterBreakdown: testQuestions.map((q) => {
@@ -54,7 +57,7 @@ export function saveTestAttempt({ testQuestions, userAnswers, examResults, durat
     };
 
     history.unshift(newAttempt);
-    localStorage.setItem(ANALYTICS_STORAGE_KEY, JSON.stringify(history));
+    localStorage.setItem(storageKey(userId), JSON.stringify(history));
     return true;
   } catch (err) {
     console.error('Failed to save test attempt:', err);
@@ -62,74 +65,54 @@ export function saveTestAttempt({ testQuestions, userAnswers, examResults, durat
   }
 }
 
-export function computeOverallAnalytics() {
-  const history = getTestHistory();
-
-  if (history.length === 0) {
-    return {
-      hasData: false,
-      totalTests: 0,
-      averageScore: 0,
-      averageAccuracy: 0,
-      totalAttemptedQuestions: 0,
-      chapterMastery: [],
-      weakChapters: [],
-      moderateChapters: [],
-      strongChapters: []
-    };
-  }
-
-  let totalScore = 0;
-  let totalPossibleScore = 0;
-  let totalCorrect = 0;
-  let totalAttempted = 0;
-
-  const chapterStats = {};
-
-  history.forEach((attempt) => {
-    totalScore += attempt.score;
-    totalPossibleScore += attempt.totalPossibleScore;
-    totalCorrect += attempt.correctCount;
-    totalAttempted += attempt.attemptedCount;
-
-    attempt.chapterBreakdown?.forEach((item) => {
-      const key = `${item.subject}::${item.chapter}`;
-      if (!chapterStats[key]) {
-        chapterStats[key] = { subject: item.subject, chapter: item.chapter, total: 0, correct: 0 };
-      }
-      if (item.isAttempted) {
-        chapterStats[key].total++;
-        if (item.isCorrect) chapterStats[key].correct++;
-      }
-    });
+function addAttemptToAggregate(aggregate, attempt) {
+  aggregate.attempts.push(attempt);
+  aggregate.totalScore += Number(attempt.score) || 0;
+  aggregate.totalCorrect += Number(attempt.correctCount) || 0;
+  aggregate.totalAttempted += Number(attempt.attemptedCount) || 0;
+  (attempt.chapterBreakdown || []).forEach((item) => {
+    const key = `${item.subject || 'General'}::${item.chapter || 'General'}`;
+    if (!aggregate.chapterStats[key]) aggregate.chapterStats[key] = { subject: item.subject || 'General', chapter: item.chapter || 'General', total: 0, correct: 0 };
+    if (item.isAttempted) { aggregate.chapterStats[key].total += 1; if (item.isCorrect) aggregate.chapterStats[key].correct += 1; }
   });
+}
 
-  const overallAccuracy = totalAttempted > 0 ? Math.round((totalCorrect / totalAttempted) * 100) : 0;
-  const averageScore = Math.round(totalScore / history.length);
+function emptyAnalytics() {
+  return { hasData:false,totalTests:0,averageScore:0,averageAccuracy:0,totalAttemptedQuestions:0,chapterMastery:[],weakChapters:[],moderateChapters:[],strongChapters:[],recentAttempts:[] };
+}
 
-  const chapterMastery = Object.values(chapterStats).map((ch) => {
-    const accuracy = ch.total > 0 ? Math.round((ch.correct / ch.total) * 100) : 0;
-    let status = 'Moderate';
-    if (accuracy < 45) status = 'Weak';
-    else if (accuracy >= 75) status = 'Strong';
+function finalizeAnalytics(a) {
+  if (!a.attempts.length) return emptyAnalytics();
+  const chapterMastery=Object.values(a.chapterStats).map((ch)=>{const accuracy=ch.total?Math.round(ch.correct/ch.total*100):0; const status=accuracy<45?'Weak':accuracy>=75?'Strong':'Moderate'; return {...ch,accuracy,status};});
+  return {hasData:true,totalTests:a.attempts.length,averageScore:Math.round(a.totalScore/a.attempts.length),averageAccuracy:a.totalAttempted?Math.round(a.totalCorrect/a.totalAttempted*100):0,totalAttemptedQuestions:a.totalAttempted,chapterMastery,weakChapters:chapterMastery.filter(c=>c.status==='Weak'),moderateChapters:chapterMastery.filter(c=>c.status==='Moderate'),strongChapters:chapterMastery.filter(c=>c.status==='Strong'),recentAttempts:a.attempts.sort((m,n)=>new Date(n.timestamp)-new Date(m.timestamp)).slice(0,5)};
+}
 
-    return {
-      ...ch,
-      accuracy,
-      status
-    };
-  });
+function buildCircleAttempt(submission, test) {
+  const questions=Array.isArray(test?.questions)?test.questions:[];
+  const answers=submission.answers && typeof submission.answers==='object'?submission.answers:{};
+  let correctCount=0, attemptedCount=0;
+  const chapterBreakdown=questions.map((q,idx)=>{const given=answers[idx]!==undefined?answers[idx]:answers[q.id]; const correct=q.correctAnswer!==undefined?q.correctAnswer:q.correct_answer; const isAttempted=given!==undefined&&given!==null&&given!==''; const isCorrect=isAttempted&&Number(given)===Number(correct); if(isAttempted)attemptedCount++; if(isCorrect)correctCount++; return {subject:q.subject||test?.subject||'General',chapter:q.chapter||test?.chapter||'General',isAttempted,isCorrect};});
+  return {id:`circle_${submission.id||Date.now()}`,source:'Friend Circle Test',timestamp:submission.created_at||new Date().toISOString(),questionCount:questions.length||test?.total_questions||0,durationMinutes:Number(test?.duration_minutes)||0,score:Number(submission.score)||0,totalPossibleScore:questions.length*4||0,accuracy:Number(submission.accuracy_pct)||0,correctCount,attemptedCount,chapterBreakdown};
+}
 
-  return {
-    hasData: true,
-    totalTests: history.length,
-    averageScore,
-    averageAccuracy: overallAccuracy,
-    totalAttemptedQuestions: totalAttempted,
-    chapterMastery,
-    weakChapters: chapterMastery.filter((c) => c.status === 'Weak'),
-    moderateChapters: chapterMastery.filter((c) => c.status === 'Moderate'),
-    strongChapters: chapterMastery.filter((c) => c.status === 'Strong'),
-    recentAttempts: history.slice(0, 5)
-  };
+export async function getCombinedAnalytics(userId) {
+  if (!userId) return emptyAnalytics();
+  const aggregate={attempts:[],totalScore:0,totalCorrect:0,totalAttempted:0,chapterStats:{}};
+  getTestHistory(userId).forEach((attempt)=>addAttemptToAggregate(aggregate,attempt));
+  try {
+    const {data: submissions,error}=await supabase.from('circle_test_submissions').select('*').eq('user_id',userId).order('created_at',{ascending:false});
+    if(error) throw error;
+    const ids=Array.from(new Set((submissions||[]).map(s=>s.test_id).filter(Boolean)));
+    let tests=[];
+    if(ids.length){const {data,error:te}=await supabase.from('circle_tests').select('id,title,subject,chapter,duration_minutes,total_questions,questions').in('id',ids); if(te) throw te; tests=data||[];}
+    const map=Object.fromEntries(tests.map(t=>[t.id,t]));
+    (submissions||[]).forEach(s=>addAttemptToAggregate(aggregate,buildCircleAttempt(s,map[s.test_id])));
+  } catch(err) { console.error('Failed to load circle analytics:',err); }
+  return finalizeAnalytics(aggregate);
+}
+
+export function computeOverallAnalytics(userId) {
+  const aggregate={attempts:[],totalScore:0,totalCorrect:0,totalAttempted:0,chapterStats:{}};
+  getTestHistory(userId).forEach((attempt)=>addAttemptToAggregate(aggregate,attempt));
+  return finalizeAnalytics(aggregate);
 }
