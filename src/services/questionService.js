@@ -38,13 +38,29 @@ export function getFilteredQuestions({ subject, chapter, difficulty, search, exa
     list = list.filter((q) => (q.difficulty || '').toLowerCase() === difficulty.toLowerCase());
   }
   if (search && search.trim()) {
-    const s = search.toLowerCase();
-    list = list.filter(
-      (q) =>
-        (q.question || q.text || '').toLowerCase().includes(s) ||
-        (q.chapterId || q.chapter || '').toLowerCase().includes(s) ||
-        (q.yearTag || '').toLowerCase().includes(s)
-    );
+    const s = search.trim().toLowerCase();
+    list = list.filter((q) => {
+      const subjectLabel =
+        SUBJECT_ID_TO_LABEL[String(q.subjectId || '').toLowerCase()] || q.subject || '';
+      const searchableFields = [
+        q.question,
+        q.text,
+        q.chapterId,
+        q.chapter,
+        q.subtopicId,
+        q.subtopic,
+        q.topic,
+        q.topicId,
+        q.yearTag,
+        q.year_tag,
+        q.difficulty,
+        subjectLabel
+      ];
+
+      return searchableFields.some((value) =>
+        String(value || '').toLowerCase().includes(s)
+      );
+    });
   }
 
   return list.map((q) => {
