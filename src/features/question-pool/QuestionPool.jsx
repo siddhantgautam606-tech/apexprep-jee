@@ -11,6 +11,8 @@ export default function QuestionPool({ currentUser, feedExam }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const QUESTIONS_PER_PAGE = 10;
 
   const [formData, setFormData] = useState({
     subject: examConfig.subjects[0],
@@ -34,9 +36,14 @@ export default function QuestionPool({ currentUser, feedExam }) {
     });
   }, [selectedSubject, searchQuery, refreshTrigger, exam]);
 
+  const totalPages = Math.max(1, Math.ceil(questions.length / QUESTIONS_PER_PAGE));
+  const pageQuestions = questions.slice((currentPage - 1) * QUESTIONS_PER_PAGE, currentPage * QUESTIONS_PER_PAGE);
+
   const handleOptionChange = (idx, value) => {
     const updated = [...formData.options];
     updated[idx] = value;
+    setCurrentPage(1);
+
     setFormData({ ...formData, options: updated });
   };
 
@@ -103,7 +110,7 @@ export default function QuestionPool({ currentUser, feedExam }) {
         {subjects.map((sub) => (
           <button
             key={sub}
-            onClick={() => setSelectedSubject(sub)}
+            onClick={() => { setSelectedSubject(sub); setCurrentPage(1); }}
             className={`px-4 py-1.5 rounded-xl text-xs font-medium transition whitespace-nowrap ${
               selectedSubject === sub
                 ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
@@ -114,7 +121,7 @@ export default function QuestionPool({ currentUser, feedExam }) {
           </button>
         ))}
         <span className="text-xs text-slate-500 ml-auto shrink-0">
-          Showing {questions.length} questions
+          Showing {questions.length} questions • Page {currentPage} of {totalPages}
         </span>
       </div>
 
@@ -125,9 +132,17 @@ export default function QuestionPool({ currentUser, feedExam }) {
             No questions match your current search criteria.
           </div>
         ) : (
-          questions.map((q, idx) => <QuestionCard key={q.id} question={q} index={idx} />)
+          pageQuestions.map((q, idx) => <QuestionCard key={q.id} question={q} index={(currentPage - 1) * QUESTIONS_PER_PAGE + idx} />)
         )}
       </div>
+
+      {questions.length > QUESTIONS_PER_PAGE && (
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:border-slate-700">Previous</button>
+          <span className="px-4 py-2 text-sm text-slate-400">Page {currentPage} / {totalPages}</span>
+          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:border-slate-700">Next</button>
+        </div>
+      )}
 
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
