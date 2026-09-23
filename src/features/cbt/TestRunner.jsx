@@ -11,6 +11,7 @@ import {
   X 
 } from 'lucide-react';
 import { computeExamStats } from '../../services/testEngineService';
+import { saveTestAttempt } from '../../services/analyticsService';
 import { getStandardQuestions, formatMathSymbols } from '../../data/jeeQuestionBank';
 import { supabase } from '../../services/supabaseClient';
 
@@ -98,12 +99,14 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
     setExamResult(stats);
     setIsSubmitted(true);
 
+    if (currentUser?.id) { saveTestAttempt({ userId: currentUser.id, testQuestions: questions, userAnswers: answers, examResults: stats, durationMinutes: Math.max(0, Math.round(totalTimeTaken / 60)) }); }
+
     // If this test belongs to a study circle, save submission to Supabase
     if (test?.circleId || test?.circle_id) {
       const circleId = test.circleId || test.circle_id;
       if (currentUser?.id) {
         try {
-          await supabase.from('circle_test_submissions').insert([
+          const { error: submissionError } = await supabase.from('circle_test_submissions').insert([
             {
               circle_id: circleId,
               test_id: test.id,
@@ -113,6 +116,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
               answers: answers
             }
           ]);
+          if (submissionError) throw submissionError;
         } catch (e) {
           console.warn('Could not save circle test score:', e);
         }
