@@ -222,6 +222,7 @@ export async function scheduleCircleTest(circleId, testConfig, userId) {
       .insert([
         {
           circle_id: circleId,
+          exam: testConfig.exam || 'JEE Main',
           title: testConfig.title || 'Untitled Test',
           subject: testConfig.subject || 'All',
           chapter: testConfig.chapter || 'All',
@@ -261,9 +262,9 @@ export async function deleteCircleTest(testId) {
 /**
  * Question fetching helper for test scheduling
  */
-export async function fetchQuestionsForTest(subject, chapter, count) {
+export async function fetchQuestionsForTest(subject, chapter, count, exam = 'JEE Main') {
   try {
-    let query = supabase.from('questions').select('*');
+    let query = supabase.from('custom_questions').select('*').eq('exam', exam);
 
     if (subject && subject !== 'All' && subject !== 'Full Syllabus') {
       query = query.ilike('subject', subject);
