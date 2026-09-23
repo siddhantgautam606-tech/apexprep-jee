@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Rich Multi-Stop Dark Background Gradient -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#090d16"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+
+    <!-- Premium Dual-Tone Flame Gradient -->
+    <linearGradient id="flame" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="50%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#c084fc"/>
+    </linearGradient>
+
+    <!-- Core Highlight Gradient -->
+    <linearGradient id="core" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+
+    <!-- Deep Neon Glow Filter -->
+    <filter id="neonGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="30" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    
+    <!-- Soft Aura Filter -->
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="15" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- App Icon Squircle Base -->
+  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
+
+  <!-- Subtle Rim Light Border -->
+  <rect x="4" y="4" width="504" height="504" rx="116" fill="none" stroke="#6366f1" stroke-width="2" stroke-opacity="0.3"/>
+
+  <!-- Ambient Background Backlighting Aura -->
+  <circle cx="256" cy="240" r="140" fill="#6366f1" filter="url(#neonGlow)" opacity="0.35"/>
+  <circle cx="256" cy="270" r="90" fill="#c084fc" filter="url(#neonGlow)" opacity="0.25"/>
+
+  <!-- Outer Flame Body with Soft Glow -->
+  <path d="M256 70C256 70 170 170 170 260C170 308.601 209.399 348 258 348C306.601 348 346 308.601 346 260C346 170 256 70 256 70Z" fill="url(#flame)" filter="url(#softGlow)"/>
+  <path d="M256 70C256 70 170 170 170 260C170 308.601 209.399 348 258 348C306.601 348 346 308.601 346 260C346 170 256 70 256 70Z" fill="url(#flame)"/>
+
+  <!-- Inner Dynamic Flame Depth Layer -->
+  <path d="M256 140C256 140 200 210 200 265C200 295.376 224.624 320 255 320C285.376 320 310 295.376 310 265C310 210 256 140 256 140Z" fill="url(#core)" opacity="0.15"/>
+
+  <!-- Razor-Sharp White Core Flame for Striking Contrast -->
+  <path d="M256 175C256 175 220 225 220 268C220 287.882 236.118 304 256 304C275.882 304 292 287.882 292 268C292 225 256 175 256 175Z" fill="url(#core)"/>
+</svg>
