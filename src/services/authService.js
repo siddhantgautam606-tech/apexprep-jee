@@ -29,13 +29,54 @@ export async function getCurrentUser() {
       console.error('Error fetching current user profile:', profileError);
     }
 
+    // OAuth users may not have a profile row yet. Create a minimal profile
+    // so Google sign-in works with the same profile-dependent features as
+    // email/password accounts.
+    let resolvedProfile = profile;
+    if (!resolvedProfile) {
+      const email = authUser.email || '';
+      const baseUsername = (authUser.user_metadata?.username
+        || email.split('@')[0]
+        || 'student')
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, '_')
+        .slice(0, 24) || 'student';
+
+      const profilePayload = {
+        id: authUser.id,
+        username: baseUsername,
+        target_exam: authUser.user_metadata?.target_exam || 'JEE Main'
+      };
+
+      const firstAttempt = await supabase
+        .from('profiles')
+        .upsert([profilePayload], { onConflict: 'id' })
+        .select('*')
+        .maybeSingle();
+
+      if (!firstAttempt.error) {
+        resolvedProfile = firstAttempt.data;
+      } else {
+        const fallbackPayload = {
+          ...profilePayload,
+          username: `student_${authUser.id.slice(0, 8)}`
+        };
+        const fallbackAttempt = await supabase
+          .from('profiles')
+          .upsert([fallbackPayload], { onConflict: 'id' })
+          .select('*')
+          .maybeSingle();
+        if (!fallbackAttempt.error) resolvedProfile = fallbackAttempt.data;
+      }
+    }
+
     return {
       id: authUser.id,
       email: authUser.email,
-      username: profile?.username || authUser.user_metadata?.username || authUser.email?.split('@')[0] || 'Aspirant',
-      target_exam: profile?.target_exam || authUser.user_metadata?.target_exam || 'JEE Main',
-      role: profile?.role || 'student',
-      is_admin: profile?.is_admin === true,
+      username: resolvedProfile?.username || authUser.user_metadata?.username || authUser.email?.split('@')[0] || 'Aspirant',
+      target_exam: resolvedProfile?.target_exam || authUser.user_metadata?.target_exam || 'JEE Main',
+      role: resolvedProfile?.role || 'student',
+      is_admin: resolvedProfile?.is_admin === true,
       created_at: authUser.created_at
     };
   } catch (err) {
