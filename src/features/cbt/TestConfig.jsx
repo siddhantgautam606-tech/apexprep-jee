@@ -92,6 +92,11 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
     }
   };
 
+  const durationPresets = isNeet
+    ? [{ minutes: 60, questions: 100 }, { minutes: 120, questions: 200 }, { minutes: 180, questions: 300 }]
+    : [{ minutes: 60, questions: 25 }, { minutes: 120, questions: 50 }, { minutes: 180, questions: 75 }];
+  const selectedDuration = Number(config?.durationMinutes) || 60;
+
   return (
     <div className="max-w-2xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-2xl">
       <div className="flex items-center gap-3 border-b border-slate-800 pb-5 mb-6">
@@ -100,7 +105,7 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
         </div>
         <div>
           <h2 className="text-lg font-bold text-white">Configure {examConfig.label} Practice Exam</h2>
-          <p className="text-xs text-slate-400">Select {examConfig.label} subjects, chapters, question count, and duration.</p>
+          <p className="text-xs text-slate-400">Select {examConfig.label} subjects, chapters, and test duration.</p>
         </div>
       </div>
 
@@ -176,42 +181,24 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
           </div>
         </div>
 
-        {/* Question Count & Duration */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Question Count</label>
-            <input
-              type="number"
-              min="5"
-              max="75"
-              value={config?.questionCount ?? 10}
-              onChange={(e) => {
-                const rawValue = e.target.value;
-                onChangeConfig({
-                  ...config,
-                  questionCount: rawValue === '' ? '' : Number(rawValue)
-                });
-              }}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Duration (Minutes)</label>
-            <input
-              type="number"
-              min="5"
-              max="180"
-              value={config?.durationMinutes ?? 30}
-              onChange={(e) => {
-                const rawValue = e.target.value;
-                onChangeConfig({
-                  ...config,
-                  durationMinutes: rawValue === '' ? '' : Number(rawValue)
-                });
-              }}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition"
-            />
+        {/* Test Duration */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-300 mb-1.5">Test Duration</label>
+          <div className="grid grid-cols-3 gap-2">
+            {durationPresets.map((preset) => {
+              const selected = selectedDuration === preset.minutes;
+              return (
+                <button
+                  key={preset.minutes}
+                  type="button"
+                  onClick={() => onChangeConfig({ ...config, durationMinutes: preset.minutes, questionCount: preset.questions })}
+                  className={`py-3 rounded-xl border text-xs font-bold transition ${selected ? (isNeet ? 'bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-600/20' : 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-600/20') : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'}`}
+                >
+                  <span className="block">{preset.minutes} Minutes</span>
+                  <span className="block mt-1 text-[10px] font-medium opacity-80">{preset.questions} Questions</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
