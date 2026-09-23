@@ -81,6 +81,10 @@ export default function App() {
   }, []);
 
   const feedExam = normalizeExam(developerExamOverride || currentUser?.target_exam);
+  const isNeetInterface = feedExam === 'NEET';
+  const examTheme = isNeetInterface
+    ? { accent: 'emerald', gradient: 'from-emerald-600 to-teal-500', soft: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' }
+    : { accent: 'indigo', gradient: 'from-indigo-600 to-violet-500', soft: 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' };
 
   const handleDeveloperExamChange = (exam) => {
     const next = exam === 'ACCOUNT' ? null : normalizeExam(exam);
@@ -140,17 +144,17 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+    <div className={`min-h-screen text-slate-100 flex flex-col font-sans transition-colors duration-300 ${isNeetInterface ? 'bg-slate-950 selection:bg-emerald-500 selection:text-white' : 'bg-slate-950 selection:bg-indigo-500 selection:text-white'}`}>
       {/* Navigation Header */}
       <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+            <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${examTheme.gradient} flex items-center justify-center shadow-lg shadow-indigo-500/20`}>
               <Flame className="w-6 h-6 text-white" />
             </div>
             <div>
               <span className="font-black text-lg tracking-tight text-white flex items-center gap-1.5">
-                PrepXAI <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">CBT</span>
+                ApexPrep <span className={`text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border ${examTheme.soft}`}>{feedExam}</span>
               </span>
               <p className="text-[10px] text-slate-400 font-medium">Peer Study & CBT Simulator</p>
             </div>
@@ -183,6 +187,22 @@ export default function App() {
               );
             })}
           </nav>
+
+          {/* Private developer exam preview: visible only to the registered admin account */}
+          {currentUser?.is_admin && (
+            <div className="hidden xl:flex items-center gap-2 mr-2 px-2 py-1.5 rounded-xl border border-slate-800 bg-slate-950/70">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Preview</span>
+              <select
+                value={developerExamOverride || 'ACCOUNT'}
+                onChange={(e) => handleDeveloperExamChange(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-white outline-none cursor-pointer"
+                title="Preview another exam interface (admin only)"
+              >
+                <option value="ACCOUNT">My Account</option>
+                {EXAM_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </div>
+          )}
 
           {/* User Profile / Auth Button */}
           <div className="flex items-center gap-2">
