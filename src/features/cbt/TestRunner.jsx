@@ -13,10 +13,13 @@ import {
 import { computeExamStats } from '../../services/testEngineService';
 import { saveTestAttempt } from '../../services/analyticsService';
 import { getStandardQuestions, formatMathSymbols } from '../../data/jeeQuestionBank';
+import { getStandardNEETQuestions } from '../../data/neetQuestionBank';
+import { normalizeExam } from '../../config/examConfig';
 import { supabase } from '../../services/supabaseClient';
 
 export default function TestRunner({ test, currentUser, onComplete, onExit }) {
   // Guarantee questions exist: if test.questions is empty, generate them immediately
+  const exam = normalizeExam(test?.exam || currentUser?.target_exam);
   const initialQuestions = useMemo(() => {
     let list = [];
     if (test && Array.isArray(test.questions) && test.questions.length > 0) {
@@ -25,7 +28,9 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
       const sub = test?.subject || 'Physics';
       const ch = test?.chapter || 'All';
       const count = Number(test?.duration_minutes ? Math.min(25, Math.floor(test.duration_minutes / 2)) : 5) || 5;
-      list = getStandardQuestions(sub === 'Full Syllabus' ? 'Physics' : sub, ch, count);
+      list = exam === 'NEET'
+        ? getStandardNEETQuestions(sub === 'Full Syllabus' ? 'All' : sub, ch, count)
+        : getStandardQuestions(sub === 'Full Syllabus' ? 'Physics' : sub, ch, count);
     }
 
     return list.map((q, idx) => ({
@@ -38,7 +43,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
       correctAnswer: q.correctAnswer !== undefined ? Number(q.correctAnswer) : q.correct_answer !== undefined ? Number(q.correct_answer) : 0,
       explanation: formatMathSymbols(q.explanation || q.solution || '')
     }));
-  }, [test]);
+  }, [test, exam]);
 
   const [questions] = useState(initialQuestions);
   const [currentIdx, setCurrentIdx] = useState(0);
