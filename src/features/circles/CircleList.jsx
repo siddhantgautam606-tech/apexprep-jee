@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Users, Plus, Shield, Check, X, MessageSquare, Trophy, Calendar, Clock, Trash2, ArrowRight, Send } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Users, Plus, Shield, Check, X, MessageSquare, Trophy, Calendar, Clock, Trash2, ArrowRight, Send, CheckCheck } from 'lucide-react';
 import { 
   getAllCircles, 
   getUserCircleMemberships, 
@@ -24,26 +24,22 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
   const [circles, setCircles] = useState([]);
   const [userMemberships, setUserMemberships] = useState([]);
   const [selectedCircle, setSelectedCircle] = useState(null);
-  const [activeTab, setActiveTab] = useState('tests'); // tests, members, chat, leaderboard
+  const [activeTab, setActiveTab] = useState('tests');
 
-  // Modals & form state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [newCircleName, setNewCircleName] = useState('');
   const [newCircleDesc, setNewCircleDesc] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Active Circle Detailed Data
   const [circleMembers, setCircleMembers] = useState({ approved: [], pending: [] });
   const [circleTests, setCircleTests] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [announcementMsg, setAnnouncementMsg] = useState('');
 
-  // Auto-scroll ref for announcements
   const chatBottomRef = useRef(null);
 
-  // Schedule Test Form State
   const [newTest, setNewTest] = useState({
     title: '',
     subject: 'All',
@@ -54,7 +50,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
     windowEnd: ''
   });
 
-  // Safely extract chapters with complete error-protection
   const availableChapters = useMemo(() => {
     let list = [];
 
@@ -64,19 +59,14 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
         const data = JEE_SYLLABUS[subKey];
         if (!data) return [];
 
-        if (Array.isArray(data)) {
-          return data;
-        }
+        if (Array.isArray(data)) return data;
 
         if (typeof data === 'object') {
           let nested = [];
           Object.keys(data).forEach((k) => {
             const val = data[k];
-            if (Array.isArray(val)) {
-              nested.push(...val);
-            } else if (typeof val === 'string') {
-              nested.push(val);
-            }
+            if (Array.isArray(val)) nested.push(...val);
+            else if (typeof val === 'string') nested.push(val);
           });
           return nested;
         }
@@ -94,8 +84,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
       list.push(...getChaptersForSubject(newTest.subject));
     }
 
-    const unique = Array.from(new Set(list.filter((c) => c && typeof c === 'string' && c !== 'All')));
-    return unique;
+    return Array.from(new Set(list.filter((c) => c && typeof c === 'string' && c !== 'All')));
   }, [newTest.subject]);
 
   const loadCirclesData = async () => {
@@ -130,7 +119,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
     loadCircleDetails();
   }, [selectedCircle]);
 
-  // Scroll to bottom of chat when announcements update
   useEffect(() => {
     if (activeTab === 'chat' && chatBottomRef.current) {
       chatBottomRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -191,7 +179,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
     }
   };
 
-  // Chapter Toggle (Supports single or multi selection)
   const handleToggleChapter = (ch) => {
     if (ch === 'All') {
       setNewTest((prev) => ({ ...prev, selectedChapters: ['All'] }));
@@ -200,14 +187,9 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
 
     setNewTest((prev) => {
       let updated = prev.selectedChapters.filter((c) => c !== 'All');
-      if (updated.includes(ch)) {
-        updated = updated.filter((c) => c !== ch);
-      } else {
-        updated.push(ch);
-      }
-      if (updated.length === 0) {
-        updated = ['All'];
-      }
+      if (updated.includes(ch)) updated = updated.filter((c) => c !== ch);
+      else updated.push(ch);
+      if (updated.length === 0) updated = ['All'];
       return { ...prev, selectedChapters: updated };
     });
   };
@@ -228,8 +210,8 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
         ? 'All'
         : newTest.selectedChapters.join(', ');
 
-      const primaryChapter = newTest.selectedChapters.includes('All') 
-        ? 'All' 
+      const primaryChapter = newTest.selectedChapters.includes('All')
+        ? 'All'
         : newTest.selectedChapters[0];
 
       try {
@@ -257,11 +239,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
 
       const res = await scheduleCircleTest(
         selectedCircle.id,
-        {
-          ...newTest,
-          chapter: chapterLabel,
-          questions
-        },
+        { ...newTest, chapter: chapterLabel, questions },
         currentUser.id
       );
 
@@ -300,7 +278,8 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
   const handlePostAnnouncement = async (e) => {
     e.preventDefault();
     if (!announcementMsg.trim() || !currentUser?.id) return;
-    const msgToSend = announcementMsg;
+
+    const msgToSend = announcementMsg.trim();
     setAnnouncementMsg('');
 
     const res = await postAnnouncement(selectedCircle.id, msgToSend, currentUser.id);
@@ -318,7 +297,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-6">
-      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -337,7 +315,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Circles Sidebar */}
         <div className="lg:col-span-1 flex flex-col gap-3">
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
             Available Circles ({circles.length})
@@ -407,11 +384,9 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
           </div>
         </div>
 
-        {/* Right: Selected Circle Content */}
         <div className="lg:col-span-2">
           {selectedCircle ? (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl flex flex-col gap-6">
-              {/* Circle Info Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
                 <div>
                   <h2 className="text-xl font-bold text-white">{selectedCircle.name}</h2>
@@ -440,8 +415,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                 </div>
               </div>
 
-              {/* Navigation Tabs inside Circle */}
-              <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+              <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
                 {[
                   { id: 'tests', label: 'Circle Tests', icon: Calendar },
                   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
@@ -454,7 +428,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
                         isActive
                           ? 'bg-indigo-600 text-white shadow-sm'
                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -467,7 +441,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                 })}
               </div>
 
-              {/* TAB 1: TESTS */}
               {activeTab === 'tests' && (
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between">
@@ -504,9 +477,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => {
-                              if (typeof onSelectTestToTake === 'function') {
-                                onSelectTestToTake(t);
-                              }
+                              if (typeof onSelectTestToTake === 'function') onSelectTestToTake(t);
                             }}
                             className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shadow-sm"
                           >
@@ -535,7 +506,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                 </div>
               )}
 
-              {/* TAB 2: LEADERBOARD */}
               {activeTab === 'leaderboard' && (
                 <div className="flex flex-col gap-3">
                   <div className="grid grid-cols-12 text-[11px] font-semibold text-slate-400 px-4 py-2 border-b border-slate-800">
@@ -553,9 +523,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                       <span className="col-span-2 font-bold text-indigo-400">#{idx + 1}</span>
                       <span className="col-span-5 font-medium text-white">{u.username}</span>
                       <span className="col-span-3 text-right text-slate-400">{u.testsTaken}</span>
-                      <span className="col-span-2 text-right font-bold text-emerald-400">
-                        {u.totalScore}
-                      </span>
+                      <span className="col-span-2 text-right font-bold text-emerald-400">{u.totalScore}</span>
                     </div>
                   ))}
 
@@ -567,7 +535,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                 </div>
               )}
 
-              {/* TAB 3: MEMBERS */}
               {activeTab === 'members' && (
                 <div className="flex flex-col gap-6">
                   {isUserAdmin(selectedCircle) && circleMembers.pending.length > 0 && (
@@ -581,9 +548,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                             key={m.id}
                             className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center justify-between"
                           >
-                            <span className="text-xs font-semibold text-white">
-                              {m.user?.username || 'Aspirant'}
-                            </span>
+                            <span className="text-xs font-semibold text-white">{m.user?.username || 'Aspirant'}</span>
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => handleManageRequest(m.id, true)}
@@ -615,12 +580,8 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                           className="p-3 bg-slate-950/40 border border-slate-800 rounded-xl flex items-center justify-between"
                         >
                           <div className="flex flex-col">
-                            <span className="text-xs font-semibold text-white">
-                              {m.user?.username || 'Aspirant'}
-                            </span>
-                            <span className="text-[10px] text-slate-400">
-                              Target: {m.user?.target_exam || 'JEE Main'}
-                            </span>
+                            <span className="text-xs font-semibold text-white">{m.user?.username || 'Aspirant'}</span>
+                            <span className="text-[10px] text-slate-400">Target: {m.user?.target_exam || 'JEE Main'}</span>
                           </div>
                           <span className="text-[10px] uppercase font-semibold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
                             {m.role}
@@ -632,54 +593,89 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                 </div>
               )}
 
-              {/* TAB 4: ANNOUNCEMENTS */}
               {activeTab === 'chat' && (
-                <div className="flex flex-col h-[520px] bg-slate-950/50 border border-slate-800/80 rounded-2xl overflow-hidden">
-                  <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-                    {announcements.map((a) => (
-                      <div
-                        key={a.id}
-                        className="p-3 bg-slate-900/90 border border-slate-800 rounded-xl flex flex-col gap-1 shadow-sm"
-                      >
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-semibold text-indigo-400">
-                            {a.author?.username || 'Member'}
-                          </span>
-                          <span className="text-slate-500 text-[10px]">
-                            {new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">
-                          {a.message}
-                        </p>
+                <div className="w-full h-[520px] bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+                  <div className="p-3.5 px-5 border-b border-slate-800/80 bg-slate-900/70 backdrop-blur-sm flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                        <MessageSquare className="w-4 h-4" />
                       </div>
-                    ))}
-                    {announcements.length === 0 && (
-                      <div className="my-auto py-12 text-center text-xs text-slate-500">
-                        No announcements posted yet. Start the conversation below!
+                      <div>
+                        <h3 className="text-sm font-bold text-white">#{selectedCircle.name}</h3>
+                        <span className="text-[11px] text-emerald-400 flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                          {circleMembers.approved.length} Members
+                        </span>
                       </div>
+                    </div>
+                    <span className="text-[11px] text-slate-400 bg-slate-800/70 border border-slate-700/60 px-2.5 py-1 rounded-full">
+                      Announcements
+                    </span>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-3">
+                    {announcements.length === 0 ? (
+                      <div className="m-auto text-center flex flex-col items-center gap-2 text-slate-500 text-xs">
+                        <MessageSquare className="w-8 h-8 text-slate-700" />
+                        <p>No announcements yet. Start the conversation!</p>
+                      </div>
+                    ) : (
+                      announcements.map((a) => {
+                        const isMine = a.author?.id === currentUser?.id || a.user_id === currentUser?.id || a.created_by === currentUser?.id;
+                        const username = a.author?.username || 'Member';
+                        const time = a.created_at
+                          ? new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                          : '';
+
+                        return (
+                          <div
+                            key={a.id}
+                            className={`flex flex-col max-w-[82%] md:max-w-[68%] ${isMine ? 'self-end items-end' : 'self-start items-start'}`}
+                          >
+                            <div
+                              className={`p-3.5 rounded-2xl text-xs leading-relaxed break-words shadow-md ${
+                                isMine
+                                  ? 'bg-indigo-600 text-white rounded-br-xs'
+                                  : 'bg-slate-800 text-slate-100 rounded-bl-xs border border-slate-700/60'
+                              }`}
+                            >
+                              {!isMine && (
+                                <div className="text-[10px] font-semibold text-indigo-300 mb-1">
+                                  @{username}
+                                </div>
+                              )}
+                              {a.message}
+                            </div>
+                            <span className="text-[10px] text-slate-500 mt-1 px-1 flex items-center gap-1">
+                              {time}
+                              {isMine && <CheckCheck className="w-3 h-3 text-indigo-400" />}
+                            </span>
+                          </div>
+                        );
+                      })
                     )}
                     <div ref={chatBottomRef} />
                   </div>
 
-                  <div className="p-3 bg-slate-900 border-t border-slate-800/80">
-                    <form onSubmit={handlePostAnnouncement} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Post an announcement or message to the circle..."
-                        value={announcementMsg}
-                        onChange={(e) => setAnnouncementMsg(e.target.value)}
-                        className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500 transition"
-                      />
-                      <button
-                        type="submit"
-                        disabled={!announcementMsg.trim()}
-                        className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shadow-sm"
-                      >
-                        <Send className="w-3.5 h-3.5" /> Post
-                      </button>
-                    </form>
-                  </div>
+                  <form
+                    onSubmit={handlePostAnnouncement}
+                    className="p-3 md:p-4 border-t border-slate-800 bg-slate-900/90 flex items-center gap-2"
+                  >
+                    <input
+                      type="text"
+                      placeholder="Message the circle..."
+                      value={announcementMsg}
+                      onChange={(e) => setAnnouncementMsg(e.target.value)}
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-200 outline-none focus:border-indigo-500 transition"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!announcementMsg.trim()}
+                      className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white p-3 rounded-xl transition flex items-center justify-center shrink-0"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </form>
                 </div>
               )}
             </div>
@@ -695,7 +691,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
         </div>
       </div>
 
-      {/* MODAL: CREATE CIRCLE */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
@@ -745,7 +740,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
         </div>
       )}
 
-      {/* MODAL: SCHEDULE TEST (With 'All' Subject & Multi-Chapter Selector) */}
       {showScheduleModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl">
@@ -763,7 +757,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                 />
               </div>
 
-              {/* Subject Selection */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">Subject</label>
                 <select
@@ -778,7 +771,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                 </select>
               </div>
 
-              {/* Multi-Chapter Selection Area */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-semibold text-slate-300">
@@ -794,7 +786,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                 </div>
 
                 <div className="max-h-40 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl p-2.5 flex flex-wrap gap-1.5">
-                  {/* Option: All */}
                   <button
                     type="button"
                     onClick={() => handleToggleChapter('All')}
@@ -807,7 +798,6 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                     All Chapters
                   </button>
 
-                  {/* Dynamic Chapter Chips */}
                   {availableChapters.map((ch, idx) => {
                     const isSelected = !newTest.selectedChapters.includes('All') && newTest.selectedChapters.includes(ch);
                     return (
