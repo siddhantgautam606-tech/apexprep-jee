@@ -134,29 +134,44 @@ export default function App() {
           </nav>
 
           {/* User Profile / Auth Button */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {currentUser ? (
-              <div className="relative flex items-center gap-3">
+              <>
                 <button
-                  onClick={() => setShowProfile((value) => !value)}
-                  className="flex flex-col text-right rounded-xl px-2 py-1 hover:bg-slate-800/70 transition"
-                  title="Open Profile"
+                  onClick={() => setActiveTab('connections')}
+                  className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-slate-700/80 bg-slate-900/80 text-slate-200 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white transition shadow-sm"
+                  title="Open Connections"
                 >
-                  <span className="text-xs font-bold text-white">{currentUser.username || 'Aspirant'}</span>
-                  <span className="text-[10px] text-indigo-400 font-medium">Profile</span>
+                  <Users className="w-4 h-4" />
+                  <span className="text-xs font-bold">Connections</span>
                 </button>
-                {showProfile && (
-                  <ProfilePanel
-                    currentUser={currentUser}
-                    onClose={() => setShowProfile(false)}
-                    onConnections={() => {
-                      setActiveTab('connections');
-                      setShowProfile(false);
-                    }}
-                    onSignOut={handleSignOut}
-                  />
-                )}
-              </div>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowProfile((value) => !value)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/15 text-white hover:bg-indigo-600 hover:border-indigo-500 transition shadow-sm"
+                    title="Open Profile"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-indigo-500/25 border border-indigo-400/30 flex items-center justify-center text-indigo-300 font-bold text-xs">
+                      {(currentUser.username || 'A')[0].toUpperCase()}
+                    </div>
+                    <div className="text-left">
+                      <span className="block text-xs font-bold">{currentUser.username || 'Aspirant'}</span>
+                      <span className="block text-[10px] text-indigo-300">Profile</span>
+                    </div>
+                  </button>
+                  {showProfile && (
+                    <ProfilePanel
+                      currentUser={currentUser}
+                      onClose={() => setShowProfile(false)}
+                      onConnections={() => {
+                        setActiveTab('connections');
+                        setShowProfile(false);
+                      }}
+                      onSignOut={handleSignOut}
+                    />
+                  )}
+                </div>
+              </>
             ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
