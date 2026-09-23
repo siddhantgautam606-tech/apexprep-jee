@@ -13,6 +13,7 @@ import CircleList from './features/circles/CircleList';
 import QuestionPool from './features/question-pool/QuestionPool';
 import TestOrganizer from './features/cbt/TestOrganizer';
 import TestRunner from './features/cbt/TestRunner';
+import PYQSession from './features/question-pool/PYQSession';
 import AnalyticsDashboard from './features/analytics/AnalyticsDashboard';
 import ChatWindow from './features/social/ChatWindow';
 import AuthModal from './features/auth/AuthModal';
@@ -33,6 +34,7 @@ export default function App() {
   const [developerExamOverride, setDeveloperExamOverride] = useState(null);
   const [activeCircleTest, setActiveCircleTest] = useState(null);
   const [activePYQTest, setActivePYQTest] = useState(null);
+  const [activePYQSession, setActivePYQSession] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -119,14 +121,11 @@ export default function App() {
 
   const handleLaunchPYQPractice = (questions, subject = 'All') => {
     if (!Array.isArray(questions) || questions.length === 0) return;
-
-    setActivePYQTest({
-      id: `pyq-${Date.now()}`,
-      title: `${feedExam} PYQS Practice`,
+    setActivePYQSession({
+      id: `pyq-session-${Date.now()}`,
+      title: `${feedExam} PYQS Session`,
       exam: feedExam,
       subject,
-      chapter: 'All',
-      durationMinutes: 60,
       questions
     });
   };
@@ -142,13 +141,12 @@ export default function App() {
     );
   }
 
-  if (activePYQTest) {
+  if (activePYQSession) {
     return (
-      <TestRunner
-        test={activePYQTest}
+      <PYQSession
+        session={activePYQSession}
         currentUser={currentUser}
-        onComplete={() => setActivePYQTest(null)}
-        onExit={() => setActivePYQTest(null)}
+        onExit={() => setActivePYQSession(null)}
       />
     );
   }
