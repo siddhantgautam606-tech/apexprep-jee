@@ -3,8 +3,10 @@ import TestConfig from './TestConfig';
 import TestRunner from './TestRunner';
 import { getStandardQuestions } from '../../data/jeeQuestionBank';
 import { fetchQuestionsForTest } from '../../services/circleService';
+import { normalizeExam } from '../../config/examConfig';
 
-export default function TestOrganizer({ currentUser }) {
+export default function TestOrganizer({ currentUser, feedExam }) {
+  const exam = normalizeExam(feedExam || currentUser?.target_exam);
   // Config with full multi-chapter state
   const [config, setConfig] = useState({
     subject: 'All',
@@ -58,14 +60,15 @@ export default function TestOrganizer({ currentUser }) {
           loadedQuestions = await fetchQuestionsForTest(
             safeSubject,
             primaryChapter,
-            safeCount
+            safeCount,
+            exam
           );
         }
       } catch (err) {
         console.warn('DB fetch failed, using standard bank:', err);
       }
 
-      // 2. Standard JEE question bank fallback
+      // 2. Exam-specific standard question bank fallback
       if (!Array.isArray(loadedQuestions) || loadedQuestions.length === 0) {
         const subForBank = safeSubject === 'All' || safeSubject === 'Full Syllabus' ? 'Physics' : safeSubject;
         loadedQuestions = getStandardQuestions(subForBank, primaryChapter, safeCount);
@@ -78,13 +81,14 @@ export default function TestOrganizer({ currentUser }) {
           question: `Sample Practice Question ${i + 1} (${safeSubject} - ${safeChapterLabel})`,
           options: ['Option A', 'Option B', 'Option C', 'Option D'],
           correctAnswer: 0,
-          explanation: 'Standard JEE concept application.'
+          explanation: `Standard ${exam} concept application.`
         }));
       }
 
       setActiveTest({
         id: 'practice-' + Date.now(),
-        title: `${safeSubject === 'All' ? 'Full Syllabus' : safeSubject} Practice CBT`,
+        title: `${exam} • ${safeSubject === 'All' ? 'Full Syllabus' : safeSubject} Practice CBT`,
+        exam,
         subject: safeSubject,
         chapter: safeChapterLabel,
         durationMinutes: safeDuration,
@@ -113,6 +117,7 @@ export default function TestOrganizer({ currentUser }) {
     <div className="w-full max-w-4xl mx-auto py-4 relative">
       <TestConfig
         config={config}
+        exam={exam}
         onChangeConfig={(newCfg) => setConfig(newCfg)}
         onStartTest={handleStartTest}
         isSubmitting={isSubmitting}
