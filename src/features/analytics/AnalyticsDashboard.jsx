@@ -1,12 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BarChart3, AlertOctagon, CheckCircle2, TrendingUp, Clock, Award } from 'lucide-react';
-import { computeOverallAnalytics } from '../../services/analyticsService';
+import { getCombinedAnalytics } from '../../services/analyticsService';
 
 export default function AnalyticsDashboard({ currentUser, onNavigateToPool }) {
-  const analytics = useMemo(() => {
-    if (!currentUser?.id) return { hasData: false, totalTests: 0, averageScore: 0, averageAccuracy: 0, totalAttemptedQuestions: 0, chapterMastery: [], weakChapters: [], moderateChapters: [], strongChapters: [], recentAttempts: [] };
-    return computeOverallAnalytics();
-  }, [currentUser?.id]);
+  const [analytics, setAnalytics] = useState({ hasData: false, totalTests: 0, averageScore: 0, averageAccuracy: 0, totalAttemptedQuestions: 0, chapterMastery: [], weakChapters: [], moderateChapters: [], strongChapters: [], recentAttempts: [] });
+  useEffect(() => { let active=true; (async()=>{ if(!currentUser?.id){setAnalytics({ hasData:false,totalTests:0,averageScore:0,averageAccuracy:0,totalAttemptedQuestions:0,chapterMastery:[],weakChapters:[],moderateChapters:[],strongChapters:[],recentAttempts:[] }); return;} const result=await getCombinedAnalytics(currentUser.id); if(active)setAnalytics(result); })(); return()=>{active=false;}; }, [currentUser?.id]);
 
   if (!analytics.hasData) {
     return (
@@ -16,7 +14,7 @@ export default function AnalyticsDashboard({ currentUser, onNavigateToPool }) {
         </div>
         <h2 className="text-lg font-bold text-white">No Exam Data Recorded Yet</h2>
         <p className="text-xs text-slate-400 max-w-sm">
-          Complete at least one mock test in the <strong>CBT Tests</strong> section to start generating performance metrics and weak-area analysis.
+          Complete at least one personal CBT or Friend Circle test to start generating performance metrics and weak-area analysis.
         </p>
       </div>
     );
