@@ -50,7 +50,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
     subject: 'All',
     selectedChapters: ['All'],
     durationMinutes: 60,
-    questionCount: 5,
+    questionCount: exam === 'NEET' ? 100 : 25,
     windowStart: '',
     windowEnd: ''
   });
@@ -211,8 +211,11 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
     let questions = [];
 
     try {
-      const qNum = Number(newTest.questionCount) || 5;
       const testExam = exam;
+      const duration = [60, 120, 180].includes(Number(newTest.durationMinutes)) ? Number(newTest.durationMinutes) : 60;
+      const qNum = testExam === 'NEET'
+        ? ({ 60: 100, 120: 200, 180: 300 }[duration] || 100)
+        : ({ 60: 25, 120: 50, 180: 75 }[duration] || 25);
       const chapterLabel = newTest.selectedChapters.includes('All')
         ? 'All'
         : newTest.selectedChapters.join(', ');
@@ -248,7 +251,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
 
       const res = await scheduleCircleTest(
         selectedCircle.id,
-        { ...newTest, exam: testExam, chapter: chapterLabel, questions },
+        { ...newTest, exam: testExam, chapter: chapterLabel, durationMinutes: duration, questionCount: qNum, questions },
         currentUser.id
       );
 
@@ -858,29 +861,20 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Question Count</label>
-                  <input
-                    type="number"
-                    min="5"
-                    max="75"
-                    value={newTest.questionCount}
-                    onChange={(e) => setNewTest({ ...newTest, questionCount: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white outline-none focus:border-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Duration (Mins)</label>
-                  <input
-                    type="number"
-                    min="5"
-                    max="180"
-                    value={newTest.durationMinutes}
-                    onChange={(e) => setNewTest({ ...newTest, durationMinutes: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white outline-none focus:border-indigo-500"
-                  />
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Test Duration</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[60, 120, 180].map((minutes) => {
+                    const questions = exam === 'NEET' ? ({ 60: 100, 120: 200, 180: 300 }[minutes]) : ({ 60: 25, 120: 50, 180: 75 }[minutes]);
+                    const selected = Number(newTest.durationMinutes) === minutes;
+                    return (
+                      <button key={minutes} type="button" onClick={() => setNewTest({ ...newTest, durationMinutes: minutes, questionCount: questions })}
+                        className={`py-3 rounded-xl border text-xs font-bold transition ${selected ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-600/20' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'}`}>
+                        <span className="block">{minutes} Minutes</span>
+                        <span className="block mt-1 text-[10px] font-medium opacity-80">{questions} Questions</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
