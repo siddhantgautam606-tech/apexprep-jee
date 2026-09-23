@@ -12,7 +12,6 @@ export default function QuestionPool({ currentUser, feedExam }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Form state
   const [formData, setFormData] = useState({
     subject: examConfig.subjects[0],
     chapter: '',
@@ -52,7 +51,6 @@ export default function QuestionPool({ currentUser, feedExam }) {
     setShowAddModal(false);
     setRefreshTrigger((prev) => prev + 1);
 
-    // Reset form
     setFormData({
       subject: examConfig.subjects[0],
       chapter: '',
@@ -67,7 +65,6 @@ export default function QuestionPool({ currentUser, feedExam }) {
 
   return (
     <div className="w-full max-w-4xl flex flex-col gap-6">
-      {/* Header bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-2xl">
         <div className="flex items-center gap-3">
           <div className={exam === 'NEET' ? 'bg-emerald-600/20 text-emerald-400 p-2.5 rounded-xl border border-emerald-600/30' : 'bg-indigo-600/20 text-indigo-400 p-2.5 rounded-xl border border-indigo-600/30'}>
@@ -101,7 +98,6 @@ export default function QuestionPool({ currentUser, feedExam }) {
         </div>
       </div>
 
-      {/* Subject Filter Pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         <Filter className="w-4 h-4 text-slate-500 mr-1 shrink-0" />
         {subjects.map((sub) => (
@@ -122,8 +118,14 @@ export default function QuestionPool({ currentUser, feedExam }) {
         </span>
       </div>
 
-      {/* Questions list */}
-      <div className="flex flex-col gap-4">
+      {/* Question layout: 10 questions down each column, then continue in the next column. */}
+      <div
+        className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start"
+        style={{
+          gridAutoFlow: 'column',
+          gridTemplateRows: 'repeat(10, auto)'
+        }}
+      >
         {questions.length === 0 ? (
           <div className="p-12 text-center text-slate-500 bg-slate-900/50 border border-slate-800 rounded-2xl text-sm">
             No questions match your current search criteria.
@@ -133,16 +135,12 @@ export default function QuestionPool({ currentUser, feedExam }) {
         )}
       </div>
 
-      {/* Add Question Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
               <h3 className="text-base font-bold text-white">Append New Question</h3>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-white"
-              >
+              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -151,45 +149,24 @@ export default function QuestionPool({ currentUser, feedExam }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-slate-400 block mb-1">Subject</label>
-                  <select
-                    value={formData.subject}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
-                  >
+                  <select value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200">
                     {examConfig.subjects.map((subject) => <option key={subject} value={subject}>{subject}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-slate-400 block mb-1">Chapter</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Thermodynamics"
-                    value={formData.chapter}
-                    onChange={(e) => setFormData({ ...formData, chapter: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
-                  />
+                  <input type="text" required placeholder="e.g. Thermodynamics" value={formData.chapter} onChange={(e) => setFormData({ ...formData, chapter: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-slate-400 block mb-1">Year / Exam Tag</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. JEE Main 2025"
-                    value={formData.yearTag}
-                    onChange={(e) => setFormData({ ...formData, yearTag: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
-                  />
+                  <input type="text" placeholder="e.g. JEE Main 2025" value={formData.yearTag} onChange={(e) => setFormData({ ...formData, yearTag: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200" />
                 </div>
                 <div>
                   <label className="text-slate-400 block mb-1">Difficulty</label>
-                  <select
-                    value={formData.difficulty}
-                    onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
-                  >
+                  <select value={formData.difficulty} onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200">
                     <option value="Easy">Easy</option>
                     <option value="Medium">Medium</option>
                     <option value="Hard">Hard</option>
@@ -199,64 +176,28 @@ export default function QuestionPool({ currentUser, feedExam }) {
 
               <div>
                 <label className="text-slate-400 block mb-1">Question Text</label>
-                <textarea
-                  rows={3}
-                  required
-                  placeholder="Enter the full question statement..."
-                  value={formData.question}
-                  onChange={(e) => setFormData({ ...formData, question: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
-                />
+                <textarea rows={3} required placeholder="Enter the full question statement..." value={formData.question} onChange={(e) => setFormData({ ...formData, question: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200" />
               </div>
 
               <div className="flex flex-col gap-2">
                 <label className="text-slate-400">Options & Correct Choice</label>
                 {formData.options.map((opt, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="correctOption"
-                      checked={formData.correctIndex === i}
-                      onChange={() => setFormData({ ...formData, correctIndex: i })}
-                    />
+                    <input type="radio" name="correctOption" checked={formData.correctIndex === i} onChange={() => setFormData({ ...formData, correctIndex: i })} />
                     <span className="font-mono text-slate-400">{String.fromCharCode(65 + i)}:</span>
-                    <input
-                      type="text"
-                      required
-                      placeholder={`Option ${String.fromCharCode(65 + i)}`}
-                      value={opt}
-                      onChange={(e) => handleOptionChange(i, e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
-                    />
+                    <input type="text" required placeholder={`Option ${String.fromCharCode(65 + i)}`} value={opt} onChange={(e) => handleOptionChange(i, e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200" />
                   </div>
                 ))}
               </div>
 
               <div>
                 <label className="text-slate-400 block mb-1">Step-by-step Solution</label>
-                <textarea
-                  rows={2}
-                  placeholder="Explanation..."
-                  value={formData.explanation}
-                  onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200"
-                />
+                <textarea rows={2} placeholder="Explanation..." value={formData.explanation} onChange={(e) => setFormData({ ...formData, explanation: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200" />
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold"
-                >
-                  Save to Bank
-                </button>
+                <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Cancel</button>
+                <button type="submit" className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold">Save to Bank</button>
               </div>
             </form>
           </div>
