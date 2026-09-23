@@ -40,7 +40,7 @@ add('Physics','Units & Measurements','Significant figures','How many significant
 add('Physics','Electrostatics','Gauss law','Net electric flux through a closed surface depends on:',['surface area only','enclosed charge','outside charge only','shape only'],1,'Φ=Q_enclosed/ε₀.');
 add('Physics','Optics','TIR','Total internal reflection requires light to travel from:',['rarer to denser','denser to rarer','vacuum to any medium','any medium to air'],1,'TIR requires incidence from higher to lower refractive index.',);
 
-add('Chemistry','Mole Concept','Stoichiometry',i=>'How many moles of oxygen atoms are present in '+(i+1)+' mol O₂?',[String((i+1)/2),String(i+1),String(2*(i+1)),String(4*(i+1))],2,'Each O₂ molecule contains two oxygen atoms.',3);
+add('Chemistry','Mole Concept','Stoichiometry',i=>'How many moles of oxygen atoms are present in '+(i+1)+' mol O₂?',i=>[String((i+1)/2),String(i+1),String(2*(i+1)),String(4*(i+1))],2,'Each O₂ molecule contains two oxygen atoms.',3);
 add('Chemistry','Atomic Structure','Quantum numbers','Maximum electrons in a p subshell are:',['2','6','10','14'],1,'A p subshell has three orbitals.');
 add('Chemistry','Periodic Table','Trends','Atomic radius generally decreases across a period because:',['shell number increases','effective nuclear charge increases','nuclear charge decreases','shielding vanishes'],1,'Effective nuclear charge generally increases.');
 add('Chemistry','Chemical Bonding','VSEPR','The molecular shape of NH₃ is:',['linear','trigonal planar','trigonal pyramidal','tetrahedral'],2,'Three bond pairs and one lone pair give trigonal pyramidal geometry.');
