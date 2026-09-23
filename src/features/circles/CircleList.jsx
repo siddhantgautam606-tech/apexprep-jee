@@ -117,7 +117,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
         getCircleLeaderboard(selectedCircle.id)
       ]);
       setCircleMembers(members);
-      setCircleTests(tests);
+      setCircleTests(tests.filter((test) => !test.exam || test.exam === exam));
       setAnnouncements(ann);
       setLeaderboard(lb);
     };
@@ -266,7 +266,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
           windowEnd: ''
         });
         const tests = await getCircleTests(selectedCircle.id);
-        setCircleTests(tests);
+        setCircleTests(tests.filter((test) => !test.exam || test.exam === exam));
       }
     } catch (err) {
       console.error('Test scheduling error:', err);
@@ -280,7 +280,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
     if (window.confirm('Delete this scheduled test?')) {
       await deleteCircleTest(testId);
       const tests = await getCircleTests(selectedCircle.id);
-      setCircleTests(tests);
+      setCircleTests(tests.filter((test) => !test.exam || test.exam === exam));
     }
   };
 
