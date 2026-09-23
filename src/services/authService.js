@@ -152,21 +152,28 @@ export async function signInUser(emailArg, passwordArg) {
 /**
  * Sign out current user
  */
-/** Sign in or create an account with Google OAuth. */
-export async function signInWithGoogle() {
+/** Send a password-reset email to the registered address. */
+export async function sendPasswordResetEmail(email) {
   try {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        // Always return OAuth users to the canonical production domain.
-        redirectTo: 'https://www.prepxai.co.in',
-      },
+    const { error } = await supabase.auth.resetPasswordForEmail(String(email).trim(), {
+      redirectTo: 'https://www.prepxai.co.in',
     });
     if (error) throw error;
-    return { data, error: null };
+    return { error: null };
   } catch (err) {
-    console.error('Google sign in error:', err);
-    return { data: null, error: err.message };
+    console.error('Password reset error:', err);
+    return { error: err.message };
+  }
+}
+
+export async function updatePassword(password) {
+  try {
+    const { error } = await supabase.auth.updateUser({ password: String(password) });
+    if (error) throw error;
+    return { error: null };
+  } catch (err) {
+    console.error('Password update error:', err);
+    return { error: err.message };
   }
 }
 
