@@ -1,21 +1,27 @@
 {
-  "name": "PrepXAI - JEE Mock Test & Study Circles",
-  "short_name": "PrepXAI",
+  "name": "ApexPrep — JEE & NEET Preparation",
+  "short_name": "ApexPrep",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#030712",
+  "orientation": "portrait-primary",
+  "background_color": "#020617",
   "theme_color": "#4f46e5",
-  "description": "Professional-grade JEE preparation platform with randomized CBT simulator and peer study circles.",
+  "description": "A focused study, practice, CBT, analytics and peer-learning platform for JEE and NEET aspirants.",
+  "lang": "en-IN",
+  "categories": ["education", "productivity"],
   "icons": [
     {
       "src": "/icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192"
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
     },
     {
       "src": "/icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
     }
   ]
 }
