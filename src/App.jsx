@@ -22,6 +22,7 @@ import Connections from './features/social/Connections';
 import { supabase } from './services/supabaseClient';
 import { getCurrentUser, signOutUser } from './services/authService';
 import { clearTestHistory } from './services/analyticsService';
+import { EXAM_OPTIONS, normalizeExam } from './config/examConfig';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -29,6 +30,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('cbt'); // 'cbt', 'circles', 'pool', 'analytics', 'chat', 'connections'
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [developerExamOverride, setDeveloperExamOverride] = useState(null);
   
   // Dedicated state for active circle test taking
   const [activeCircleTest, setActiveCircleTest] = useState(null);
@@ -40,6 +42,7 @@ export default function App() {
       const user = await getCurrentUser();
       if (!mounted) return;
       setCurrentUser(user);
+      if (user?.is_admin) setDeveloperExamOverride(localStorage.getItem('apexprep_dev_exam') || null);
       if (!user) clearTestHistory();
       setAuthChecked(true);
     }
@@ -61,6 +64,7 @@ export default function App() {
 
       if (user) {
         setCurrentUser(user);
+        if (user.is_admin) setDeveloperExamOverride(localStorage.getItem('apexprep_dev_exam') || null);
       } else {
         setCurrentUser(null);
         clearTestHistory();
@@ -75,6 +79,15 @@ export default function App() {
       authListener?.subscription?.unsubscribe();
     };
   }, []);
+
+  const feedExam = normalizeExam(developerExamOverride || currentUser?.target_exam);
+
+  const handleDeveloperExamChange = (exam) => {
+    const next = exam === 'ACCOUNT' ? null : normalizeExam(exam);
+    setDeveloperExamOverride(next);
+    if (next) localStorage.setItem('apexprep_dev_exam', next);
+    else localStorage.removeItem('apexprep_dev_exam');
+  };
 
   const handleSignOut = async () => {
     await signOutUser();
@@ -194,7 +207,7 @@ export default function App() {
                     </div>
                     <div className="text-left">
                       <span className="block text-xs font-bold">{currentUser.username || 'Aspirant'}</span>
-                      <span className="block text-[10px] text-indigo-300">Profile</span>
+                      <span className="block text-[10px] text-indigo-300">{feedExam} • Profile</span>
                     </div>
                   </button>
                   {showProfile && (
@@ -250,11 +263,11 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        {activeTab === 'cbt' && <TestOrganizer currentUser={currentUser} />}
+        {activeTab === 'cbt' && <TestOrganizer currentUser={currentUser} feedExam={feedExam} />}
         {activeTab === 'circles' && (
-          <CircleList currentUser={currentUser} onSelectTestToTake={handleLaunchCircleTest} />
+          <CircleList currentUser={currentUser} feedExam={feedExam} onSelectTestToTake={handleLaunchCircleTest} />
         )}
-        {activeTab === 'pool' && <QuestionPool currentUser={currentUser} />}
+        {activeTab === 'pool' && <QuestionPool currentUser={currentUser} feedExam={feedExam} />}
         {activeTab === 'analytics' && <AnalyticsDashboard currentUser={currentUser} />}
         {activeTab === 'chat' && <ChatWindow currentUser={currentUser} />}
         {activeTab === 'connections' && <Connections currentUser={currentUser} />}
