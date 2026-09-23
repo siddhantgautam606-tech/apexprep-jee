@@ -24,6 +24,7 @@ import { getCurrentUser, signOutUser } from './services/authService';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [activeTab, setActiveTab] = useState('cbt'); // 'cbt', 'circles', 'pool', 'analytics', 'chat', 'connections'
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -32,22 +33,41 @@ export default function App() {
   const [activeCircleTest, setActiveCircleTest] = useState(null);
 
   useEffect(() => {
+    let mounted = true;
+
     async function checkAuth() {
       const user = await getCurrentUser();
+      if (!mounted) return;
       setCurrentUser(user);
+      setAuthChecked(true);
     }
     checkAuth();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const user = await getCurrentUser();
+      if (!mounted) return;
+
+      if (event === 'SIGNED_OUT' || !session?.user) {
+        setCurrentUser(null);
+        setShowProfile(false);
+        setShowAuthModal(false);
+        return;
+      }
+
+      const user = await getCurrentUser();
+      if (!mounted) return;
+
+      if (user) {
         setCurrentUser(user);
       } else {
         setCurrentUser(null);
+        setShowProfile(false);
+        setShowAuthModal(false);
+        await supabase.auth.signOut();
       }
     });
 
     return () => {
+      mounted = false;
       authListener?.subscription?.unsubscribe();
     };
   }, []);
@@ -55,6 +75,7 @@ export default function App() {
   const handleSignOut = async () => {
     await signOutUser();
     setCurrentUser(null);
+    setShowProfile(false);
   };
 
   // Launch test runner directly for a Circle mock test
@@ -85,6 +106,19 @@ export default function App() {
         onComplete={() => setActiveCircleTest(null)}
         onExit={() => setActiveCircleTest(null)}
       />
+    );
+  }
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center font-sans">
+        <div className="text-center">
+          <div className="w-10 h-10 mx-auto mb-4 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+            <Flame className="w-6 h-6 text-white" />
+          </div>
+          <p className="text-sm text-slate-400">Checking your session...</p>
+        </div>
+      </div>
     );
   }
 
@@ -213,25 +247,13 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
         {activeTab === 'cbt' && <TestOrganizer currentUser={currentUser} />}
-
         {activeTab === 'circles' && (
-          <CircleList
-            currentUser={currentUser}
-            onSelectTestToTake={handleLaunchCircleTest}
-          />
+          <CircleList currentUser={currentUser} onSelectTestToTake={handleLaunchCircleTest} />
         )}
-
         {activeTab === 'pool' && <QuestionPool currentUser={currentUser} />}
-
         {activeTab === 'analytics' && <AnalyticsDashboard currentUser={currentUser} />}
-
-        {activeTab === 'chat' && (
-          <ChatWindow currentUser={currentUser} />
-        )}
-
-        {activeTab === 'connections' && (
-          <Connections currentUser={currentUser} />
-        )}
+        {activeTab === 'chat' && <ChatWindow currentUser={currentUser} />}
+        {activeTab === 'connections' && <Connections currentUser={currentUser} />}
       </main>
 
       {/* Auth Modal */}
