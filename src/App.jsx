@@ -5,7 +5,6 @@ import {
   HelpCircle, 
   BarChart2, 
   MessageSquare, 
-  LogOut, 
   LogIn, 
   Flame
 } from 'lucide-react';
@@ -17,14 +16,17 @@ import TestRunner from './features/cbt/TestRunner';
 import AnalyticsDashboard from './features/analytics/AnalyticsDashboard';
 import ChatWindow from './features/social/ChatWindow';
 import AuthModal from './features/auth/AuthModal';
+import ProfilePanel from './features/auth/ProfilePanel';
+import Connections from './features/social/Connections';
 
 import { supabase } from './services/supabaseClient';
 import { getCurrentUser, signOutUser } from './services/authService';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('cbt'); // 'cbt', 'circles', 'pool', 'analytics', 'social'
+  const [activeTab, setActiveTab] = useState('cbt'); // 'cbt', 'circles', 'pool', 'analytics', 'chat', 'connections'
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   
   // Dedicated state for active circle test taking
   const [activeCircleTest, setActiveCircleTest] = useState(null);
@@ -110,7 +112,7 @@ export default function App() {
               { id: 'circles', label: 'Study Circles', icon: Users },
               { id: 'pool', label: 'Question Pool', icon: HelpCircle },
               { id: 'analytics', label: 'Analytics', icon: BarChart2 },
-              { id: 'social', label: 'Friends & Chat', icon: MessageSquare }
+              { id: 'chat', label: 'Chat', icon: MessageSquare }
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -134,18 +136,26 @@ export default function App() {
           {/* User Profile / Auth Button */}
           <div className="flex items-center gap-3">
             {currentUser ? (
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col text-right">
-                  <span className="text-xs font-bold text-white">{currentUser.username || 'Aspirant'}</span>
-                  <span className="text-[10px] text-indigo-400 font-medium">{currentUser.target_exam || 'JEE Main'}</span>
-                </div>
+              <div className="relative flex items-center gap-3">
                 <button
-                  onClick={handleSignOut}
-                  className="p-2 hover:bg-slate-800 text-slate-400 hover:text-rose-400 rounded-xl transition"
-                  title="Sign Out"
+                  onClick={() => setShowProfile((value) => !value)}
+                  className="flex flex-col text-right rounded-xl px-2 py-1 hover:bg-slate-800/70 transition"
+                  title="Open Profile"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <span className="text-xs font-bold text-white">{currentUser.username || 'Aspirant'}</span>
+                  <span className="text-[10px] text-indigo-400 font-medium">Profile</span>
                 </button>
+                {showProfile && (
+                  <ProfilePanel
+                    currentUser={currentUser}
+                    onClose={() => setShowProfile(false)}
+                    onConnections={() => {
+                      setActiveTab('connections');
+                      setShowProfile(false);
+                    }}
+                    onSignOut={handleSignOut}
+                  />
+                )}
               </div>
             ) : (
               <button
@@ -165,7 +175,7 @@ export default function App() {
             { id: 'circles', label: 'Circles', icon: Users },
             { id: 'pool', label: 'Pool', icon: HelpCircle },
             { id: 'analytics', label: 'Analytics', icon: BarChart2 },
-            { id: 'social', label: 'Social', icon: MessageSquare }
+            { id: 'chat', label: 'Chat', icon: MessageSquare }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -200,8 +210,12 @@ export default function App() {
 
         {activeTab === 'analytics' && <AnalyticsDashboard currentUser={currentUser} />}
 
-        {activeTab === 'social' && (
+        {activeTab === 'chat' && (
           <ChatWindow currentUser={currentUser} />
+        )}
+
+        {activeTab === 'connections' && (
+          <Connections currentUser={currentUser} />
         )}
       </main>
 
