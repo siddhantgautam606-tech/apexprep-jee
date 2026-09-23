@@ -21,6 +21,7 @@ import Connections from './features/social/Connections';
 
 import { supabase } from './services/supabaseClient';
 import { getCurrentUser, signOutUser } from './services/authService';
+import { clearTestHistory } from './services/analyticsService';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -39,6 +40,7 @@ export default function App() {
       const user = await getCurrentUser();
       if (!mounted) return;
       setCurrentUser(user);
+      if (!user) clearTestHistory();
       setAuthChecked(true);
     }
     checkAuth();
@@ -48,6 +50,7 @@ export default function App() {
 
       if (event === 'SIGNED_OUT' || !session?.user) {
         setCurrentUser(null);
+        clearTestHistory();
         setShowProfile(false);
         setShowAuthModal(false);
         return;
@@ -60,6 +63,7 @@ export default function App() {
         setCurrentUser(user);
       } else {
         setCurrentUser(null);
+        clearTestHistory();
         setShowProfile(false);
         setShowAuthModal(false);
         await supabase.auth.signOut();
