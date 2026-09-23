@@ -71,12 +71,27 @@ export default function TestOrganizer({ currentUser, feedExam }) {
         console.warn('DB fetch failed, using standard bank:', err);
       }
 
-      // 2. Exam-specific standard question bank fallback
+      // 2. Exam-specific standard question bank fallback.
+      // Full-syllabus tests are split into separate subject sections.
       if (!Array.isArray(loadedQuestions) || loadedQuestions.length === 0) {
-        const subForBank = safeSubject === 'All' || safeSubject === 'Full Syllabus' ? 'Physics' : safeSubject;
-        loadedQuestions = exam === 'NEET'
-          ? getStandardNEETQuestions(safeSubject === 'All' || safeSubject === 'Full Syllabus' ? 'All' : subForBank, primaryChapter, safeCount)
-          : getStandardQuestions(subForBank, primaryChapter, safeCount);
+        const isFullSyllabus = safeSubject === 'All' || safeSubject === 'Full Syllabus';
+        if (isFullSyllabus) {
+          const subjectCounts = exam === 'NEET'
+            ? { Physics: Math.ceil(safeCount * 0.25), Chemistry: Math.ceil(safeCount * 0.25), Biology: Math.floor(safeCount * 0.5) }
+            : { Physics: Math.ceil(safeCount / 3), Chemistry: Math.ceil((safeCount - Math.ceil(safeCount / 3)) / 2), Mathematics: Math.floor(safeCount / 3) };
+
+          loadedQuestions = [];
+          for (const [subjectName, count] of Object.entries(subjectCounts)) {
+            const subjectQuestions = exam === 'NEET'
+              ? getStandardNEETQuestions(subjectName, primaryChapter, count)
+              : getStandardQuestions(subjectName, primaryChapter, count);
+            loadedQuestions.push(...(Array.isArray(subjectQuestions) ? subjectQuestions : []));
+          }
+        } else {
+          loadedQuestions = exam === 'NEET'
+            ? getStandardNEETQuestions(safeSubject, primaryChapter, safeCount)
+            : getStandardQuestions(safeSubject, primaryChapter, safeCount);
+        }
       }
 
       // 3. Absolute failsafe generator
