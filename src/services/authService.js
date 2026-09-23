@@ -10,14 +10,13 @@ import { supabase } from './supabaseClient';
  */
 export async function getCurrentUser() {
   try {
-    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-    if (userError || !authUser) {
-      // Clear a stale locally persisted session when the Auth server says it
-      // is no longer valid.
-      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+    if (sessionError || !session?.user) {
       return null;
     }
+
+    const authUser = session.user;
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
