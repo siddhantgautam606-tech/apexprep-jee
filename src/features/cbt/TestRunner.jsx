@@ -260,7 +260,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
   return (
     <div className="max-w-7xl mx-auto py-4 px-4 flex flex-col gap-4">
       {/* Top Status Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+      <div className="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
@@ -300,7 +300,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
       </div>
 
       {subjectSections.length > 1 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-lg">
+        <div className="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-lg">
           <div className="flex items-center gap-2 overflow-x-auto">
             {subjectSections.map((section) => (
               <button
@@ -317,9 +317,9 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
       )}
 
       {/* Main Grid: Question Panel & Palette */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-4 gap-3">
         {/* Left: Question Content */}
-        <div className="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between min-h-[520px]">
+        <div className="lg:col-span-3 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between overflow-hidden">
           <div>
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
               <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">
@@ -400,10 +400,10 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
         </div>
 
         {/* Right: Question Palette */}
-        <div className="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
+        <div className="lg:col-span-1 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-3 overflow-hidden">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Question Palette</h3>
           
-          <div className="grid grid-cols-5 gap-2 max-h-72 overflow-y-auto pr-1">
+          <div className="grid grid-cols-5 gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
             {questions.map((_, idx) => {
               const isAnswered = answers[idx] !== undefined;
               const isMarked = markedForReview[idx];
