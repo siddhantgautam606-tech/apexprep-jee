@@ -2,8 +2,11 @@ import React, { useMemo } from 'react';
 import { BarChart3, AlertOctagon, CheckCircle2, TrendingUp, Clock, Award } from 'lucide-react';
 import { computeOverallAnalytics } from '../../services/analyticsService';
 
-export default function AnalyticsDashboard({ onNavigateToPool }) {
-  const analytics = useMemo(() => computeOverallAnalytics(), []);
+export default function AnalyticsDashboard({ currentUser, onNavigateToPool }) {
+  const analytics = useMemo(() => {
+    if (!currentUser?.id) return { hasData: false, totalTests: 0, averageScore: 0, averageAccuracy: 0, totalAttemptedQuestions: 0, chapterMastery: [], weakChapters: [], moderateChapters: [], strongChapters: [], recentAttempts: [] };
+    return computeOverallAnalytics();
+  }, [currentUser?.id]);
 
   if (!analytics.hasData) {
     return (
