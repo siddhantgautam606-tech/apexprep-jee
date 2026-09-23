@@ -307,12 +307,14 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
             Form private study circles, challenge friends with synchronized mock exams, and climb leaderboards.
           </p>
         </div>
+        {currentUser?.is_admin && (
         <button
           onClick={() => setShowCreateModal(true)}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition shadow-lg shadow-indigo-600/20"
         >
           <Plus className="w-4 h-4" /> Create New Circle
         </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
