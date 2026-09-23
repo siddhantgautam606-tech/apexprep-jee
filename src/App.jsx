@@ -155,7 +155,7 @@ export default function App() {
             </div>
             <div>
               <span className="font-black text-lg tracking-tight text-white flex items-center gap-1.5">
-                ApexPrep <span className={`text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border ${examTheme.soft}`}>{feedExam}</span>
+                PrepXAI <span className={`text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border ${examTheme.soft}`}>{feedExam}</span>
               </span>
               <p className="text-[10px] text-slate-400 font-medium">Peer Study & CBT Simulator</p>
             </div>
