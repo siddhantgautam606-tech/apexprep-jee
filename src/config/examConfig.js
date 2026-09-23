@@ -1,16 +1,9 @@
-export const EXAM_OPTIONS = ['JEE Main', 'JEE Advanced', 'NEET'];
+export const EXAM_OPTIONS = ['JEE', 'NEET'];
 
 export const EXAM_CONFIG = {
-  'JEE Main': {
+  JEE: {
     key: 'jee',
-    label: 'JEE Main',
-    subjects: ['Physics', 'Chemistry', 'Mathematics'],
-    syllabusKey: 'JEE',
-    scoring: { correct: 4, incorrect: -1 }
-  },
-  'JEE Advanced': {
-    key: 'jee_advanced',
-    label: 'JEE Advanced',
+    label: 'JEE',
     subjects: ['Physics', 'Chemistry', 'Mathematics'],
     syllabusKey: 'JEE',
     scoring: { correct: 4, incorrect: -1 }
@@ -25,7 +18,8 @@ export const EXAM_CONFIG = {
 };
 
 export function normalizeExam(exam) {
-  return EXAM_CONFIG[exam] ? exam : 'JEE Main';
+  if (exam === 'JEE Main' || exam === 'JEE Advanced') return 'JEE';
+  return EXAM_CONFIG[exam] ? exam : 'JEE';
 }
 
 export function getExamConfig(exam) {
