@@ -67,7 +67,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
           }}
           className="flex w-full items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white py-2.5 font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
         >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 text-sm font-bold text-blue-600 dark:border-slate-600">G</span>
+          <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#4285F4" d="M21.35 12.23c0-.71-.06-1.4-.18-2.05H12v3.88h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.22Z"/>
+            <path fill="#34A853" d="M12 21.9c2.63 0 4.84-.87 6.45-2.35l-3.14-2.45c-.87.58-1.98.93-3.31.93-2.54 0 4.69-1.72 5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.9Z"/>
+            <path fill="#FBBC05" d="M6.54 14c-.2-.58-.31-1.2-.31-1.83s.11-1.25.31-1.83V7.81H3.3A9.78 9.78 0 0 0 2.25 12c0 1.58.38 3.07 1.05 4.19L6.54 14Z"/>
+            <path fill="#EA4335" d="M12 6.31c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.84 3.33 14.63 2.1 12 2.1a9.74 9.74 0 0 0-8.7 5.71L6.54 10.34C7.31 8.03 9.46 6.31 12 6.31Z"/>
+          </svg>
           Continue with Google
         </button>
         <div className="my-3 flex items-center gap-3 text-xs text-slate-400">
