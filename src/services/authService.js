@@ -159,7 +159,8 @@ export async function signInWithGoogle() {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        // Always return OAuth users to the canonical production domain.
+        redirectTo: 'https://www.prepxai.co.in',
       },
     });
     if (error) throw error;
