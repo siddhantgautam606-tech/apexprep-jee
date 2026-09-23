@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import TestConfig from './TestConfig';
 import TestRunner from './TestRunner';
 import { getStandardQuestions } from '../../data/jeeQuestionBank';
+import { getStandardNEETQuestions } from '../../data/neetQuestionBank';
 import { fetchQuestionsForTest } from '../../services/circleService';
 import { normalizeExam } from '../../config/examConfig';
 
@@ -71,7 +72,9 @@ export default function TestOrganizer({ currentUser, feedExam }) {
       // 2. Exam-specific standard question bank fallback
       if (!Array.isArray(loadedQuestions) || loadedQuestions.length === 0) {
         const subForBank = safeSubject === 'All' || safeSubject === 'Full Syllabus' ? 'Physics' : safeSubject;
-        loadedQuestions = getStandardQuestions(subForBank, primaryChapter, safeCount);
+        loadedQuestions = exam === 'NEET'
+          ? getStandardNEETQuestions(safeSubject === 'All' || safeSubject === 'Full Syllabus' ? 'All' : subForBank, primaryChapter, safeCount)
+          : getStandardQuestions(subForBank, primaryChapter, safeCount);
       }
 
       // 3. Absolute failsafe generator
