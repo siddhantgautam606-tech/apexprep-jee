@@ -123,7 +123,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
     };
 
     loadCircleDetails();
-  }, [selectedCircle]);
+  }, [selectedCircle, exam]);
 
   useEffect(() => {
     if (showAnnouncements && chatBottomRef.current) {
@@ -309,7 +309,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Users className="w-6 h-6 text-indigo-400" /> Study Circles
+            <Users className={`w-6 h-6 ${exam === 'NEET' ? 'text-emerald-400' : 'text-indigo-400'}`} /> {exam} Study Circles
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             Form private study circles, challenge friends with synchronized mock exams, and climb leaderboards.
@@ -402,7 +402,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
                 <div>
                   <h2 className="text-xl font-bold text-white">{selectedCircle.name}</h2>
                   <p className="text-xs text-slate-400 mt-1">
-                    {selectedCircle.description || 'Private peer study circle for JEE prep.'}
+                    {selectedCircle.description || 'Private peer study circle for exam-specific preparation.'}
                   </p>
                 </div>
 
