@@ -184,8 +184,14 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
               type="number"
               min="5"
               max="75"
-              value={config?.questionCount || 10}
-              onChange={(e) => onChangeConfig({ ...config, questionCount: Number(e.target.value) })}
+              value={config?.questionCount ?? 10}
+              onChange={(e) => {
+                const rawValue = e.target.value;
+                onChangeConfig({
+                  ...config,
+                  questionCount: rawValue === '' ? '' : Number(rawValue)
+                });
+              }}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition"
             />
           </div>
@@ -196,8 +202,14 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
               type="number"
               min="5"
               max="180"
-              value={config?.durationMinutes || 30}
-              onChange={(e) => onChangeConfig({ ...config, durationMinutes: Number(e.target.value) })}
+              value={config?.durationMinutes ?? 30}
+              onChange={(e) => {
+                const rawValue = e.target.value;
+                onChangeConfig({
+                  ...config,
+                  durationMinutes: rawValue === '' ? '' : Number(rawValue)
+                });
+              }}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition"
             />
           </div>
