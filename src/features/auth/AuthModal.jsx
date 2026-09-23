@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, Target, Loader2 } from 'lucide-react';
-import { signUpUser, signInUser } from '../../services/authService';
+import { signUpUser, signInUser, signInWithGoogle } from '../../services/authService';
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -42,7 +42,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900 dark:text-white">
         <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
           <h2 className="text-xl font-bold">
-            {isSignUp ? 'Create ApexPrep Account' : 'Welcome Back'}
+            {isSignUp ? 'Create PrepXAI Account' : 'Welcome Back'}
           </h2>
           <button onClick={onClose} className="rounded-lg p-1 hover:bg-slate-100 dark:hover:bg-slate-800">
             <X className="h-5 w-5 text-slate-500" />
@@ -53,6 +53,28 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             {errorMsg}
           </div>
         )}
+        <button
+          type="button"
+          disabled={loading}
+          onClick={async () => {
+            setLoading(true);
+            setErrorMsg('');
+            const result = await signInWithGoogle();
+            if (result?.error) {
+              setErrorMsg(result.error);
+              setLoading(false);
+            }
+          }}
+          className="flex w-full items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white py-2.5 font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
+        >
+          <span className="flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 text-sm font-bold text-blue-600 dark:border-slate-600">G</span>
+          Continue with Google
+        </button>
+        <div className="my-3 flex items-center gap-3 text-xs text-slate-400">
+          <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+          <span>OR</span>
+          <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+        </div>
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           {isSignUp && (
             <>
