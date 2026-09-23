@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
-import { Search, Filter, BookOpen, Plus, X } from 'lucide-react';
+import { Search, Filter, BookOpen, Plus, X, Play } from 'lucide-react';
 import QuestionCard from './QuestionCard';
 import { getFilteredQuestions, getAllSubjects, appendQuestion } from '../../services/questionService';
 import { normalizeExam, getExamConfig } from '../../config/examConfig';
 
-export default function QuestionPool({ currentUser, feedExam }) {
+export default function QuestionPool({ currentUser, feedExam, onStartPractice }) {
   const exam = normalizeExam(feedExam || currentUser?.target_exam);
   const examConfig = getExamConfig(exam);
   const [selectedSubject, setSelectedSubject] = useState('All');
@@ -27,23 +27,27 @@ export default function QuestionPool({ currentUser, feedExam }) {
 
   const subjects = useMemo(() => getAllSubjects(exam), [refreshTrigger, exam]);
 
-  const questions = useMemo(() => {
-    return getFilteredQuestions({
-      subject: selectedSubject,
-      chapter: 'All',
-      search: searchQuery,
-      exam
-    });
-  }, [selectedSubject, searchQuery, refreshTrigger, exam]);
+  const questions = useMemo(() => getFilteredQuestions({
+    subject: selectedSubject,
+    chapter: 'All',
+    search: searchQuery,
+    exam
+  }), [selectedSubject, searchQuery, refreshTrigger, exam]);
 
   const totalPages = Math.max(1, Math.ceil(questions.length / QUESTIONS_PER_PAGE));
-  const pageQuestions = questions.slice((currentPage - 1) * QUESTIONS_PER_PAGE, currentPage * QUESTIONS_PER_PAGE);
+  const pageQuestions = questions.slice(
+    (currentPage - 1) * QUESTIONS_PER_PAGE,
+    currentPage * QUESTIONS_PER_PAGE
+  );
+
+  const startPractice = () => {
+    if (!questions.length) return;
+    onStartPractice?.(questions, selectedSubject);
+  };
 
   const handleOptionChange = (idx, value) => {
     const updated = [...formData.options];
     updated[idx] = value;
-    setCurrentPage(1);
-
     setFormData({ ...formData, options: updated });
   };
 
@@ -57,6 +61,7 @@ export default function QuestionPool({ currentUser, feedExam }) {
     appendQuestion(formData);
     setShowAddModal(false);
     setRefreshTrigger((prev) => prev + 1);
+    setCurrentPage(1);
 
     setFormData({
       subject: examConfig.subjects[0],
@@ -78,8 +83,8 @@ export default function QuestionPool({ currentUser, feedExam }) {
             <BookOpen className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">{exam} Question Pool & PYQ Bank</h2>
-            <p className="text-xs text-slate-400">Chapterwise questions with official year tags</p>
+            <h2 className="text-lg font-bold text-white">{exam} PYQS</h2>
+            <p className="text-xs text-slate-400">Practice previous-year questions in the CBT interface</p>
           </div>
         </div>
 
@@ -90,16 +95,23 @@ export default function QuestionPool({ currentUser, feedExam }) {
               type="text"
               placeholder="Search topic or year..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               className={`w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none transition ${exam === 'NEET' ? 'focus:border-emerald-500' : 'focus:border-indigo-500'}`}
             />
           </div>
+          <button
+            onClick={startPractice}
+            disabled={!questions.length}
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow transition shrink-0"
+          >
+            <Play className="w-4 h-4" /> Start Practice
+          </button>
           {currentUser?.is_admin && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-2.5 rounded-xl shadow transition shrink-0"
+              className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-3.5 py-2.5 rounded-xl transition shrink-0"
             >
-              <Plus className="w-4 h-4" /> Add Question
+              <Plus className="w-4 h-4" /> Add
             </button>
           )}
         </div>
@@ -121,18 +133,23 @@ export default function QuestionPool({ currentUser, feedExam }) {
           </button>
         ))}
         <span className="text-xs text-slate-500 ml-auto shrink-0">
-          Showing {questions.length} questions • Page {currentPage} of {totalPages}
+          {questions.length} questions
         </span>
       </div>
 
-      {/* Questions list */}
       <div className="flex flex-col gap-4">
         {questions.length === 0 ? (
           <div className="p-12 text-center text-slate-500 bg-slate-900/50 border border-slate-800 rounded-2xl text-sm">
             No questions match your current search criteria.
           </div>
         ) : (
-          pageQuestions.map((q, idx) => <QuestionCard key={q.id} question={q} index={(currentPage - 1) * QUESTIONS_PER_PAGE + idx} />)
+          pageQuestions.map((q, idx) => (
+            <QuestionCard
+              key={q.id}
+              question={q}
+              index={(currentPage - 1) * QUESTIONS_PER_PAGE + idx}
+            />
+          ))
         )}
       </div>
 
