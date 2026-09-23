@@ -110,6 +110,7 @@ export default function App() {
     setActiveCircleTest({
       id: testRecord.id,
       title: testRecord.title || 'Circle Mock Test',
+      exam: testRecord.exam || normalizeExam(currentUser?.target_exam),
       subject: testRecord.subject || 'All',
       chapter: testRecord.chapter || 'All',
       durationMinutes: Number(testRecord.duration_minutes) || 60,
