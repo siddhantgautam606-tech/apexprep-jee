@@ -17,13 +17,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
-
     try {
       if (isSignUp) {
         if (!username.trim()) throw new Error('Please enter a username.');
-        await signUpUser({ email, password, username, targetExam });
+        await signUpUser(email, password, { username, targetExam });
       } else {
-        await signInUser({ email, password });
+        await signInUser(email, password);
       }
       onAuthSuccess();
       onClose();
@@ -45,13 +44,11 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             <X className="h-5 w-5 text-slate-500" />
           </button>
         </div>
-
         {errorMsg && (
           <div className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-400">
             {errorMsg}
           </div>
         )}
-
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           {isSignUp && (
             <>
@@ -69,7 +66,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                   />
                 </div>
               </div>
-
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Target Exam</label>
                 <div className="relative flex items-center">
@@ -87,7 +83,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               </div>
             </>
           )}
-
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Email Address</label>
             <div className="relative flex items-center">
@@ -102,7 +97,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               />
             </div>
           </div>
-
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Password</label>
             <div className="relative flex items-center">
@@ -117,7 +111,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               />
             </div>
           </div>
-
           <button
             type="submit"
             disabled={loading}
@@ -127,7 +120,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             {isSignUp ? 'Create Account' : 'Log In'}
           </button>
         </form>
-
         <div className="mt-4 text-center text-sm text-slate-500">
           {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
           <button
