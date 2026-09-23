@@ -84,7 +84,7 @@ export default function QuestionPool({ currentUser, feedExam, onStartPractice })
           </div>
           <div>
             <h2 className="text-lg font-bold text-white">{exam} PYQS</h2>
-            <p className="text-xs text-slate-400">Practice previous-year questions in the CBT interface</p>
+            <p className="text-xs text-slate-400">Select questions and start a dedicated PYQS practice session</p>
           </div>
         </div>
 
@@ -102,9 +102,9 @@ export default function QuestionPool({ currentUser, feedExam, onStartPractice })
           <button
             onClick={startPractice}
             disabled={!questions.length}
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow transition shrink-0"
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow transition shrink-0"
           >
-            <Play className="w-4 h-4" /> Start Practice
+            <Play className="w-4 h-4" /> Start Session
           </button>
           {currentUser?.is_admin && (
             <button
