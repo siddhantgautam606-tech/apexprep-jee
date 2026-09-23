@@ -258,7 +258,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
 
   // Active CBT Exam Runner
   return (
-    <div className="max-w-7xl mx-auto py-4 px-4 flex flex-col gap-4">
+    <div className="h-[100dvh] max-h-[100dvh] overflow-hidden w-full max-w-7xl mx-auto py-3 px-4 flex flex-col gap-3">
       {/* Top Status Bar */}
       <div className="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
@@ -317,9 +317,9 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
       )}
 
       {/* Main Grid: Question Panel & Palette */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-4 gap-3">
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-4 gap-3 overflow-hidden">
         {/* Left: Question Content */}
-        <div className="lg:col-span-3 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between overflow-hidden">
+        <div className="lg:col-span-3 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col justify-between overflow-hidden">
           <div>
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
               <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">
