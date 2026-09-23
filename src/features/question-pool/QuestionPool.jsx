@@ -2,10 +2,11 @@ import { useState, useMemo } from 'react';
 import { Search, Filter, BookOpen, Plus, X } from 'lucide-react';
 import QuestionCard from './QuestionCard';
 import { getFilteredQuestions, getAllSubjects, appendQuestion } from '../../services/questionService';
-import { normalizeExam } from '../../config/examConfig';
+import { normalizeExam, getExamConfig } from '../../config/examConfig';
 
 export default function QuestionPool({ currentUser, feedExam }) {
   const exam = normalizeExam(feedExam || currentUser?.target_exam);
+  const examConfig = getExamConfig(exam);
   const [selectedSubject, setSelectedSubject] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -13,7 +14,7 @@ export default function QuestionPool({ currentUser, feedExam }) {
 
   // Form state
   const [formData, setFormData] = useState({
-    subject: exam === 'NEET' ? 'Physics' : 'Physics',
+    subject: examConfig.subjects[0],
     chapter: '',
     yearTag: exam === 'NEET' ? 'NEET Practice' : 'JEE Main 2025',
     difficulty: 'Medium',
@@ -53,7 +54,7 @@ export default function QuestionPool({ currentUser, feedExam }) {
 
     // Reset form
     setFormData({
-      subject: 'Physics',
+      subject: examConfig.subjects[0],
       chapter: '',
       yearTag: exam === 'NEET' ? 'NEET Practice' : 'JEE Main 2025',
       difficulty: 'Medium',
@@ -69,7 +70,7 @@ export default function QuestionPool({ currentUser, feedExam }) {
       {/* Header bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-2xl">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-600/20 text-indigo-400 p-2.5 rounded-xl border border-indigo-600/30">
+          <div className={exam === 'NEET' ? 'bg-emerald-600/20 text-emerald-400 p-2.5 rounded-xl border border-emerald-600/30' : 'bg-indigo-600/20 text-indigo-400 p-2.5 rounded-xl border border-indigo-600/30'}>
             <BookOpen className="w-5 h-5" />
           </div>
           <div>
@@ -86,7 +87,7 @@ export default function QuestionPool({ currentUser, feedExam }) {
               placeholder="Search topic or year..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+              className={`w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none transition ${exam === 'NEET' ? 'focus:border-emerald-500' : 'focus:border-indigo-500'}`}
             />
           </div>
           {currentUser?.is_admin && (
@@ -155,9 +156,7 @@ export default function QuestionPool({ currentUser, feedExam }) {
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
                   >
-                    <option value="Physics">Physics</option>
-                    <option value="Chemistry">Chemistry</option>
-                    <option value="Mathematics">Mathematics</option>
+                    {examConfig.subjects.map((subject) => <option key={subject} value={subject}>{subject}</option>)}
                   </select>
                 </div>
                 <div>
