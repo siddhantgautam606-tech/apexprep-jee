@@ -24,6 +24,7 @@ export async function getCurrentUser() {
       username: profile?.username || authUser.user_metadata?.username || authUser.email?.split('@')[0] || 'Aspirant',
       target_exam: profile?.target_exam || authUser.user_metadata?.target_exam || 'JEE Main',
       role: profile?.role || 'student',
+      is_admin: profile?.is_admin === true,
       created_at: authUser.created_at
     };
   } catch (err) {
