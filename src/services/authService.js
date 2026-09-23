@@ -1,22 +1,33 @@
 import { supabase } from './supabaseClient';
 
 /**
- * Get current session user along with their profile metadata
+ * Get the current authenticated user from Supabase Auth.
+ *
+ * getSession() reads the locally persisted session and can return a stale
+ * session after an account has been deleted remotely. getUser() performs a
+ * network request to the Auth server, so it verifies that the account still
+ * exists before the app treats the user as signed in.
  */
 export async function getCurrentUser() {
   try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session?.user) {
+    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !authUser) {
+      // Clear a stale locally persisted session when the Auth server says it
+      // is no longer valid.
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
       return null;
     }
-    const authUser = session.user;
-    
-    // Fetch extra profile details from profiles table if it exists
-    const { data: profile } = await supabase
+
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', authUser.id)
-      .single();
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('Error fetching current user profile:', profileError);
+    }
 
     return {
       id: authUser.id,
@@ -29,6 +40,7 @@ export async function getCurrentUser() {
     };
   } catch (err) {
     console.error('Error fetching current user:', err);
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
     return null;
   }
 }
@@ -86,6 +98,10 @@ export async function signInUser(emailArg, passwordArg) {
     if (error) throw error;
 
     const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Your account is no longer available. Please sign in again.');
+    }
+
     return { data: user, error: null };
   } catch (err) {
     console.error('Sign in error:', err);
