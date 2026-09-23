@@ -20,11 +20,15 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     try {
       if (isSignUp) {
         if (!username.trim()) throw new Error('Please enter a username.');
-        await signUpUser(email, password, { username, targetExam });
+        const result = await signUpUser(email, password, { username, target_exam: targetExam });
+        if (result?.error) throw new Error(result.error);
+        onAuthSuccess(result?.data || null);
       } else {
-        await signInUser(email, password);
+        const result = await signInUser(email, password);
+        if (result?.error) throw new Error(result.error);
+        if (!result?.data) throw new Error('Login succeeded but the user profile could not be loaded. Please try again.');
+        onAuthSuccess(result.data);
       }
-      onAuthSuccess();
       onClose();
     } catch (err) {
       setErrorMsg(err.message || 'Authentication failed. Please try again.');
