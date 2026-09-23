@@ -13,8 +13,8 @@ export default function TestOrganizer({ currentUser, feedExam }) {
     subject: 'All',
     selectedChapters: ['All'],
     chapter: 'All',
-    durationMinutes: 30,
-    questionCount: 10
+    durationMinutes: 60,
+    questionCount: exam === 'NEET' ? 100 : 25
   });
 
   const [activeTest, setActiveTest] = useState(null);
@@ -51,8 +51,10 @@ export default function TestOrganizer({ currentUser, feedExam }) {
       : ['All'];
     const safeChapterLabel = chaptersList.includes('All') ? 'All' : chaptersList.join(', ');
     const primaryChapter = chaptersList.includes('All') ? 'All' : chaptersList[0];
-    const safeCount = Number(config?.questionCount) || 10;
-    const safeDuration = Number(config?.durationMinutes) || 30;
+    const safeDuration = [60, 120, 180].includes(Number(config?.durationMinutes)) ? Number(config.durationMinutes) : 60;
+    const safeCount = exam === 'NEET'
+      ? ({ 60: 100, 120: 200, 180: 300 }[safeDuration] || 100)
+      : ({ 60: 25, 120: 50, 180: 75 }[safeDuration] || 25);
 
     try {
       // 1. Try DB question pool
@@ -95,6 +97,7 @@ export default function TestOrganizer({ currentUser, feedExam }) {
         subject: safeSubject,
         chapter: safeChapterLabel,
         durationMinutes: safeDuration,
+        questionCount: safeCount,
         questions: loadedQuestions
       });
     } catch (err) {
