@@ -9,9 +9,8 @@ export async function getCurrentUser() {
     if (sessionError || !session?.user) {
       return null;
     }
-
     const authUser = session.user;
-
+    
     // Fetch extra profile details from profiles table if it exists
     const { data: profile } = await supabase
       .from('profiles')
@@ -36,27 +35,29 @@ export async function getCurrentUser() {
 /**
  * Sign up a new user with email, password, and metadata
  */
-export async function signUpUser(email, password, metadata = {}) {
+export async function signUpUser(emailArg, passwordArg, metadataArg = {}) {
+  const email = typeof emailArg === 'object' && emailArg !== null ? emailArg.email : emailArg;
+  const password = typeof emailArg === 'object' && emailArg !== null ? emailArg.password : passwordArg;
+  const metadata = typeof emailArg === 'object' && emailArg !== null ? (emailArg.metadata || emailArg) : metadataArg;
+
   try {
     const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
+      email: String(email).trim(),
+      password: String(password),
       options: {
         data: {
-          username: metadata.username || email.split('@')[0],
+          username: metadata.username || String(email).split('@')[0],
           target_exam: metadata.target_exam || 'JEE Main'
         }
       }
     });
-
     if (error) throw error;
 
-    // Also attempt inserting into profiles table if setup
     if (data?.user) {
       await supabase.from('profiles').upsert([
         {
           id: data.user.id,
-          username: metadata.username || email.split('@')[0],
+          username: metadata.username || String(email).split('@')[0],
           target_exam: metadata.target_exam || 'JEE Main'
         }
       ]).catch(() => {});
@@ -72,14 +73,17 @@ export async function signUpUser(email, password, metadata = {}) {
 /**
  * Sign in existing user with email and password
  */
-export async function signInUser(email, password) {
+export async function signInUser(emailArg, passwordArg) {
+  const email = typeof emailArg === 'object' && emailArg !== null ? emailArg.email : emailArg;
+  const password = typeof emailArg === 'object' && emailArg !== null ? emailArg.password : passwordArg;
+
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
+      email: String(email).trim(),
+      password: String(password)
     });
-
     if (error) throw error;
+
     const user = await getCurrentUser();
     return { data: user, error: null };
   } catch (err) {
