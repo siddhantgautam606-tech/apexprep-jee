@@ -44,7 +44,7 @@ add('Chemistry','Mole Concept','Stoichiometry',i=>'How many moles of oxygen atom
 add('Chemistry','Atomic Structure','Quantum numbers','Maximum electrons in a p subshell are:',['2','6','10','14'],1,'A p subshell has three orbitals.');
 add('Chemistry','Periodic Table','Trends','Atomic radius generally decreases across a period because:',['shell number increases','effective nuclear charge increases','nuclear charge decreases','shielding vanishes'],1,'Effective nuclear charge generally increases.');
 add('Chemistry','Chemical Bonding','VSEPR','The molecular shape of NH₃ is:',['linear','trigonal planar','trigonal pyramidal','tetrahedral'],2,'Three bond pairs and one lone pair give trigonal pyramidal geometry.');
-add('Chemistry','States of Matter','Gas laws',i=>'At constant temperature, increasing pressure '+(i+2)+' times changes volume to:',[(i+2)+'V','V/'+(i+2),((i+2)**2)+'V','unchanged'],1,'Boyle’s law: PV=constant.',3);
+add('Chemistry','States of Matter','Gas laws',i=>'At constant temperature, increasing pressure '+(i+2)+' times changes volume to:',i=>[(i+2)+'V','V/'+(i+2),((i+2)**2)+'V','unchanged'],1,'Boyle’s law: PV=constant.',3);
 add('Chemistry','Thermodynamics','First law','At constant pressure with only PV work, heat exchanged equals:',['ΔU','ΔH','ΔS','ΔG always'],1,'q_p=ΔH.');
 add('Chemistry','Equilibrium','Le Chatelier','Adding a catalyst to a system at equilibrium:',['increases K','decreases K','does not change K','makes K zero'],2,'Catalysts change rates, not equilibrium constant.');
 add('Chemistry','Ionic Equilibrium','pH','At 25°C, a neutral aqueous solution has pH:',['0','7','14','1'],1,'Neutrality at 25°C corresponds to pH 7.');
@@ -109,13 +109,14 @@ add('Biology','Cell Cycle','Meiosis','Crossing over occurs during:',['prophase I
 add('Biology','Molecular Biology','Translation','A codon is present on:',['tRNA','mRNA','rRNA','DNA polymerase'],1,'mRNA carries codons.');
 add('Biology','Plant Growth','Hormones','Auxin is strongly associated with:',['cell elongation','blood clotting','starch digestion','oxygen transport'],0,'Auxin promotes cell elongation.');
 
+const NEET_QUESTIONS_100=[...questions.filter(q=>q.subject==='Physics').slice(0,34),...questions.filter(q=>q.subject==='Chemistry').slice(0,33),...questions.filter(q=>q.subject==='Biology').slice(0,33)];
 export const NEET_QUESTION_BANK={
- Physics:questions.filter(q=>q.subject==='Physics'),
- Chemistry:questions.filter(q=>q.subject==='Chemistry'),
- Biology:questions.filter(q=>q.subject==='Biology')
+ Physics:NEET_QUESTIONS_100.filter(q=>q.subject==='Physics'),
+ Chemistry:NEET_QUESTIONS_100.filter(q=>q.subject==='Chemistry'),
+ Biology:NEET_QUESTIONS_100.filter(q=>q.subject==='Biology')
 };
 export function getStandardNEETQuestions(subject='Physics',chapter='All',count=5){
- let pool=subject==='All'||subject==='Full Syllabus'?questions:(NEET_QUESTION_BANK[subject]||NEET_QUESTION_BANK.Physics);
+ let pool=subject==='All'||subject==='Full Syllabus'?NEET_QUESTIONS_100:(NEET_QUESTION_BANK[subject]||NEET_QUESTION_BANK.Physics);
  if(chapter&&chapter!=='All'){const m=pool.filter(q=>q.chapter.toLowerCase()===chapter.toLowerCase());if(m.length)pool=m;}
  const target=Math.max(1,count||5),shuffled=[...pool].sort(()=>Math.random()-0.5);
  return Array.from({length:target},(_,i)=>{const q=shuffled[i%shuffled.length];return{id:i+1,yearTag:q.yearTag,chapter:q.chapter,question:formatMathSymbols(q.question),options:q.options.map(formatMathSymbols),correctAnswer:q.correctAnswer,explanation:formatMathSymbols(q.explanation)}});
