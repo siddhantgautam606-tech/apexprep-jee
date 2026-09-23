@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { getStandardQuestions, formatMathSymbols } from '../data/jeeQuestionBank';
-import { getStandardNEETQuestions, NEET_QUESTION_BANK } from '../data/neetQuestionBank';
+import { getStandardNEETQuestions } from '../data/neetQuestionBank';
+import { NEET_QUESTIONS_POOL } from '../data/neetQuestionsPool';
 import { normalizeExam, getExamConfig } from '../config/examConfig';
 import { QUESTIONS_POOL } from '../data/questionsPool';
 
@@ -20,8 +21,7 @@ export function getFilteredQuestions({ subject, chapter, difficulty, search, exa
   const normalizedExam = normalizeExam(exam);
   let list = Array.isArray(QUESTIONS_POOL) ? [...QUESTIONS_POOL] : [];
   if (normalizedExam === 'NEET') {
-    const subjects = Object.entries(NEET_QUESTION_BANK).flatMap(([subject, questions]) => questions.map(q => ({ ...q, subject, exam: 'NEET' })));
-    list = subjects;
+    list = NEET_QUESTIONS_POOL.map(q => ({ ...q, subject: q.subjectId, exam: 'NEET' }));
   } else list = list.filter(q => !q.exam || q.exam !== 'NEET');
 
   if (subject && subject !== 'All') {
