@@ -2,8 +2,10 @@ import { useState, useMemo } from 'react';
 import { Search, Filter, BookOpen, Plus, X } from 'lucide-react';
 import QuestionCard from './QuestionCard';
 import { getFilteredQuestions, getAllSubjects, appendQuestion } from '../../services/questionService';
+import { normalizeExam } from '../../config/examConfig';
 
-export default function QuestionPool({ currentUser }) {
+export default function QuestionPool({ currentUser, feedExam }) {
+  const exam = normalizeExam(feedExam || currentUser?.target_exam);
   const [selectedSubject, setSelectedSubject] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -11,9 +13,9 @@ export default function QuestionPool({ currentUser }) {
 
   // Form state
   const [formData, setFormData] = useState({
-    subject: 'Physics',
+    subject: exam === 'NEET' ? 'Physics' : 'Physics',
     chapter: '',
-    yearTag: 'JEE Main 2025',
+    yearTag: exam === 'NEET' ? 'NEET Practice' : 'JEE Main 2025',
     difficulty: 'Medium',
     question: '',
     options: ['', '', '', ''],
@@ -21,15 +23,16 @@ export default function QuestionPool({ currentUser }) {
     explanation: ''
   });
 
-  const subjects = useMemo(() => getAllSubjects(), [refreshTrigger]);
+  const subjects = useMemo(() => getAllSubjects(exam), [refreshTrigger, exam]);
 
   const questions = useMemo(() => {
     return getFilteredQuestions({
       subject: selectedSubject,
       chapter: 'All',
-      search: searchQuery
+      search: searchQuery,
+      exam
     });
-  }, [selectedSubject, searchQuery, refreshTrigger]);
+  }, [selectedSubject, searchQuery, refreshTrigger, exam]);
 
   const handleOptionChange = (idx, value) => {
     const updated = [...formData.options];
@@ -70,7 +73,7 @@ export default function QuestionPool({ currentUser }) {
             <BookOpen className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">Question Pool & PYQ Bank</h2>
+            <h2 className="text-lg font-bold text-white">{exam} Question Pool & PYQ Bank</h2>
             <p className="text-xs text-slate-400">Chapterwise questions with official year tags</p>
           </div>
         </div>
