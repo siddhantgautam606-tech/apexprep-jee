@@ -2,19 +2,12 @@ import { supabase } from './supabaseClient';
 
 /**
  * Get the current authenticated user from Supabase Auth.
- *
- * getSession() reads the locally persisted session and can return a stale
- * session after an account has been deleted remotely. getUser() performs a
- * network request to the Auth server, so it verifies that the account still
- * exists before the app treats the user as signed in.
  */
 export async function getCurrentUser() {
   try {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-    if (sessionError || !session?.user) {
-      return null;
-    }
+    if (sessionError || !session?.user) return null;
 
     const authUser = session.user;
 
@@ -28,9 +21,6 @@ export async function getCurrentUser() {
       console.error('Error fetching current user profile:', profileError);
     }
 
-    // OAuth users may not have a profile row yet. Create a minimal profile
-    // so Google sign-in works with the same profile-dependent features as
-    // email/password accounts.
     let resolvedProfile = profile;
     if (!resolvedProfile) {
       const email = authUser.email || '';
@@ -56,15 +46,15 @@ export async function getCurrentUser() {
       if (!firstAttempt.error) {
         resolvedProfile = firstAttempt.data;
       } else {
-        const fallbackPayload = {
-          ...profilePayload,
-          username: `student_${authUser.id.slice(0, 8)}`
-        };
         const fallbackAttempt = await supabase
           .from('profiles')
-          .upsert([fallbackPayload], { onConflict: 'id' })
+          .upsert([{
+            ...profilePayload,
+            username: `student_${authUser.id.slice(0, 8)}`
+          }], { onConflict: 'id' })
           .select('*')
           .maybeSingle();
+
         if (!fallbackAttempt.error) resolvedProfile = fallbackAttempt.data;
       }
     }
@@ -86,7 +76,7 @@ export async function getCurrentUser() {
 }
 
 /**
- * Sign up a new user with email, password, and metadata
+ * Sign up a new user with email, password, and metadata.
  */
 export async function signUpUser(emailArg, passwordArg, metadataArg = {}) {
   const email = typeof emailArg === 'object' && emailArg !== null ? emailArg.email : emailArg;
@@ -107,13 +97,11 @@ export async function signUpUser(emailArg, passwordArg, metadataArg = {}) {
     if (error) throw error;
 
     if (data?.user) {
-      await supabase.from('profiles').upsert([
-        {
-          id: data.user.id,
-          username: metadata.username || String(email).split('@')[0],
-          target_exam: metadata.target_exam || 'JEE Main'
-        }
-      ]).catch(() => {});
+      await supabase.from('profiles').upsert([{
+        id: data.user.id,
+        username: metadata.username || String(email).split('@')[0],
+        target_exam: metadata.target_exam || 'JEE Main'
+      }]).catch(() => {});
     }
 
     return { data, error: null };
@@ -124,7 +112,7 @@ export async function signUpUser(emailArg, passwordArg, metadataArg = {}) {
 }
 
 /**
- * Sign in existing user with email and password
+ * Sign in existing user with email and password.
  */
 export async function signInUser(emailArg, passwordArg) {
   const email = typeof emailArg === 'object' && emailArg !== null ? emailArg.email : emailArg;
@@ -150,9 +138,11 @@ export async function signInUser(emailArg, passwordArg) {
 }
 
 /**
- * Sign out current user
+ * Send a password-reset OTP to the registered email.
+ *
+ * Supabase's Recovery email template must render {{ .Token }}
+ * for the user to receive the 6-digit code instead of a link.
  */
-/** Send a password-reset email to the registered address. */
 export async function sendPasswordResetEmail(email) {
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(String(email).trim(), {
@@ -166,6 +156,30 @@ export async function sendPasswordResetEmail(email) {
   }
 }
 
+/**
+ * Verify the 6-digit password recovery OTP.
+ * A successful recovery verification creates the recovery session
+ * that is required before updateUser({ password }) can be called.
+ */
+export async function verifyPasswordResetOtp(email, token) {
+  try {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: String(email).trim(),
+      token: String(token).trim(),
+      type: 'recovery',
+    });
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (err) {
+    console.error('Password reset OTP verification error:', err);
+    return { data: null, error: err.message };
+  }
+}
+
+/**
+ * Update the password after recovery OTP verification.
+ */
 export async function updatePassword(password) {
   try {
     const { error } = await supabase.auth.updateUser({ password: String(password) });
