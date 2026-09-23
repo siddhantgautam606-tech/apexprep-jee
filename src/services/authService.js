@@ -112,6 +112,23 @@ export async function signInUser(emailArg, passwordArg) {
 /**
  * Sign out current user
  */
+/** Sign in or create an account with Google OAuth. */
+export async function signInWithGoogle() {
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) throw error;
+    return { data, error: null };
+  } catch (err) {
+    console.error('Google sign in error:', err);
+    return { data: null, error: err.message };
+  }
+}
+
 export async function signOutUser() {
   try {
     const { error } = await supabase.auth.signOut();
