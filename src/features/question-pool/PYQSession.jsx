@@ -58,9 +58,9 @@ export default function PYQSession({ session, currentUser, onExit }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-3 sm:p-5">
-      <div className="max-w-7xl mx-auto flex flex-col gap-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-lg">
+    <div className="h-screen max-h-screen overflow-hidden bg-slate-950 text-slate-100 p-3 sm:p-4">
+      <div className="h-full max-w-7xl mx-auto flex flex-col gap-3">
+        <div className="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between gap-4 shadow-lg">
           <div className="flex items-center gap-3 min-w-0">
             <button onClick={requestExit} className="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 hover:text-white shrink-0" title="End session">
               <X className="w-4 h-4" />
@@ -76,8 +76,8 @@ export default function PYQSession({ session, currentUser, onExit }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <div className="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-7 shadow-xl min-h-[560px] flex flex-col justify-between">
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-4 gap-3">
+          <div className="lg:col-span-3 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between overflow-hidden">
             <div>
               <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-5">
                 <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20">
@@ -128,13 +128,13 @@ export default function PYQSession({ session, currentUser, onExit }) {
             </div>
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
+          <div className="min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-3 overflow-hidden">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Question Navigation</h2>
               <span className="text-[10px] text-slate-500">{Object.keys(answers).length} attempted</span>
             </div>
 
-            <div className="grid grid-cols-5 gap-2 max-h-[420px] overflow-y-auto pr-1">
+            <div className="grid grid-cols-5 gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
               {questions.map((_, idx) => {
                 const answered = answers[idx] !== undefined;
                 const marked = markedForReview[idx];
