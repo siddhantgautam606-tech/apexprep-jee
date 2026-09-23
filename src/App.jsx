@@ -48,7 +48,7 @@ export default function App() {
     }
     checkAuth();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
 
       if (event === 'SIGNED_OUT' || !session?.user) {
@@ -59,19 +59,28 @@ export default function App() {
         return;
       }
 
-      const user = await getCurrentUser();
-      if (!mounted) return;
+      // Do not call Supabase auth methods directly inside the auth callback.
+      // Supabase documents that onAuthStateChange callbacks should be kept
+      // synchronous; deferring profile loading also prevents an OAuth callback
+      // from getting stuck while getUser() waits on the same auth lock.
+      setTimeout(async () => {
+        if (!mounted) return;
 
-      if (user) {
-        setCurrentUser(user);
-        if (user.is_admin) setDeveloperExamOverride(localStorage.getItem('apexprep_dev_exam') || null);
-      } else {
-        setCurrentUser(null);
-        clearTestHistory();
-        setShowProfile(false);
-        setShowAuthModal(false);
-        await supabase.auth.signOut();
-      }
+        const user = await getCurrentUser();
+        if (!mounted) return;
+
+        if (user) {
+          setCurrentUser(user);
+          setShowAuthModal(false);
+          if (user.is_admin) {
+            setDeveloperExamOverride(localStorage.getItem('apexprep_dev_exam') || null);
+          }
+        } else {
+          setCurrentUser(null);
+          clearTestHistory();
+          setShowProfile(false);
+        }
+      }, 0);
     });
 
     return () => {
