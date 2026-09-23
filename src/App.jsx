@@ -16,7 +16,6 @@ import TestOrganizer from './features/cbt/TestOrganizer';
 import TestRunner from './features/cbt/TestRunner';
 import AnalyticsDashboard from './features/analytics/AnalyticsDashboard';
 import ChatWindow from './features/social/ChatWindow';
-import FriendList from './features/social/FriendList';
 import AuthModal from './features/auth/AuthModal';
 
 import { supabase } from './services/supabaseClient';
@@ -202,14 +201,7 @@ export default function App() {
         {activeTab === 'analytics' && <AnalyticsDashboard currentUser={currentUser} />}
 
         {activeTab === 'social' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-1">
-              <FriendList currentUser={currentUser} />
-            </div>
-            <div className="md:col-span-2">
-              <ChatWindow currentUser={currentUser} />
-            </div>
-          </div>
+          <ChatWindow currentUser={currentUser} />
         )}
       </main>
 
@@ -218,7 +210,7 @@ export default function App() {
         <AuthModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
-          onSuccess={(u) => {
+          onAuthSuccess={(u) => {
             setCurrentUser(u);
             setShowAuthModal(false);
           }}
