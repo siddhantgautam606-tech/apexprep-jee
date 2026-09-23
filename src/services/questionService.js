@@ -12,7 +12,7 @@ export function getAllSubjects(exam = 'JEE Main') {
   return getExamConfig(exam).subjects;
 }
 
-const SUBJECT_ID_TO_LABEL = { physics: 'Physics', chemistry: 'Chemistry', math: 'Mathematics', mathematics: 'Mathematics' };
+const SUBJECT_ID_TO_LABEL = { physics: 'Physics', chemistry: 'Chemistry', math: 'Mathematics', mathematics: 'Mathematics', biology: 'Biology' };
 
 /**
  * Filters questions for QuestionPool.jsx
