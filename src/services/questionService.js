@@ -1,12 +1,14 @@
 import { supabase } from './supabaseClient';
 import { getStandardQuestions, formatMathSymbols } from '../data/jeeQuestionBank';
+import { getStandardNEETQuestions } from '../data/neetQuestionBank';
+import { normalizeExam, getExamConfig } from '../config/examConfig';
 import { QUESTIONS_POOL } from '../data/questionsPool';
 
 /**
  * Returns all available subjects
  */
-export function getAllSubjects() {
-  return ['Physics', 'Chemistry', 'Mathematics'];
+export function getAllSubjects(exam = 'JEE Main') {
+  return getExamConfig(exam).subjects;
 }
 
 const SUBJECT_ID_TO_LABEL = { physics: 'Physics', chemistry: 'Chemistry', math: 'Mathematics', mathematics: 'Mathematics' };
@@ -14,8 +16,11 @@ const SUBJECT_ID_TO_LABEL = { physics: 'Physics', chemistry: 'Chemistry', math: 
 /**
  * Filters questions for QuestionPool.jsx
  */
-export function getFilteredQuestions({ subject, chapter, difficulty, search } = {}) {
+export function getFilteredQuestions({ subject, chapter, difficulty, search, exam = 'JEE Main' } = {}) {
+  const normalizedExam = normalizeExam(exam);
   let list = Array.isArray(QUESTIONS_POOL) ? [...QUESTIONS_POOL] : [];
+  if (normalizedExam === 'NEET') list = list.filter(q => q.exam === 'NEET');
+  else list = list.filter(q => !q.exam || q.exam !== 'NEET');
 
   if (subject && subject !== 'All') {
     list = list.filter(
@@ -121,54 +126,36 @@ export async function addCustomQuestionToDB(questionData, userId) {
 /**
  * Universal fetcher used by BOTH Personal Practice Tests and Friend Circle Tests.
  */
-export async function fetchQuestionsForTest(subject = 'Physics', chapter = 'All', count = 5) {
+export async function fetchQuestionsForTest(subject = 'Physics', chapter = 'All', count = 5, exam = 'JEE Main') {
+  const normalizedExam = normalizeExam(exam);
   try {
-    let query = supabase.from('custom_questions').select('*');
-
-    if (subject && subject !== 'Full Syllabus') {
-      query = query.eq('subject', subject);
-    }
-    if (chapter && chapter !== 'All') {
-      query = query.eq('chapter', chapter);
-    }
+    let query = supabase.from('custom_questions').select('*').eq('exam', normalizedExam);
+    if (subject && subject !== 'Full Syllabus' && subject !== 'All') query = query.eq('subject', subject);
+    if (chapter && chapter !== 'All') query = query.eq('chapter', chapter);
 
     const { data: dbQuestions, error } = await query;
     let pool = [];
-
-    if (!error && Array.isArray(dbQuestions) && dbQuestions.length > 0) {
+    if (!error && Array.isArray(dbQuestions)) {
       pool = dbQuestions.map((q, idx) => ({
-        id: idx + 1,
-        question: formatMathSymbols(q.question),
-        options: Array.isArray(q.options)
-          ? q.options.map((opt) => formatMathSymbols(opt))
-          : [],
-        correctAnswer: q.correct_answer,
-        explanation: formatMathSymbols(q.explanation || ''),
-        subject: q.subject,
-        chapter: q.chapter
+        id: idx + 1, question: formatMathSymbols(q.question),
+        options: Array.isArray(q.options) ? q.options.map(formatMathSymbols) : [],
+        correctAnswer: q.correct_answer, explanation: formatMathSymbols(q.explanation || ''),
+        subject: q.subject, chapter: q.chapter, yearTag: q.year_tag || q.yearTag
       }));
     }
-
-    const shuffled = pool.sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, count);
-
+    const selected = pool.sort(() => 0.5 - Math.random()).slice(0, count);
     if (selected.length < count) {
       const needed = count - selected.length;
-      const fallbackQuestions = getStandardQuestions(
-        subject === 'Full Syllabus' ? 'Physics' : subject,
-        chapter,
-        needed
-      );
-      selected.push(...fallbackQuestions);
+      const fallback = normalizedExam === 'NEET'
+        ? getStandardNEETQuestions(subject === 'Full Syllabus' ? 'All' : subject, chapter, needed)
+        : getStandardQuestions(subject === 'Full Syllabus' ? 'Physics' : subject, chapter, needed);
+      selected.push(...fallback);
     }
-
     return selected.slice(0, count);
   } catch (err) {
-    console.error('Error fetching from custom pool, using fallback:', err);
-    return getStandardQuestions(
-      subject === 'Full Syllabus' ? 'Physics' : subject,
-      chapter,
-      count
-    );
+    console.error('Error fetching questions:', err);
+    return normalizedExam === 'NEET'
+      ? getStandardNEETQuestions(subject === 'Full Syllabus' ? 'All' : subject, chapter, count)
+      : getStandardQuestions(subject === 'Full Syllabus' ? 'Physics' : subject, chapter, count);
   }
 }
