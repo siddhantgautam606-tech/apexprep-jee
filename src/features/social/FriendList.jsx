@@ -75,10 +75,10 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
   };
 
   return (
-    <div className="flex h-full flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4">
+    <div className="flex min-h-[620px] h-full flex-col bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
       <div className="flex items-center gap-2 mb-4">
         <Users className="h-5 w-5 text-blue-600" />
-        <h2 className="font-bold text-slate-800 dark:text-white">Study Network</h2>
+        <h2 className="font-bold text-white">Study Network</h2>
       </div>
 
       {/* User Search Input */}
@@ -89,13 +89,13 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
           placeholder="Search aspirants..."
           value={searchQuery}
           onChange={handleSearch}
-          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 py-2 pl-9 pr-4 text-sm focus:outline-hidden focus:border-blue-500 dark:text-white"
+          className="w-full rounded-xl border border-slate-800 bg-slate-950/70 py-2 pl-9 pr-4 text-sm focus:outline-hidden focus:border-blue-500 dark:text-white"
         />
       </div>
 
       {/* Search Results Dropdown / Panel */}
       {searchQuery.trim().length >= 2 && (
-        <div className="mb-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-2 space-y-2">
+        <div className="mb-4 rounded-xl border border-slate-800 bg-slate-950/50 p-2 space-y-2">
           <p className="text-[11px] font-semibold text-slate-400 uppercase px-2">Aspirants Found</p>
           {searchLoading ? (
             <div className="flex justify-center p-2">
@@ -105,7 +105,7 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
             <p className="text-xs text-slate-500 px-2">No users matching "{searchQuery}"</p>
           ) : (
             searchResults.map((user) => (
-              <div key={user.id} className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-900 shadow-2xs">
+              <div key={user.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-900 shadow-lg">
                 <div>
                   <p className="text-xs font-semibold dark:text-white">@{user.username}</p>
                   <span className="text-[10px] text-slate-400">{user.target_exam}</span>
@@ -130,7 +130,7 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
           </p>
           <div className="space-y-2">
             {pendingRequests.map((req) => (
-              <div key={req.id} className="flex items-center justify-between p-2 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30">
+              <div key={req.id} className="flex items-center justify-between p-2 rounded-xl bg-amber-950/20 border border-amber-900/30">
                 <div>
                   <p className="text-xs font-semibold dark:text-white">@{req.sender.username}</p>
                   <span className="text-[10px] text-slate-400">{req.sender.target_exam}</span>
@@ -179,16 +179,16 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
                   onClick={() => onSelectFriend(friend)}
                   className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition ${
                     isActive
-                      ? 'bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                      ? 'bg-indigo-600/15 border border-indigo-500/30'
+                      : 'hover:bg-slate-800/60'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center font-bold text-xs text-slate-600 dark:text-slate-300">
+                    <div className="h-8 w-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-indigo-400">
                       {friend.username?.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-800 dark:text-white">@{friend.username}</p>
+                      <p className="text-xs font-semibold text-white">@{friend.username}</p>
                       <span className="text-[10px] text-slate-400">{friend.target_exam || 'JEE Main'}</span>
                     </div>
                   </div>
