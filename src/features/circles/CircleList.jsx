@@ -25,6 +25,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
   const [userMemberships, setUserMemberships] = useState([]);
   const [selectedCircle, setSelectedCircle] = useState(null);
   const [activeTab, setActiveTab] = useState('tests');
+  const [showAnnouncements, setShowAnnouncements] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -120,10 +121,10 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
   }, [selectedCircle]);
 
   useEffect(() => {
-    if (activeTab === 'chat' && chatBottomRef.current) {
+    if (showAnnouncements && chatBottomRef.current) {
       chatBottomRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [announcements, activeTab]);
+  }, [announcements, showAnnouncements]);
 
   const isUserAdmin = (circle) => {
     if (!currentUser) return false;
@@ -427,7 +428,13 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                   return (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
+                      onClick={() => {
+                        if (tab.id === 'chat') {
+                          setShowAnnouncements(true);
+                        } else {
+                          setActiveTab(tab.id);
+                        }
+                      }}
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
                         isActive
                           ? 'bg-indigo-600 text-white shadow-sm'
@@ -593,8 +600,30 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                 </div>
               )}
 
-              {activeTab === 'chat' && (
-                <div className="w-full h-[520px] bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+              {showAnnouncements && (
+                <div className="fixed inset-0 z-40 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4 md:p-6">
+                  <div className="w-full max-w-5xl h-[calc(100vh-120px)] min-h-[560px] bg-slate-950 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+                    <div className="px-5 py-4 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between shrink-0">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setShowAnnouncements(false)}
+                          className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition"
+                          title="Back to Circle"
+                        >
+                          <ArrowRight className="w-4 h-4 rotate-180" />
+                        </button>
+                        <div className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                          <MessageSquare className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold text-white">Announcements</h3>
+                          <p className="text-[11px] text-slate-400 mt-0.5">#{selectedCircle.name} · {circleMembers.approved.length} members</p>
+                        </div>
+                      </div>
+                      <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-800/70 border border-slate-700/60 px-3 py-1.5 rounded-full">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" /> Circle chat
+                      </span>
+                    </div>
                   <div className="p-3.5 px-5 border-b border-slate-800/80 bg-slate-900/70 backdrop-blur-sm flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
@@ -613,7 +642,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                     </span>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-3">
+                  <div className="flex-1 overflow-y-auto p-5 md:p-8 flex flex-col gap-4 bg-slate-950">
                     {announcements.length === 0 ? (
                       <div className="m-auto text-center flex flex-col items-center gap-2 text-slate-500 text-xs">
                         <MessageSquare className="w-8 h-8 text-slate-700" />
@@ -659,23 +688,24 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
 
                   <form
                     onSubmit={handlePostAnnouncement}
-                    className="p-3 md:p-4 border-t border-slate-800 bg-slate-900/90 flex items-center gap-2"
+                    className="p-4 md:p-5 border-t border-slate-800 bg-slate-900/95 flex items-center gap-3 shrink-0"
                   >
                     <input
                       type="text"
                       placeholder="Message the circle..."
                       value={announcementMsg}
                       onChange={(e) => setAnnouncementMsg(e.target.value)}
-                      className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-200 outline-none focus:border-indigo-500 transition"
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-xs text-slate-200 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition"
                     />
                     <button
                       type="submit"
                       disabled={!announcementMsg.trim()}
-                      className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white p-3 rounded-xl transition flex items-center justify-center shrink-0"
+                      className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white p-3.5 rounded-2xl transition flex items-center justify-center shrink-0 shadow-lg shadow-indigo-600/20"
                     >
                       <Send className="w-4 h-4" />
                     </button>
                   </form>
+                  </div>
                 </div>
               )}
             </div>
