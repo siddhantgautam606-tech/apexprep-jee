@@ -95,6 +95,8 @@ export async function addCustomQuestionToDB(questionData, userId) {
         {
           subject: questionData.subject,
           chapter: questionData.chapter || 'All',
+          exam: questionData.exam || 'JEE Main',
+          year_tag: questionData.yearTag || null,
           question: formattedQuestion,
           options: formattedOptions,
           correct_answer: Number(questionData.correctAnswer),
