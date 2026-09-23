@@ -55,7 +55,7 @@ export default function QuestionPool({ currentUser, feedExam }) {
     setFormData({
       subject: 'Physics',
       chapter: '',
-      yearTag: 'JEE Main 2025',
+      yearTag: exam === 'NEET' ? 'NEET Practice' : 'JEE Main 2025',
       difficulty: 'Medium',
       question: '',
       options: ['', '', '', ''],
