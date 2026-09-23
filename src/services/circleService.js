@@ -1,4 +1,7 @@
 import { supabase } from './supabaseClient';
+import { getStandardQuestions } from '../data/jeeQuestionBank';
+import { getStandardNEETQuestions } from '../data/neetQuestionBank';
+import { normalizeExam } from '../config/examConfig';
 
 /**
  * Circles CRUD & Fetching
@@ -263,22 +266,46 @@ export async function deleteCircleTest(testId) {
  * Question fetching helper for test scheduling
  */
 export async function fetchQuestionsForTest(subject, chapter, count, exam = 'JEE Main') {
+  const normalizedExam = normalizeExam(exam);
+  const requestedCount = Math.max(1, Number(count) || 10);
+
   try {
-    let query = supabase.from('custom_questions').select('*').eq('exam', exam);
+    let query = supabase.from('custom_questions').select('*').eq('exam', normalizedExam);
 
     if (subject && subject !== 'All' && subject !== 'Full Syllabus') {
-      query = query.ilike('subject', subject);
+      query = query.eq('subject', subject);
     }
     if (chapter && chapter !== 'All') {
-      query = query.ilike('chapter', chapter);
+      query = query.eq('chapter', chapter);
     }
 
-    const { data, error } = await query.limit(Number(count) || 10);
+    const { data, error } = await query.limit(requestedCount);
     if (error) throw error;
-    return data || [];
+
+    const dbQuestions = (data || []).map((q, idx) => ({
+      id: q.id || idx + 1,
+      question: q.question,
+      options: Array.isArray(q.options) ? q.options : [],
+      correctAnswer: q.correct_answer,
+      explanation: q.explanation || '',
+      subject: q.subject,
+      chapter: q.chapter,
+      yearTag: q.year_tag || q.yearTag
+    }));
+
+    if (dbQuestions.length >= requestedCount) return dbQuestions.slice(0, requestedCount);
+
+    const needed = requestedCount - dbQuestions.length;
+    const fallback = normalizedExam === 'NEET'
+      ? getStandardNEETQuestions(subject === 'All' || subject === 'Full Syllabus' ? 'All' : subject, chapter, needed)
+      : getStandardQuestions(subject === 'All' || subject === 'Full Syllabus' ? 'Physics' : subject, chapter, needed);
+
+    return [...dbQuestions, ...fallback].slice(0, requestedCount);
   } catch (err) {
-    console.warn('Questions table not found or empty:', err.message);
-    return [];
+    console.warn('Questions table unavailable; using the exam-specific question bank:', err.message);
+    return normalizedExam === 'NEET'
+      ? getStandardNEETQuestions(subject === 'All' || subject === 'Full Syllabus' ? 'All' : subject, chapter, requestedCount)
+      : getStandardQuestions(subject === 'All' || subject === 'Full Syllabus' ? 'Physics' : subject, chapter, requestedCount);
   }
 }
 
