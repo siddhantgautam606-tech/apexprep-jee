@@ -1,8 +1,12 @@
 import React, { useMemo } from 'react';
 import { Play, Settings2, RotateCcw } from 'lucide-react';
 import { JEE_SYLLABUS } from '../../data/syllabusData';
+import { NEET_SYLLABUS } from '../../data/neetSyllabusData';
+import { getExamConfig } from '../../config/examConfig';
 
-export default function TestConfig({ config, onChangeConfig, onStartTest, isSubmitting }) {
+export default function TestConfig({ config, onChangeConfig, onStartTest, isSubmitting, exam = 'JEE Main' }) {
+  const examConfig = getExamConfig(exam);
+  const syllabus = exam === 'NEET' ? NEET_SYLLABUS : JEE_SYLLABUS;
   const safeSubject = config?.subject || 'All';
   const selectedChapters = Array.isArray(config?.selectedChapters) 
     ? config.selectedChapters 
@@ -14,8 +18,8 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
 
     const getChaptersForSubject = (subKey) => {
       try {
-        if (!JEE_SYLLABUS) return [];
-        const data = JEE_SYLLABUS[subKey];
+        if (!syllabus) return [];
+        const data = syllabus[subKey];
         if (!data) return [];
 
         if (Array.isArray(data)) {
@@ -41,7 +45,7 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
     };
 
     if (safeSubject === 'All' || safeSubject === 'Full Syllabus') {
-      ['Physics', 'Chemistry', 'Mathematics'].forEach((s) => {
+      examConfig.subjects.forEach((s) => {
         list.push(...getChaptersForSubject(s));
       });
     } else {
@@ -49,7 +53,7 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
     }
 
     return Array.from(new Set(list.filter((c) => c && typeof c === 'string' && c !== 'All')));
-  }, [safeSubject]);
+  }, [safeSubject, exam, syllabus, examConfig.subjects]);
 
   // Handle multi-chapter chip toggling
   const handleToggleChapter = (ch) => {
@@ -94,8 +98,8 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
           <Settings2 className="w-5 h-5" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-white">Configure Practice Exam</h2>
-          <p className="text-xs text-slate-400">Select target subjects, multiple chapters, question count, and duration.</p>
+          <h2 className="text-lg font-bold text-white">Configure {examConfig.label} Practice Exam</h2>
+          <p className="text-xs text-slate-400">Select {examConfig.label} subjects, chapters, question count, and duration.</p>
         </div>
       </div>
 
@@ -116,10 +120,8 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
             }}
             className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition"
           >
-            <option value="All">All Subjects (Physics + Chemistry + Mathematics)</option>
-            <option value="Physics">Physics</option>
-            <option value="Chemistry">Chemistry</option>
-            <option value="Mathematics">Mathematics</option>
+            <option value="All">All Subjects ({examConfig.subjects.join(' + ')})</option>
+            {examConfig.subjects.map((subject) => <option key={subject} value={subject}>{subject}</option>)}
           </select>
         </div>
 
