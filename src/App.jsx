@@ -27,13 +27,12 @@ import { EXAM_OPTIONS, normalizeExam } from './config/examConfig';
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [activeTab, setActiveTab] = useState('cbt'); // 'cbt', 'circles', 'pool', 'analytics', 'chat', 'connections'
+  const [activeTab, setActiveTab] = useState('cbt');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [developerExamOverride, setDeveloperExamOverride] = useState(null);
-  
-  // Dedicated state for active circle test taking
   const [activeCircleTest, setActiveCircleTest] = useState(null);
+  const [activePYQTest, setActivePYQTest] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -59,13 +58,8 @@ export default function App() {
         return;
       }
 
-      // Do not call Supabase auth methods directly inside the auth callback.
-      // Supabase documents that onAuthStateChange callbacks should be kept
-      // synchronous; deferring profile loading also prevents an OAuth callback
-      // from getting stuck while getUser() waits on the same auth lock.
       setTimeout(async () => {
         if (!mounted) return;
-
         const user = await getCurrentUser();
         if (!mounted) return;
 
@@ -108,13 +102,8 @@ export default function App() {
     setShowProfile(false);
   };
 
-  // Launch test runner directly for a Circle mock test
   const handleLaunchCircleTest = (testRecord) => {
     if (!testRecord) return;
-    
-    const formattedQuestions = Array.isArray(testRecord.questions)
-      ? testRecord.questions
-      : [];
 
     setActiveCircleTest({
       id: testRecord.id,
@@ -123,12 +112,25 @@ export default function App() {
       subject: testRecord.subject || 'All',
       chapter: testRecord.chapter || 'All',
       durationMinutes: Number(testRecord.duration_minutes) || 60,
-      questions: formattedQuestions,
+      questions: Array.isArray(testRecord.questions) ? testRecord.questions : [],
       circleId: testRecord.circle_id
     });
   };
 
-  // If a Circle Test is being taken, show TestRunner full screen
+  const handleLaunchPYQPractice = (questions, subject = 'All') => {
+    if (!Array.isArray(questions) || questions.length === 0) return;
+
+    setActivePYQTest({
+      id: `pyq-${Date.now()}`,
+      title: `${feedExam} PYQS Practice`,
+      exam: feedExam,
+      subject,
+      chapter: 'All',
+      durationMinutes: 60,
+      questions
+    });
+  };
+
   if (activeCircleTest) {
     return (
       <TestRunner
@@ -136,6 +138,17 @@ export default function App() {
         currentUser={currentUser}
         onComplete={() => setActiveCircleTest(null)}
         onExit={() => setActiveCircleTest(null)}
+      />
+    );
+  }
+
+  if (activePYQTest) {
+    return (
+      <TestRunner
+        test={activePYQTest}
+        currentUser={currentUser}
+        onComplete={() => setActivePYQTest(null)}
+        onExit={() => setActivePYQTest(null)}
       />
     );
   }
@@ -155,7 +168,6 @@ export default function App() {
 
   return (
     <div className={`min-h-screen text-slate-100 flex flex-col font-sans transition-colors duration-300 ${isNeetInterface ? 'bg-slate-950 selection:bg-emerald-500 selection:text-white' : 'bg-slate-950 selection:bg-indigo-500 selection:text-white'}`}>
-      {/* Navigation Header */}
       <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -170,27 +182,19 @@ export default function App() {
             </div>
           </div>
 
-          {/* Navigation Tabs */}
           <nav className="hidden md:flex items-center gap-1 bg-slate-950/60 p-1.5 rounded-2xl border border-slate-800/80">
             {[
               { id: 'cbt', label: 'Practice CBT', icon: BookOpen },
               { id: 'circles', label: 'Study Circles', icon: Users },
-              { id: 'pool', label: 'Question Pool', icon: HelpCircle },
+              { id: 'pool', label: 'PYQS', icon: HelpCircle },
               { id: 'analytics', label: 'Analytics', icon: BarChart2 },
               { id: 'chat', label: 'Chat', icon: MessageSquare }
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-                    isActive 
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                  }`}
-                >
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${isActive ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'}`}>
                   <Icon className="w-4 h-4" />
                   {tab.label}
                 </button>
@@ -198,40 +202,26 @@ export default function App() {
             })}
           </nav>
 
-          {/* Private developer exam preview: visible only to the registered admin account */}
           {currentUser?.is_admin && (
             <div className="hidden xl:flex items-center gap-2 mr-2 px-2 py-1.5 rounded-xl border border-slate-800 bg-slate-950/70">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Preview</span>
-              <select
-                value={developerExamOverride || 'ACCOUNT'}
-                onChange={(e) => handleDeveloperExamChange(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-white outline-none cursor-pointer"
-                title="Preview another exam interface (admin only)"
-              >
+              <select value={developerExamOverride || 'ACCOUNT'} onChange={(e) => handleDeveloperExamChange(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-white outline-none cursor-pointer" title="Preview another exam interface (admin only)">
                 <option value="ACCOUNT">My Account</option>
                 {EXAM_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
             </div>
           )}
 
-          {/* User Profile / Auth Button */}
           <div className="flex items-center gap-2">
             {currentUser ? (
               <>
-                <button
-                  onClick={() => setActiveTab('connections')}
-                  className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-slate-700/80 bg-slate-900/80 text-slate-200 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white transition shadow-sm"
-                  title="Open Connections"
-                >
+                <button onClick={() => setActiveTab('connections')} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-slate-700/80 bg-slate-900/80 text-slate-200 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white transition shadow-sm" title="Open Connections">
                   <Users className="w-4 h-4" />
                   <span className="text-xs font-bold">Connections</span>
                 </button>
                 <div className="relative">
-                  <button
-                    onClick={() => setShowProfile((value) => !value)}
-                    className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/15 text-white hover:bg-indigo-600 hover:border-indigo-500 transition shadow-sm"
-                    title="Open Profile"
-                  >
+                  <button onClick={() => setShowProfile((value) => !value)} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/15 text-white hover:bg-indigo-600 hover:border-indigo-500 transition shadow-sm" title="Open Profile">
                     <div className="w-7 h-7 rounded-full bg-indigo-500/25 border border-indigo-400/30 flex items-center justify-center text-indigo-300 font-bold text-xs">
                       {(currentUser.username || 'A')[0].toUpperCase()}
                     </div>
@@ -241,48 +231,32 @@ export default function App() {
                     </div>
                   </button>
                   {showProfile && (
-                    <ProfilePanel
-                      currentUser={currentUser}
-                      onClose={() => setShowProfile(false)}
-                      onConnections={() => {
-                        setActiveTab('connections');
-                        setShowProfile(false);
-                      }}
-                      onSignOut={handleSignOut}
-                    />
+                    <ProfilePanel currentUser={currentUser} onClose={() => setShowProfile(false)}
+                      onConnections={() => { setActiveTab('connections'); setShowProfile(false); }} onSignOut={handleSignOut} />
                   )}
                 </div>
               </>
             ) : (
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-indigo-600/20"
-              >
+              <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-indigo-600/20">
                 <LogIn className="w-4 h-4" /> Sign In / Sign Up
               </button>
             )}
           </div>
         </div>
 
-        {/* Mobile Navigation */}
         <div className="flex md:hidden border-t border-slate-800/80 px-2 py-1.5 overflow-x-auto gap-1">
           {[
             { id: 'cbt', label: 'CBT', icon: BookOpen },
             { id: 'circles', label: 'Circles', icon: Users },
-            { id: 'pool', label: 'Pool', icon: HelpCircle },
+            { id: 'pool', label: 'PYQS', icon: HelpCircle },
             { id: 'analytics', label: 'Analytics', icon: BarChart2 },
             { id: 'chat', label: 'Chat', icon: MessageSquare }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
-                  isActive ? 'bg-indigo-600 text-white' : 'text-slate-400'
-                }`}
-              >
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${isActive ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}>
                 <Icon className="w-3.5 h-3.5" />
                 {tab.label}
               </button>
@@ -291,28 +265,18 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
         {activeTab === 'cbt' && <TestOrganizer currentUser={currentUser} feedExam={feedExam} />}
-        {activeTab === 'circles' && (
-          <CircleList currentUser={currentUser} feedExam={feedExam} onSelectTestToTake={handleLaunchCircleTest} />
-        )}
-        {activeTab === 'pool' && <QuestionPool currentUser={currentUser} feedExam={feedExam} />}
+        {activeTab === 'circles' && <CircleList currentUser={currentUser} feedExam={feedExam} onSelectTestToTake={handleLaunchCircleTest} />}
+        {activeTab === 'pool' && <QuestionPool currentUser={currentUser} feedExam={feedExam} onStartPractice={handleLaunchPYQPractice} />}
         {activeTab === 'analytics' && <AnalyticsDashboard currentUser={currentUser} />}
         {activeTab === 'chat' && <ChatWindow currentUser={currentUser} />}
         {activeTab === 'connections' && <Connections currentUser={currentUser} />}
       </main>
 
-      {/* Auth Modal */}
       {showAuthModal && (
-        <AuthModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          onAuthSuccess={(u) => {
-            setCurrentUser(u);
-            setShowAuthModal(false);
-          }}
-        />
+        <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)}
+          onAuthSuccess={(u) => { setCurrentUser(u); setShowAuthModal(false); }} />
       )}
     </div>
   );
