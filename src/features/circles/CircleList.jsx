@@ -19,8 +19,12 @@ import {
 } from '../../services/circleService';
 import { getStandardQuestions } from '../../data/jeeQuestionBank';
 import { JEE_SYLLABUS } from '../../data/syllabusData';
+import { NEET_SYLLABUS } from '../../data/neetSyllabusData';
+import { getStandardNEETQuestions } from '../../data/neetQuestionBank';
+import { normalizeExam } from '../../config/examConfig';
 
-export default function CircleList({ currentUser, onSelectTestToTake }) {
+export default function CircleList({ currentUser, onSelectTestToTake, feedExam }) {
+  const exam = normalizeExam(feedExam || currentUser?.target_exam);
   const [circles, setCircles] = useState([]);
   const [userMemberships, setUserMemberships] = useState([]);
   const [selectedCircle, setSelectedCircle] = useState(null);
@@ -56,8 +60,9 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
 
     const getChaptersForSubject = (subKey) => {
       try {
-        if (!JEE_SYLLABUS) return [];
-        const data = JEE_SYLLABUS[subKey];
+        const syllabus = exam === 'NEET' ? NEET_SYLLABUS : JEE_SYLLABUS;
+        if (!syllabus) return [];
+        const data = syllabus[subKey];
         if (!data) return [];
 
         if (Array.isArray(data)) return data;
@@ -78,7 +83,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
     };
 
     if (newTest.subject === 'All') {
-      ['Physics', 'Chemistry', 'Mathematics'].forEach((s) => {
+      (exam === 'NEET' ? ['Physics', 'Chemistry', 'Biology'] : ['Physics', 'Chemistry', 'Mathematics']).forEach((s) => {
         list.push(...getChaptersForSubject(s));
       });
     } else {
@@ -86,7 +91,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
     }
 
     return Array.from(new Set(list.filter((c) => c && typeof c === 'string' && c !== 'All')));
-  }, [newTest.subject]);
+  }, [newTest.subject, exam]);
 
   const loadCirclesData = async () => {
     const all = await getAllCircles();
@@ -207,6 +212,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
 
     try {
       const qNum = Number(newTest.questionCount) || 5;
+      const testExam = exam;
       const chapterLabel = newTest.selectedChapters.includes('All')
         ? 'All'
         : newTest.selectedChapters.join(', ');
@@ -217,7 +223,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
 
       try {
         if (typeof fetchQuestionsForTest === 'function') {
-          questions = await fetchQuestionsForTest(newTest.subject, primaryChapter, qNum);
+          questions = await fetchQuestionsForTest(newTest.subject, primaryChapter, qNum, testExam);
         }
       } catch (err) {
         console.warn('DB question fetch fallback:', err);
@@ -225,7 +231,9 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
 
       if (!Array.isArray(questions) || questions.length === 0) {
         const subForBank = newTest.subject === 'All' ? 'Physics' : newTest.subject;
-        questions = getStandardQuestions(subForBank, primaryChapter, qNum);
+        questions = testExam === 'NEET'
+          ? getStandardNEETQuestions(newTest.subject === 'All' ? 'All' : subForBank, primaryChapter, qNum)
+          : getStandardQuestions(subForBank, primaryChapter, qNum);
       }
 
       if (!Array.isArray(questions) || questions.length === 0) {
@@ -240,7 +248,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
 
       const res = await scheduleCircleTest(
         selectedCircle.id,
-        { ...newTest, chapter: chapterLabel, questions },
+        { ...newTest, exam: testExam, chapter: chapterLabel, questions },
         currentUser.id
       );
 
@@ -799,7 +807,7 @@ export default function CircleList({ currentUser, onSelectTestToTake }) {
                   <option value="All">All</option>
                   <option value="Physics">Physics</option>
                   <option value="Chemistry">Chemistry</option>
-                  <option value="Mathematics">Mathematics</option>
+                  {exam === 'NEET' ? <option value="Biology">Biology</option> : <option value="Mathematics">Mathematics</option>}
                 </select>
               </div>
 
