@@ -1,4 +1,4 @@
-const CACHE_NAME = 'apexprep-shell-v2';
+const CACHE_NAME = 'apexprep-shell-v3';
 const APP_SHELL = ['/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -23,9 +23,6 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) return;
-
-  // Never serve a cached HTML document. Always get the latest app shell from
-  // the server so a new deployment cannot leave Chrome on an outdated build.
   if (event.request.mode === 'navigate' || event.request.destination === 'document') {
     event.respondWith(
       fetch(event.request, { cache: 'no-store' })
@@ -33,16 +30,11 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
-
       return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type === 'opaque') {
-          return response;
-        }
-
+        if (!response || response.status !== 200 || response.type === 'opaque') return response;
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         return response;
