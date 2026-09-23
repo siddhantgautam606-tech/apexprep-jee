@@ -1,4 +1,5 @@
-const ANALYTICS_STORAGE_KEY = 'apexprep_test_history';
+const ANALYTICS_STORAGE_KEY = 'apexprep_test_history_v2';
+const LEGACY_ANALYTICS_STORAGE_KEY = 'apexprep_test_history';
 
 export function clearTestHistory() {
   try {
@@ -12,6 +13,9 @@ export function clearTestHistory() {
 
 
 export function getTestHistory() {
+  // The previous analytics store was global to the browser. Never reuse it
+  // for a new account; remove it once the new store is initialized.
+  try { localStorage.removeItem(LEGACY_ANALYTICS_STORAGE_KEY); } catch {}
   try {
     const data = localStorage.getItem(ANALYTICS_STORAGE_KEY);
     return data ? JSON.parse(data) : [];
