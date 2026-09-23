@@ -1,5 +1,16 @@
 const ANALYTICS_STORAGE_KEY = 'apexprep_test_history';
 
+export function clearTestHistory() {
+  try {
+    localStorage.removeItem(ANALYTICS_STORAGE_KEY);
+    return true;
+  } catch (err) {
+    console.error('Failed to clear test history:', err);
+    return false;
+  }
+}
+
+
 export function getTestHistory() {
   try {
     const data = localStorage.getItem(ANALYTICS_STORAGE_KEY);
