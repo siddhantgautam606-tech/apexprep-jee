@@ -118,14 +118,8 @@ export default function QuestionPool({ currentUser, feedExam }) {
         </span>
       </div>
 
-      {/* Question layout: 10 questions down each column, then continue in the next column. */}
-      <div
-        className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start"
-        style={{
-          gridAutoFlow: 'column',
-          gridTemplateRows: 'repeat(10, auto)'
-        }}
-      >
+      {/* Questions list */}
+      <div className="flex flex-col gap-4">
         {questions.length === 0 ? (
           <div className="p-12 text-center text-slate-500 bg-slate-900/50 border border-slate-800 rounded-2xl text-sm">
             No questions match your current search criteria.
