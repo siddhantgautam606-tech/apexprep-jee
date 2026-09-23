@@ -70,6 +70,27 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
     return () => clearInterval(timer);
   }, [isSubmitted, timeRemaining]);
 
+  const subjectSections = useMemo(() => {
+    const sections = [];
+    const seen = new Set();
+    questions.forEach((q, idx) => {
+      const subject = q.subject || q.subjectId || test?.subject || (exam === 'NEET' ? 'Biology' : 'Physics');
+      if (!seen.has(subject)) {
+        seen.add(subject);
+        sections.push({ subject, firstIndex: idx });
+      }
+    });
+    return sections;
+  }, [questions, test, exam]);
+
+  const activeSubject = subjectSections.find((section) => section.subject === (questions[currentIdx]?.subject || questions[currentIdx]?.subjectId))?.subject
+    || subjectSections[0]?.subject;
+
+  const jumpToSubject = (subject) => {
+    const target = subjectSections.find((section) => section.subject === subject);
+    if (target) setCurrentIdx(target.firstIndex);
+  };
+
   const currentQ = questions[currentIdx];
 
   const handleSelectOption = (optIdx) => {
@@ -277,6 +298,27 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
           </button>
         </div>
       </div>
+
+      {/* Subject Sections */}
+      {subjectSections.length > 1 && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-lg">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            {subjectSections.map((section) => {
+              const isActive = activeSubject === section.subject;
+              return (
+                <button
+                  key={section.subject}
+                  type="button"
+                  onClick={() => jumpToSubject(section.subject)}
+                  className={`flex-1 min-w-[130px] px-4 py-2.5 rounded-xl border text-xs font-bold transition ${isActive ? 'bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-600/20' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'}`}
+                >
+                  {section.subject}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Main Grid: Question Panel & Palette */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
