@@ -147,7 +147,7 @@ export default function App() {
           <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-600/30"><Flame className="w-9 h-9 text-white" /></div>
           <h2 className="text-xl font-black text-white">Get PrepXAI on your phone</h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">Download the Android app for a faster, app-like study experience.</p>
-          <a href="https://siddhantgautam606-tech.github.io/apexprep-jee/PrepXAI.apk" className="mt-5 w-full inline-flex items-center justify-center rounded-2xl bg-indigo-600 hover:bg-indigo-500 px-5 py-3.5 text-sm font-bold text-white transition shadow-lg shadow-indigo-600/20">Download Android App</a>
+          <a href="/PrepXAI.apk" className="mt-5 w-full inline-flex items-center justify-center rounded-2xl bg-indigo-600 hover:bg-indigo-500 px-5 py-3.5 text-sm font-bold text-white transition shadow-lg shadow-indigo-600/20">Download Android App</a>
           <button onClick={() => { localStorage.setItem('prepxai_app_download_dismissed','1'); setShowAppDownload(false); }} className="mt-3 w-full py-2 text-xs font-semibold text-slate-400 hover:text-white transition">Not now</button>
         </div>
       </div>
