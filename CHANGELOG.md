@@ -25,6 +25,10 @@
 
 ## 📜 Chronological Dev Diary
 
+### Session 5: Android APK Refresh
+- Rebuilt the Android package from the current `main` web app source so the website download points to the latest PrepXAI UI/CBT build rather than the older bundled APK.
+
+
 ### Session 1: Project Stabilization & Schema Fixes
 - Resolved Supabase 400 Bad Request errors by creating and aligning relational database tables.
 - Stabilized database connection and authentication listeners.
