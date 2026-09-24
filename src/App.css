@@ -113,3 +113,194 @@
     padding: 8px !important;
   }
 }
+
+/* PrepXAI mobile-first layout polish */
+@media (max-width: 767px) {
+  header .max-w-7xl {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .app-brand {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .app-brand-icon {
+    width: 38px !important;
+    height: 38px !important;
+    flex-shrink: 0;
+  }
+
+  .app-brand-title {
+    font-size: 15px !important;
+  }
+
+  .app-brand-subtitle {
+    display: none !important;
+  }
+
+  .header-actions {
+    flex-shrink: 0;
+    gap: 6px !important;
+  }
+
+  .header-actions .connections-button,
+  .header-actions .profile-button {
+    padding: 7px !important;
+    min-height: 40px;
+    min-width: 40px;
+    justify-content: center;
+  }
+
+  .header-actions .connections-button .connections-label,
+  .header-actions .profile-button .profile-details {
+    display: none !important;
+  }
+
+  .header-actions .profile-button > div:first-child {
+    width: 27px !important;
+    height: 27px !important;
+  }
+
+  .mobile-nav {
+    padding: 6px 8px !important;
+    gap: 5px !important;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .mobile-nav button {
+    min-height: 38px;
+    padding: 8px 11px !important;
+  }
+
+  .app-main {
+    padding: 10px !important;
+  }
+
+  /* Native Android/WebView: the CBT must be a normal scrolling document on phones. */
+  .cbt-runner {
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 4px 0 18px !important;
+  }
+
+  .cbt-status-bar {
+    min-height: 58px;
+    padding: 9px !important;
+    gap: 8px;
+  }
+
+  .cbt-status-bar > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .cbt-status-bar > div:last-child {
+    flex-shrink: 0;
+  }
+
+  .cbt-status-bar .cbt-submit-button {
+    padding: 9px 10px !important;
+    min-height: 40px;
+  }
+
+  .cbt-status-bar .cbt-submit-button span {
+    display: none;
+  }
+
+  .cbt-subject-bar {
+    overflow: hidden;
+  }
+
+  .cbt-subject-bar > div {
+    overflow-x: auto !important;
+    scrollbar-width: none;
+  }
+
+  .cbt-subject-bar > div::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cbt-main-grid {
+    display: block !important;
+    overflow: visible !important;
+    min-height: 0 !important;
+  }
+
+  .cbt-question-panel {
+    width: 100% !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+    padding: 13px !important;
+  }
+
+  .cbt-question-panel .cbt-action-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px !important;
+  }
+
+  .cbt-question-panel .cbt-action-bar > div {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .cbt-question-panel .cbt-action-bar > div button {
+    flex: 1;
+  }
+
+  .cbt-palette {
+    width: 100% !important;
+    min-height: 220px !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin-top: 12px;
+  }
+
+  .cbt-palette > div:first-of-type {
+    max-height: 320px;
+    overflow-y: auto !important;
+  }
+
+  /* Never let the Android viewport clip the question/options. */
+  .cbt-runner button {
+    touch-action: manipulation;
+  }
+
+  .cbt-runner .text-sm {
+    line-height: 1.7;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-main {
+    padding: 8px !important;
+  }
+
+  .cbt-runner {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .cbt-status-bar h2 {
+    max-width: 150px;
+  }
+
+  .cbt-question-panel {
+    border-radius: 16px !important;
+    padding: 11px !important;
+  }
+
+  .cbt-question-panel button {
+    padding: 12px !important;
+  }
+}
