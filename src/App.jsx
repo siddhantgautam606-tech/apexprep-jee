@@ -191,16 +191,16 @@ export default function App() {
   return (
     <div className={`min-h-screen text-slate-100 flex flex-col font-sans transition-colors duration-300 ${isNeetInterface ? 'bg-slate-950 selection:bg-emerald-500 selection:text-white' : 'bg-slate-950 selection:bg-indigo-500 selection:text-white'}`}>
       <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between app-header-row">
+          <div className="flex items-center gap-3 app-brand">
             <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${examTheme.gradient} flex items-center justify-center shadow-lg shadow-indigo-500/20`}>
               <Flame className="w-6 h-6 text-white" />
             </div>
             <div>
-              <span className="font-black text-lg tracking-tight text-white flex items-center gap-1.5">
+              <span className="font-black text-lg tracking-tight text-white flex items-center gap-1.5 app-brand-title">
                 PrepXAI <span className={`text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border ${examTheme.soft}`}>{feedExam}</span>
               </span>
-              <p className="text-[10px] text-slate-400 font-medium">Peer Study & CBT Simulator</p>
+              <p className="text-[10px] text-slate-400 font-medium app-brand-subtitle">Peer Study & CBT Simulator</p>
             </div>
           </div>
 
@@ -235,7 +235,7 @@ export default function App() {
             </div>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 header-actions">
             <a href="https://cdn.jsdelivr.net/gh/siddhantgautam606-tech/apexprep-jee@main/public/PrepXAI.apk" download="PrepXAI.apk" className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/10 text-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs font-bold" title="Download PrepXAI Android app">
               <Download className="w-4 h-4" /> Download App
             </a>
@@ -243,14 +243,14 @@ export default function App() {
               <>
                 <button onClick={() => setActiveTab('connections')} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-slate-700/80 bg-slate-900/80 text-slate-200 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white transition shadow-sm" title="Open Connections">
                   <Users className="w-4 h-4" />
-                  <span className="text-xs font-bold">Connections</span>
+                  <span className="text-xs font-bold connections-label">Connections</span>
                 </button>
                 <div className="relative">
                   <button onClick={() => setShowProfile((value) => !value)} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/15 text-white hover:bg-indigo-600 hover:border-indigo-500 transition shadow-sm" title="Open Profile">
                     <div className="w-7 h-7 rounded-full bg-indigo-500/25 border border-indigo-400/30 flex items-center justify-center text-indigo-300 font-bold text-xs">
                       {(currentUser.username || 'A')[0].toUpperCase()}
                     </div>
-                    <div className="text-left">
+                    <div className="text-left profile-details">
                       <span className="block text-xs font-bold">{currentUser.username || 'Aspirant'}</span>
                       <span className="block text-[10px] text-indigo-300">{feedExam} • Profile</span>
                     </div>
@@ -269,7 +269,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex md:hidden border-t border-slate-800/80 px-2 py-1.5 overflow-x-auto gap-1">
+        <div className="mobile-nav flex md:hidden border-t border-slate-800/80 px-2 py-1.5 overflow-x-auto gap-1">
           {[
             { id: 'cbt', label: 'CBT', icon: BookOpen },
             { id: 'circles', label: 'Circles', icon: Users },
@@ -290,7 +290,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+      <main className="app-main flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
         {activeTab === 'cbt' && <TestOrganizer currentUser={currentUser} feedExam={feedExam} />}
         {activeTab === 'circles' && <CircleList currentUser={currentUser} feedExam={feedExam} onSelectTestToTake={handleLaunchCircleTest} />}
         {activeTab === 'pool' && <QuestionPool currentUser={currentUser} feedExam={feedExam} onStartPractice={handleLaunchPYQPractice} />}
