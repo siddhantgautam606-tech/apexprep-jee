@@ -1,4 +1,4 @@
-name: Build PrepXAI Play Store AAB
+name: Build PrepXAI Android APK
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  android-aab:
+  android-apk:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -42,77 +42,13 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build unsigned release AAB
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
+      - name: Build debug APK
         working-directory: android
-        run: ./gradlew bundleRelease
+        run: ./gradlew assembleDebug
 
-      - name: Decode release keystore
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
-        env:
-          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          echo "$KEYSTORE_B64" | base64 --decode > android/prepxai-release.jks
-
-      - name: Create signing properties
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          cat > android/keystore.properties <<EOF
-          storeFile=prepxai-release.jks
-          storePassword=$KEYSTORE_PASSWORD
-          keyAlias=$KEY_ALIAS
-          keyPassword=$KEY_PASSWORD
-          EOF
-
-      - name: Configure release signing
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path("android/app/build.gradle")
-          s = p.read_text()
-          signing = '''
-          def keystorePropertiesFile = rootProject.file("keystore.properties")
-          def keystoreProperties = new Properties()
-          if (keystorePropertiesFile.exists()) {
-              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-          }
-          '''
-          if "keystorePropertiesFile" not in s:
-              s = signing + "\n" + s
-          if "signingConfigs {" not in s:
-              s = s.replace("android {", """android {
-                  signingConfigs {
-                      release {
-                          storeFile file(keystoreProperties['storeFile'])
-                          storePassword keystoreProperties['storePassword']
-                          keyAlias keystoreProperties['keyAlias']
-                          keyPassword keystoreProperties['keyPassword']
-                      }
-                  }""", 1)
-          s = s.replace("buildTypes {", """buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                  }""", 1)
-          p.write_text(s)
-          PY
-
-      - name: Build signed release AAB
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
-        working-directory: android
-        run: ./gradlew bundleRelease
-
-      - name: Remove signing material
-        if: always()
-        run: rm -f android/prepxai-release.jks android/keystore.properties
-
-      - name: Upload Play Store AAB
+      - name: Upload PrepXAI APK
         uses: actions/upload-artifact@v4
         with:
-          name: PrepXAI-Play-Store-AAB
-          path: android/app/build/outputs/bundle/release/app-release.aab
+          name: PrepXAI-Android
+          path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
