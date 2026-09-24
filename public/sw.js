@@ -1,5 +1,5 @@
-const CACHE_NAME = 'prepxai-shell-v4';
-const APP_SHELL = ['/manifest.json', '/icon-192.svg', '/icon-512.svg'];
+const CACHE_NAME = 'prepxai-shell-v5';
+const APP_SHELL = ['/manifest.json', '/icon-192.jpg', '/icon-512.jpg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
