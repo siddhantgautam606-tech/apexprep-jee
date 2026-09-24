@@ -147,7 +147,7 @@ export default function App() {
           <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-600/30"><Flame className="w-9 h-9 text-white" /></div>
           <h2 className="text-xl font-black text-white">Get PrepXAI on your phone</h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">Download the Android app for a faster, app-like study experience.</p>
-          <a href="/PrepXAI.apk" className="mt-5 w-full inline-flex items-center justify-center rounded-2xl bg-indigo-600 hover:bg-indigo-500 px-5 py-3.5 text-sm font-bold text-white transition shadow-lg shadow-indigo-600/20">Download Android App</a>
+          <a href="https://cdn.jsdelivr.net/gh/siddhantgautam606-tech/apexprep-jee@main/public/PrepXAI.apk" className="mt-5 w-full inline-flex items-center justify-center rounded-2xl bg-indigo-600 hover:bg-indigo-500 px-5 py-3.5 text-sm font-bold text-white transition shadow-lg shadow-indigo-600/20">Download Android App</a>
           <button onClick={() => { localStorage.setItem('prepxai_app_download_dismissed','1'); setShowAppDownload(false); }} className="mt-3 w-full py-2 text-xs font-semibold text-slate-400 hover:text-white transition">Not now</button>
         </div>
       </div>
@@ -236,7 +236,7 @@ export default function App() {
           )}
 
           <div className="flex items-center gap-2">
-            <a href="/PrepXAI.apk" download="PrepXAI.apk" className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/10 text-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs font-bold" title="Download PrepXAI Android app">
+            <a href="https://cdn.jsdelivr.net/gh/siddhantgautam606-tech/apexprep-jee@main/public/PrepXAI.apk" download="PrepXAI.apk" className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/10 text-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs font-bold" title="Download PrepXAI Android app">
               <Download className="w-4 h-4" /> Download App
             </a>
             {currentUser ? (
