@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pages: write
+      id-token: write
 
     steps:
       - name: Checkout
@@ -48,9 +50,26 @@ jobs:
         working-directory: android
         run: ./gradlew assembleDebug
 
-      - name: Upload PrepXAI APK
+      - name: Upload PrepXAI APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: PrepXAI-Android
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      - name: Prepare APK for public download
+        run: |
+          mkdir -p pages
+          cp android/app/build/outputs/apk/debug/app-debug.apk pages/PrepXAI.apk
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: pages
+
+      - name: Deploy APK download
+        id: deployment
+        uses: actions/deploy-pages@v4
