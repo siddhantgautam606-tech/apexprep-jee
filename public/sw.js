@@ -1,5 +1,5 @@
-const CACHE_NAME = 'apexprep-shell-v3';
-const APP_SHELL = ['/manifest.json', '/icon-192.png', '/icon-512.png'];
+const CACHE_NAME = 'prepxai-shell-v4';
+const APP_SHELL = ['/manifest.json', '/icon-192.svg', '/icon-512.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
