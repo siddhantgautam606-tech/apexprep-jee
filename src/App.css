@@ -1,5 +1,115 @@
-/* Component-level overrides if needed; Tailwind is handled in index.css */
+/* Component-level overrides; Tailwind handles the main design system. */
 #root {
   width: 100%;
   min-height: 100vh;
+}
+
+@media (max-width: 767px) {
+  html,
+  body,
+  #root {
+    min-height: 100dvh;
+    height: auto;
+  }
+
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  /* Give the mobile header more breathing room and prevent the top row from feeling cramped. */
+  header .max-w-7xl {
+    min-height: 60px !important;
+    height: auto !important;
+    padding: 8px 12px !important;
+    gap: 8px !important;
+  }
+
+  header .max-w-7xl > .flex.items-center.gap-3 {
+    min-width: 0;
+  }
+
+  header .max-w-7xl > .flex.items-center.gap-3 > div:last-child p {
+    display: none;
+  }
+
+  header .max-w-7xl > .flex.items-center.gap-3 > div:last-child span {
+    font-size: 15px;
+  }
+
+  /* The mobile navigation remains horizontally swipeable rather than squeezing five tabs together. */
+  header .flex.md\\:hidden {
+    padding: 7px 8px !important;
+    scrollbar-width: none;
+  }
+
+  header .flex.md\\:hidden::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Compact the main mobile content without making it tiny. */
+  main {
+    padding: 12px !important;
+  }
+
+  /* IMPORTANT for Android/Capacitor:
+     the CBT runner must not inherit the desktop fixed-height/overflow-hidden shell.
+     On phones the question area becomes a normal vertical page, so all options and
+     navigation remain reachable by scrolling. */
+  [class~="h-[100dvh]"] {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+    padding: 8px 0 !important;
+  }
+
+  [class~="h-[100dvh]"] > [class*="grid-cols-1"] {
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  [class~="h-[100dvh]"] > [class*="grid-cols-1"] > div {
+    width: 100% !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    margin-bottom: 12px;
+  }
+
+  /* Keep the question controls comfortable for touch. */
+  [class~="h-[100dvh]"] button {
+    min-height: 44px;
+  }
+
+  [class~="h-[100dvh]"] [class*="text-sm"] {
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  /* Palette sits below the question on phones instead of fighting for screen width. */
+  [class~="h-[100dvh]"] [class*="lg:col-span-1"] {
+    max-height: none !important;
+  }
+
+  /* Make the CBT setup card breathe on small screens. */
+  form {
+    width: 100%;
+  }
+
+  /* Prevent long chapter names/buttons from making the setup screen feel cramped. */
+  select,
+  button {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  header .max-w-7xl {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  main {
+    padding: 8px !important;
+  }
 }
