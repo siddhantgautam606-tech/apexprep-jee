@@ -1,25 +1,28 @@
 {
-  "name": "ApexPrep — JEE & NEET Preparation",
-  "short_name": "ApexPrep",
+  "name": "PrepXAI — JEE & NEET Preparation",
+  "short_name": "PrepXAI",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#020617",
-  "theme_color": "#4f46e5",
+  "background_color": "#07142f",
+  "theme_color": "#4d58ff",
   "description": "A focused study, practice, CBT, analytics and peer-learning platform for JEE and NEET aspirants.",
   "lang": "en-IN",
-  "categories": ["education", "productivity"],
+  "categories": [
+    "education",
+    "productivity"
+  ],
   "icons": [
     {
-      "src": "/icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192",
+      "src": "/icon-192.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512.png",
-      "type": "image/png",
+      "src": "/icon-512.svg",
+      "type": "image/svg+xml",
       "sizes": "512x512",
       "purpose": "any maskable"
     }
