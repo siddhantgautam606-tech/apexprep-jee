@@ -9,9 +9,7 @@ jobs:
   android-apk:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      pages: write
-      id-token: write
+      contents: write
 
     steps:
       - name: Checkout
@@ -57,19 +55,15 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-      - name: Prepare APK for public download
+      - name: Publish APK to website
         run: |
-          mkdir -p pages
-          cp android/app/build/outputs/apk/debug/app-debug.apk pages/PrepXAI.apk
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: pages
-
-      - name: Deploy APK download
-        id: deployment
-        uses: actions/deploy-pages@v4
+          cp android/app/build/outputs/apk/debug/app-debug.apk public/PrepXAI.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/PrepXAI.apk
+          if git diff --cached --quiet; then
+            echo "APK unchanged"
+          else
+            git commit -m "Publish latest PrepXAI Android APK"
+            git push origin HEAD:main
+          fi
