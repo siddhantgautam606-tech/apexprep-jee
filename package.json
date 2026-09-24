@@ -1,26 +1,21 @@
 {
-  "name": "prepxai",
+  "name": "jee-prep-app",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "done": "node record.js",
-    "cap:sync": "npm run build && npx cap sync android",
-    "cap:open:android": "npx cap open android"
+    "done": "node record.js"
   },
   "dependencies": {
-    "@capacitor/android": "^8.0.0",
-    "@capacitor/core": "^8.0.0",
     "@supabase/supabase-js": "^2.116.0",
     "lucide-react": "^1.47.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.0.0",
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^19.2.18",
