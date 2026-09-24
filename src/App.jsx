@@ -193,7 +193,7 @@ export default function App() {
       <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between app-header-row">
           <div className="flex items-center gap-3 app-brand">
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${examTheme.gradient} flex items-center justify-center shadow-lg shadow-indigo-500/20`}>
+            <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${examTheme.gradient} flex items-center justify-center shadow-lg shadow-indigo-500/20 app-brand-icon`}>
               <Flame className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -241,12 +241,12 @@ export default function App() {
             </a>
             {currentUser ? (
               <>
-                <button onClick={() => setActiveTab('connections')} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-slate-700/80 bg-slate-900/80 text-slate-200 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white transition shadow-sm" title="Open Connections">
+                <button onClick={() => setActiveTab('connections')} className="connections-button flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-slate-700/80 bg-slate-900/80 text-slate-200 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white transition shadow-sm" title="Open Connections">
                   <Users className="w-4 h-4" />
                   <span className="text-xs font-bold connections-label">Connections</span>
                 </button>
                 <div className="relative">
-                  <button onClick={() => setShowProfile((value) => !value)} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/15 text-white hover:bg-indigo-600 hover:border-indigo-500 transition shadow-sm" title="Open Profile">
+                  <button onClick={() => setShowProfile((value) => !value)} className="profile-button flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/15 text-white hover:bg-indigo-600 hover:border-indigo-500 transition shadow-sm" title="Open Profile">
                     <div className="w-7 h-7 rounded-full bg-indigo-500/25 border border-indigo-400/30 flex items-center justify-center text-indigo-300 font-bold text-xs">
                       {(currentUser.username || 'A')[0].toUpperCase()}
                     </div>
