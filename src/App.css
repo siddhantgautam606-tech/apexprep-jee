@@ -304,3 +304,224 @@
     padding: 12px !important;
   }
 }
+
+
+/* CBT mobile-first hardening: one document scroll, compact controls, no clipped exam window. */
+.cbt-logo-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  overflow: hidden;
+  flex: 0 0 38px;
+  background: #0f172a;
+  border: 1px solid rgba(99,102,241,.35);
+  box-shadow: 0 5px 18px rgba(15,23,42,.35);
+}
+.cbt-logo {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+@media (max-width: 767px) {
+  html, body, #root {
+    width: 100%;
+    min-width: 0;
+  }
+
+  body {
+    overflow-x: hidden !important;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .cbt-runner {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+    padding: 6px 8px 24px !important;
+    gap: 8px !important;
+  }
+
+  .cbt-status-bar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px !important;
+    border-radius: 14px !important;
+    gap: 8px !important;
+    align-items: center !important;
+  }
+
+  .cbt-status-left {
+    min-width: 0 !important;
+    flex: 1 1 auto;
+    gap: 8px !important;
+  }
+
+  .cbt-logo-wrap {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    border-radius: 9px;
+  }
+
+  .cbt-status-actions {
+    gap: 6px !important;
+  }
+
+  .cbt-status-actions > div {
+    padding: 7px 9px !important;
+    border-radius: 10px !important;
+  }
+
+  .cbt-status-actions .cbt-submit-button,
+  .cbt-status-actions > button {
+    min-height: 38px;
+    padding: 8px 9px !important;
+  }
+
+  .cbt-submit-label {
+    display: none;
+  }
+
+  .cbt-subject-bar {
+    position: sticky;
+    top: 58px;
+    z-index: 25;
+    border-radius: 12px !important;
+    padding: 6px !important;
+  }
+
+  .cbt-subject-bar > div {
+    display: flex !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .cbt-subject-bar > div::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cbt-subject-bar button {
+    flex: 0 0 auto !important;
+    min-width: 108px !important;
+    min-height: 40px;
+    padding: 9px 12px !important;
+  }
+
+  .cbt-main-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    gap: 8px !important;
+    overflow: visible !important;
+  }
+
+  .cbt-question-panel {
+    order: 1;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+    padding: 12px !important;
+    border-radius: 15px !important;
+  }
+
+  .cbt-question-panel .text-sm {
+    font-size: 14px !important;
+    line-height: 1.7 !important;
+    overflow-wrap: anywhere;
+  }
+
+  .cbt-question-panel button {
+    min-height: 48px;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .cbt-action-bar {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .cbt-action-bar > button {
+    min-height: 44px;
+  }
+
+  .cbt-action-bar > div {
+    display: flex;
+    flex: 1 1 100%;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .cbt-action-bar > div button {
+    flex: 1 1 0;
+    min-height: 44px;
+  }
+
+  .cbt-palette {
+    order: 2;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+    padding: 12px !important;
+    border-radius: 15px !important;
+  }
+
+  .cbt-palette > div:first-of-type {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    max-height: 280px !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    padding-right: 2px;
+  }
+
+  .cbt-palette button {
+    min-height: 42px;
+  }
+}
+
+@media (max-width: 380px) {
+  .cbt-runner {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+
+  .cbt-status-bar {
+    padding: 7px !important;
+  }
+
+  .cbt-status-bar h2 {
+    font-size: 12px !important;
+    max-width: 125px;
+  }
+
+  .cbt-status-bar .text-\[10px\] {
+    font-size: 9px !important;
+  }
+
+  .cbt-logo-wrap {
+    width: 31px;
+    height: 31px;
+    flex-basis: 31px;
+  }
+
+  .cbt-question-panel {
+    padding: 10px !important;
+  }
+}
