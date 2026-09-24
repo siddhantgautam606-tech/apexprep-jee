@@ -35,6 +35,16 @@ export default function App() {
   const [activeCircleTest, setActiveCircleTest] = useState(null);
   const [activePYQTest, setActivePYQTest] = useState(null);
   const [activePYQSession, setActivePYQSession] = useState(null);
+  const [showAppDownload, setShowAppDownload] = useState(false);
+
+  useEffect(() => {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const dismissed = localStorage.getItem('prepxai_app_download_dismissed') === '1';
+    if (isMobile && !dismissed) {
+      const timer = setTimeout(() => setShowAppDownload(true), 1200);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -129,6 +139,20 @@ export default function App() {
       questions
     });
   };
+
+  const appDownloadPopup = showAppDownload ? (
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md rounded-3xl border border-indigo-500/30 bg-slate-900 shadow-2xl shadow-indigo-950/50 overflow-hidden">
+        <div className="p-6 text-center">
+          <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-600/30"><Flame className="w-9 h-9 text-white" /></div>
+          <h2 className="text-xl font-black text-white">Get PrepXAI on your phone</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">Download the Android app for a faster, app-like study experience.</p>
+          <a href="/PrepXAI.apk" download className="mt-5 w-full inline-flex items-center justify-center rounded-2xl bg-indigo-600 hover:bg-indigo-500 px-5 py-3.5 text-sm font-bold text-white transition shadow-lg shadow-indigo-600/20">Download Android App</a>
+          <button onClick={() => { localStorage.setItem('prepxai_app_download_dismissed','1'); setShowAppDownload(false); }} className="mt-3 w-full py-2 text-xs font-semibold text-slate-400 hover:text-white transition">Not now</button>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   if (activeCircleTest) {
     return (
