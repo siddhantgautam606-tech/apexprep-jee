@@ -8,7 +8,8 @@ import {
   ChevronRight, 
   Send, 
   BookOpen, 
-  X 
+  X, 
+  Flame
 } from 'lucide-react';
 import { computeExamStats } from '../../services/testEngineService';
 import { saveTestAttempt } from '../../services/analyticsService';
@@ -261,7 +262,10 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
     <div className="cbt-runner w-full max-w-7xl mx-auto py-3 px-4 flex flex-col gap-3">
       {/* Top Status Bar */}
       <div className="cbt-status-bar shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-3">
+        <div className="cbt-status-left flex items-center gap-3 min-w-0">
+          <div className="cbt-logo-wrap shrink-0" aria-label="PrepXAI">
+            <img src="/icon-192.png" alt="PrepXAI logo" className="cbt-logo" />
+          </div>
           <button
             onClick={() => {
               if (window.confirm('Are you sure you want to exit the exam? Your progress will be lost.')) {
@@ -273,13 +277,16 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
           >
             <X className="w-4 h-4" />
           </button>
-          <div>
-            <h2 className="text-sm font-bold text-white">{test?.title || 'JEE CBT Examination'}</h2>
-            <span className="text-[10px] text-indigo-400 font-semibold">{test?.subject || 'Practice'} • {test?.chapter || 'All'}</span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="text-sm font-bold text-white truncate">{test?.title || 'JEE CBT Examination'}</h2>
+              <span className="cbt-brand-name hidden sm:inline text-[10px] font-black tracking-wide text-slate-300">PrepXAI</span>
+            </div>
+            <span className="text-[10px] text-indigo-400 font-semibold truncate block">{test?.subject || 'Practice'} • {test?.chapter || 'All'}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="cbt-status-actions flex items-center gap-3 shrink-0">
           <div className="flex items-center gap-2 bg-slate-950 px-3.5 py-1.5 rounded-xl border border-slate-800">
             <Clock className="w-4 h-4 text-amber-400" />
             <span className="font-mono text-xs font-bold text-white tracking-wider">
@@ -294,7 +301,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
             }}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20"
           >
-            <Send className="w-3.5 h-3.5" /> Submit Exam
+            <Send className="w-3.5 h-3.5" /><span className="cbt-submit-label">Submit Exam</span>
           </button>
         </div>
       </div>
@@ -323,7 +330,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
           <div>
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
               <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">
-                Question {currentIdx + 1} of {questions.length}
+                Q {currentIdx + 1} / {questions.length}
               </span>
               <div className="flex items-center gap-2 text-[11px] text-slate-400">
                 <span>Marking: <strong className="text-emerald-400">+4</strong> / <strong className="text-rose-400">-1</strong></span>
@@ -361,7 +368,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
           </div>
 
           {/* Bottom Action Buttons */}
-          <div className="flex items-center justify-between border-t border-slate-800 pt-4 mt-6">
+          <div className="cbt-action-bar flex items-center justify-between border-t border-slate-800 pt-4 mt-6">
             <button
               onClick={handleToggleMarkReview}
               className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition ${
