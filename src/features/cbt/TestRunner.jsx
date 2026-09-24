@@ -8,8 +8,7 @@ import {
   ChevronRight, 
   Send, 
   BookOpen, 
-  X, 
-  Flame
+  X
 } from 'lucide-react';
 import { computeExamStats } from '../../services/testEngineService';
 import { saveTestAttempt } from '../../services/analyticsService';
