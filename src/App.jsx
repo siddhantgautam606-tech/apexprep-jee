@@ -6,7 +6,8 @@ import {
   BarChart2, 
   MessageSquare, 
   LogIn, 
-  Flame
+  Flame,
+  Download
 } from 'lucide-react';
 
 import CircleList from './features/circles/CircleList';
@@ -39,8 +40,7 @@ export default function App() {
 
   useEffect(() => {
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const dismissed = localStorage.getItem('prepxai_app_download_dismissed') === '1';
-    if (isMobile && !dismissed) {
+    if (isMobile) {
       const timer = setTimeout(() => setShowAppDownload(true), 1200);
       return () => clearTimeout(timer);
     }
@@ -236,6 +236,9 @@ export default function App() {
           )}
 
           <div className="flex items-center gap-2">
+            <a href="/PrepXAI.apk" download="PrepXAI.apk" className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/10 text-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs font-bold" title="Download PrepXAI Android app">
+              <Download className="w-4 h-4" /> Download App
+            </a>
             {currentUser ? (
               <>
                 <button onClick={() => setActiveTab('connections')} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-slate-700/80 bg-slate-900/80 text-slate-200 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white transition shadow-sm" title="Open Connections">
@@ -300,6 +303,8 @@ export default function App() {
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)}
           onAuthSuccess={(u) => { setCurrentUser(u); setShowAuthModal(false); }} />
       )}
+
+      {appDownloadPopup}
     </div>
   );
 }
