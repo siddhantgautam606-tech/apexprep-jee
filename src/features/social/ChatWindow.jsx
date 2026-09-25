@@ -109,7 +109,7 @@ export default function ChatWindow({ currentUser }) {
   });
 
   return (
-    <div className="w-full h-[calc(100vh-140px)] max-h-[920px] bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
+    <div className="chat-window w-full h-[calc(100vh-140px)] max-h-[920px] bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
       <div
         className={`w-full md:w-80 lg:w-96 flex flex-col border-r border-slate-800/80 bg-slate-900/60 shrink-0 ${
           activeFriend ? 'hidden md:flex' : 'flex'
@@ -221,7 +221,7 @@ export default function ChatWindow({ currentUser }) {
               </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-3">
+            <div className="chat-messages flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-3">
               {loadingMessages ? (
                 <div className="m-auto text-slate-500 text-xs">Loading message history...</div>
               ) : messages.length === 0 ? (
