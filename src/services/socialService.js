@@ -15,30 +15,121 @@ export async function searchUsers(searchTerm, currentUserId) {
   return data || [];
 }
 
-// 2. Send a friend request
+// 2. Get the friendship relationship for a set of users.
+// This lets the UI keep a searched user visible after a request is declined.
+export async function getFriendshipStatuses(currentUserId, userIds = []) {
+  if (!currentUserId || !userIds.length) return {};
+
+  const { data, error } = await supabase
+    .from('friendships')
+    .select('id, sender_id, receiver_id, status, created_at')
+    .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
+    .in('status', ['pending', 'accepted', 'declined'])
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  const requestedIds = new Set(userIds);
+  const map = {};
+
+  for (const row of data || []) {
+    const otherId = row.sender_id === currentUserId ? row.receiver_id : row.sender_id;
+    if (requestedIds.has(otherId) && !map[otherId]) {
+      map[otherId] = {
+        id: row.id,
+        status: row.status,
+        direction: row.sender_id === currentUserId ? 'outgoing' : 'incoming',
+      };
+    }
+  }
+
+  return map;
+}
+
+// 3. Send a friend request.
+// Reuses a previous declined outgoing request instead of creating duplicates.
 export async function sendFriendRequest(senderId, receiverId) {
+  if (!senderId || !receiverId || senderId === receiverId) {
+    throw new Error('Invalid friend request');
+  }
+
+  const { data: existing, error: lookupError } = await supabase
+    .from('friendships')
+    .select('id, sender_id, receiver_id, status, created_at')
+    .or(
+      `and(sender_id.eq.${senderId},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${senderId})`
+    )
+    .order('created_at', { ascending: false });
+
+  if (lookupError) throw lookupError;
+
+  const sameDirection = (existing || []).find(
+    (row) => row.sender_id === senderId && row.receiver_id === receiverId
+  );
+  const reverseDirection = (existing || []).find(
+    (row) => row.sender_id === receiverId && row.receiver_id === senderId
+  );
+
+  if (sameDirection?.status === 'pending') {
+    return { ...sameDirection, action: 'pending' };
+  }
+
+  if (sameDirection?.status === 'accepted') {
+    return { ...sameDirection, action: 'accepted' };
+  }
+
+  if (reverseDirection?.status === 'pending') {
+    return { ...reverseDirection, action: 'incoming' };
+  }
+
+  if (reverseDirection?.status === 'accepted') {
+    return { ...reverseDirection, action: 'accepted' };
+  }
+
+  if (sameDirection?.status === 'declined') {
+    const { data, error } = await supabase
+      .from('friendships')
+      .update({ status: 'pending', created_at: new Date().toISOString() })
+      .eq('id', sameDirection.id)
+      .eq('sender_id', senderId)
+      .eq('receiver_id', receiverId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { ...data, action: 'pending' };
+  }
+
+  // If the old relationship was declined in the opposite direction,
+  // start a fresh request in the direction chosen by the current user.
   const { data, error } = await supabase
     .from('friendships')
     .insert([{ sender_id: senderId, receiver_id: receiverId, status: 'pending' }])
-    .select();
+    .select()
+    .single();
 
   if (error) throw error;
-  return data[0];
+  return { ...data, action: 'pending' };
 }
 
-// 3. Respond to friend request ('accepted' or 'declined')
+// 4. Respond to a friend request ('accepted' or 'declined')
 export async function respondToFriendRequest(friendshipId, status) {
+  if (!['accepted', 'declined'].includes(status)) {
+    throw new Error('Invalid friendship response');
+  }
+
   const { data, error } = await supabase
     .from('friendships')
     .update({ status })
     .eq('id', friendshipId)
-    .select();
+    .select()
+    .single();
 
   if (error) throw error;
-  return data[0];
+  return data;
 }
 
-// 4. Get confirmed friends for a user
+// 5. Get confirmed friends for a user
 export async function getFriendsList(currentUserId) {
   const { data, error } = await supabase
     .from('friendships')
@@ -58,23 +149,50 @@ export async function getFriendsList(currentUserId) {
   });
 }
 
-// 5. Get pending incoming friend requests
+// 6. Get pending incoming friend requests
 export async function getPendingRequests(currentUserId) {
   const { data, error } = await supabase
     .from('friendships')
     .select(`
       id,
       status,
+      created_at,
       sender:profiles!friendships_sender_id_fkey(id, username, target_exam)
     `)
     .eq('receiver_id', currentUserId)
-    .eq('status', 'pending');
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
 
   if (error) throw error;
   return data || [];
 }
 
-// 6. Get direct message conversation between two users
+// 7. Realtime friendship updates for incoming requests and responses
+export function subscribeToFriendships(currentUserId, onChange) {
+  if (!currentUserId) return null;
+
+  return supabase
+    .channel(`friendships_${currentUserId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'friendships',
+      },
+      (payload) => {
+        const row = payload.new || payload.old;
+        if (!row) return;
+
+        if (row.sender_id === currentUserId || row.receiver_id === currentUserId) {
+          onChange?.(payload);
+        }
+      }
+    )
+    .subscribe();
+}
+
+// 8. Get direct message conversation between two users
 export async function getDirectMessages(userId1, userId2) {
   if (!userId1 || !userId2) return [];
 
@@ -93,7 +211,7 @@ export async function getDirectMessages(userId1, userId2) {
   return data || [];
 }
 
-// 7. Send a direct message
+// 9. Send a direct message
 export async function sendDirectMessage(senderId, receiverId, content) {
   if (!senderId || !receiverId || !content.trim()) return { error: 'Invalid message payload' };
 
@@ -139,7 +257,7 @@ export async function markMessageRead(messageId, userId) {
     .neq('status', 'read');
 }
 
-// 8. Subscribe to realtime messages between two users
+// 10. Subscribe to realtime messages between two users
 export function subscribeToDirectMessages(userId1, userId2, onNewMessage) {
   const channel = supabase
     .channel(`dm_${[userId1, userId2].sort().join('_')}`)
