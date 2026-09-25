@@ -394,7 +394,7 @@ export async function getCircleAnnouncements(circleId) {
     if (error) throw error;
     if (!data || data.length === 0) return [];
 
-    const authorIds = Array.from(new Set(data.map((a) => a.user_id).filter(Boolean)));
+    const authorIds = Array.from(new Set(data.map((a) => a.created_by).filter(Boolean)));
     let profileMap = {};
 
     if (authorIds.length > 0) {
@@ -410,7 +410,7 @@ export async function getCircleAnnouncements(circleId) {
 
     return data.map((a) => ({
       ...a,
-      author: { username: profileMap[a.user_id] || 'Member' }
+      author: { username: profileMap[a.created_by] || 'Member' }
     }));
   } catch (err) {
     console.error('Error fetching announcements:', err);
@@ -425,7 +425,7 @@ export async function postAnnouncement(circleId, message, userId) {
       .insert([
         {
           circle_id: circleId,
-          user_id: userId,
+          created_by: userId,
           message: message
         }
       ])
