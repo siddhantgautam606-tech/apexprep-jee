@@ -70,16 +70,30 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
     return () => clearInterval(timer);
   }, [isSubmitted, timeRemaining]);
 
-  // Subject sections are visual navigation only; they never block test loading.
+  // Derive subject sections from the actual question metadata. This keeps
+  // the visible subject tabs aligned with the questions loaded for each section.
   const subjectSections = useMemo(() => {
     if (test?.subject !== 'All' && test?.subject !== 'Full Syllabus') return [];
     const names = exam === 'NEET' ? ['Physics', 'Chemistry', 'Biology'] : ['Physics', 'Chemistry', 'Mathematics'];
-    const perSection = Math.ceil(questions.length / names.length);
-    return names.map((subject, i) => ({
-      subject,
-      firstIndex: Math.min(i * perSection, Math.max(0, questions.length - 1))
-    })).filter((section, i) => i === 0 || section.firstIndex > 0);
-  }, [questions.length, test?.subject, exam]);
+    const sections = [];
+    let lastSubject = null;
+    questions.forEach((question, index) => {
+      const subject = names.includes(question?.subject) ? question.subject : null;
+      if (subject && subject !== lastSubject) {
+        sections.push({ subject, firstIndex: index });
+        lastSubject = subject;
+      }
+    });
+    // Backward-compatible fallback for any legacy questions without subject metadata.
+    if (sections.length < 2) {
+      const perSection = Math.ceil(questions.length / names.length);
+      return names.map((subject, i) => ({
+        subject,
+        firstIndex: Math.min(i * perSection, Math.max(0, questions.length - 1))
+      })).filter((section, i) => i === 0 || section.firstIndex > 0);
+    }
+    return sections;
+  }, [questions, test?.subject, exam]);
 
   const activeSubject = subjectSections.find((section, i) => {
     const next = subjectSections[i + 1];
