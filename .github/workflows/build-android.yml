@@ -33,53 +33,25 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Apply PrepXAI Android branding and version
+      - name: Apply exact PrepXAI app icon and version
         run: |
-          mkdir -p android/app/src/main/res/drawable android/app/src/main/res/mipmap-anydpi-v26
+          mkdir -p android/app/src/main/res/drawable-nodpi
 
-          # Same Lucide Flame shape used by the PrepXAI website header.
-          cat > android/app/src/main/res/drawable/prepxai_flame_foreground.xml <<'XML'
-          <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="108dp"
-              android:height="108dp"
-              android:viewportWidth="24"
-              android:viewportHeight="24">
-            <path
-                android:fillColor="#FFFFFFFF"
-                android:pathData="M8.5,14.5A2.5,2.5 0,0 0,11,12c0,-1.38 -0.5,-2 -1,-3 -1.072,-1.143 -1.5,-2 -1.5,-3.5 0,0 -4.5,2.5 -4.5,7.5a6.5,6.5 0,0 0,13,0c0,-1.22 -0.25,-2.15 -0.55,-3A5.5,5.5 0,0 1,13,14.5a2.5,2.5 0,0 0,-5,0Z" />
-          </vector>
-          XML
-
-          cat > android/app/src/main/res/drawable/prepxai_icon_background.xml <<'XML'
-          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-            <solid android:color="#4F46E5" />
-          </shape>
-          XML
-
-          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'XML'
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-            <background android:drawable="@drawable/prepxai_icon_background" />
-            <foreground android:drawable="@drawable/prepxai_flame_foreground" />
-            <monochrome android:drawable="@drawable/prepxai_flame_foreground" />
-          </adaptive-icon>
-          XML
-
-          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml <<'XML'
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-            <background android:drawable="@drawable/prepxai_icon_background" />
-            <foreground android:drawable="@drawable/prepxai_flame_foreground" />
-            <monochrome android:drawable="@drawable/prepxai_flame_foreground" />
-          </adaptive-icon>
-          XML
+          # Use the exact app-icon artwork supplied for PrepXAI.
+          cp public/prepxai_app_icon.jpg android/app/src/main/res/drawable-nodpi/prepxai_icon.jpg
 
           python - <<'PY'
           from pathlib import Path
+          import re
           p = Path('android/app/src/main/AndroidManifest.xml')
           s = p.read_text()
-          s = s.replace('android:icon="@drawable/prepxai_icon"', 'android:icon="@mipmap/ic_launcher"')
-          s = s.replace('android:roundIcon="@drawable/prepxai_icon"', 'android:roundIcon="@mipmap/ic_launcher_round"')
+          s = re.sub(r'android:icon="[^"]+"', 'android:icon="@drawable/prepxai_icon"', s, count=1)
+          if 'android:roundIcon=' in s:
+              s = re.sub(r'android:roundIcon="[^"]+"', 'android:roundIcon="@drawable/prepxai_icon"', s, count=1)
+          else:
+              s = s.replace('android:icon="@drawable/prepxai_icon"', 'android:icon="@drawable/prepxai_icon"\n        android:roundIcon="@drawable/prepxai_icon"', 1)
           p.write_text(s)
-          assert '@mipmap/ic_launcher' in s
+          assert 'android:icon="@drawable/prepxai_icon"' in s
           PY
 
           sed -i 's/versionCode [0-9][0-9]*/versionCode 3/' android/app/build.gradle
