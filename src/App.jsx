@@ -225,7 +225,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between app-header-row">
           <div className="flex items-center gap-3 app-brand">
             <div className="w-10 h-10 rounded-xl overflow-hidden border border-indigo-500/30 shadow-lg shadow-indigo-500/20 app-brand-icon">
-              <img src="/icon-192.png" alt="PrepXAI logo" className="w-full h-full object-cover" />
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-tr from-indigo-600 to-violet-500"><Flame className="w-6 h-6 text-white" /></div>
             </div>
             <div>
               <span className="font-black text-lg tracking-tight text-white flex items-center gap-1.5 app-brand-title">
@@ -267,7 +267,7 @@ export default function App() {
           )}
 
           <div className="flex items-center gap-2 header-actions">
-            {!isNativeAndroid && <a href="https://cdn.jsdelivr.net/gh/siddhantgautam606-tech/apexprep-jee@main/public/PrepXAI.apk" download="PrepXAI.apk" className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/10 text-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs font-bold" title="Download PrepXAI Android app">
+            {!isNativeAndroid && <a href="/PrepXAI.apk" download="PrepXAI.apk" className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/10 text-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs font-bold" title="Download PrepXAI Android app">
               <Download className="w-4 h-4" /> Download App
             </a>}
             {currentUser ? (
