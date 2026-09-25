@@ -663,7 +663,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
                       </div>
                     ) : (
                       announcements.map((a) => {
-                        const isMine = a.author?.id === currentUser?.id || a.user_id === currentUser?.id || a.created_by === currentUser?.id;
+                        const isMine = a.author?.id === currentUser?.id || a.created_by === currentUser?.id;
                         const username = a.author?.username || 'Member';
                         const time = a.created_at
                           ? new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
