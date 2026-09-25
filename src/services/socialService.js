@@ -99,13 +99,12 @@ export async function sendDirectMessage(senderId, receiverId, content) {
 
   const { data, error } = await supabase
     .from('messages')
-    .insert([
-      {
-        sender_id: senderId,
-        receiver_id: receiverId,
-        content: content.trim(),
-      },
-    ])
+    .insert([{
+      sender_id: senderId,
+      receiver_id: receiverId,
+      content: content.trim(),
+      status: 'sent'
+    }])
     .select()
     .single();
 
@@ -114,6 +113,30 @@ export async function sendDirectMessage(senderId, receiverId, content) {
     return { error: error.message };
   }
   return { data };
+}
+
+export async function markMessageDelivered(messageId, userId) {
+  if (!messageId || !userId) return;
+  await supabase
+    .from('messages')
+    .update({ status: 'delivered', delivered_at: new Date().toISOString() })
+    .eq('id', messageId)
+    .eq('receiver_id', userId)
+    .eq('status', 'sent');
+}
+
+export async function markMessageRead(messageId, userId) {
+  if (!messageId || !userId) return;
+  await supabase
+    .from('messages')
+    .update({
+      status: 'read',
+      delivered_at: new Date().toISOString(),
+      read_at: new Date().toISOString()
+    })
+    .eq('id', messageId)
+    .eq('receiver_id', userId)
+    .neq('status', 'read');
 }
 
 // 8. Subscribe to realtime messages between two users
@@ -140,4 +163,48 @@ export function subscribeToDirectMessages(userId1, userId2, onNewMessage) {
     .subscribe();
 
   return channel;
+}
+
+export function subscribeToOnlinePresence(currentUserId, onOnlineUsers) {
+  if (!currentUserId) return null;
+  const channel = supabase
+    .channel('prepxai-online-users', { config: { presence: { key: currentUserId } } })
+    .on('presence', { event: 'sync' }, () => {
+      const state = channel.presenceState();
+      const ids = new Set(Object.keys(state));
+      Object.values(state).flat().forEach((presence) => {
+        if (presence?.userId) ids.add(presence.userId);
+      });
+      onOnlineUsers(Array.from(ids));
+    })
+    .subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({
+          userId: currentUserId,
+          online_at: new Date().toISOString()
+        });
+      }
+    });
+  return channel;
+}
+
+export function subscribeToUserMessages(currentUserId, onInsert, onUpdate) {
+  if (!currentUserId) return null;
+  return supabase
+    .channel(`user_messages_${currentUserId}`)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'messages',
+      filter: `receiver_id=eq.${currentUserId}`
+    }, (payload) => onInsert?.(payload.new))
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'messages'
+    }, (payload) => {
+      const row = payload.new;
+      if (row?.sender_id === currentUserId || row?.receiver_id === currentUserId) onUpdate?.(row);
+    })
+    .subscribe();
 }
