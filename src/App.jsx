@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { APP_VERSION, APP_UPDATE_URL, APP_VERSION_URL } from './config/appVersion';
 import { 
   BookOpen, 
   Users, 
@@ -36,15 +37,29 @@ export default function App() {
   const [activeCircleTest, setActiveCircleTest] = useState(null);
   const [activePYQTest, setActivePYQTest] = useState(null);
   const [activePYQSession, setActivePYQSession] = useState(null);
-  const [showAppDownload, setShowAppDownload] = useState(false);
+  const [updateRequired, setUpdateRequired] = useState(false);
+  const [latestVersion, setLatestVersion] = useState(APP_VERSION);
+  const isNativeAndroid = typeof window !== 'undefined' && (window.Capacitor?.getPlatform?.() === 'android' || (/Android/i.test(navigator.userAgent) && window.Capacitor?.isNativePlatform?.()));
 
   useEffect(() => {
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (isMobile) {
-      const timer = setTimeout(() => setShowAppDownload(true), 1200);
-      return () => clearTimeout(timer);
+    if (!isNativeAndroid) return;
+    let cancelled = false;
+    async function checkForRequiredUpdate() {
+      try {
+        const response = await fetch(APP_VERSION_URL + '?v=' + Date.now(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const info = await response.json();
+        const remoteVersion = String(info?.latestVersion || '').trim();
+        if (!remoteVersion || cancelled) return;
+        setLatestVersion(remoteVersion);
+        if (remoteVersion !== APP_VERSION) setUpdateRequired(true);
+      } catch (error) {
+        console.warn('PrepXAI update check failed:', error);
+      }
     }
-  }, []);
+    checkForRequiredUpdate();
+    return () => { cancelled = true; };
+  }, [isNativeAndroid]);
 
   useEffect(() => {
     let mounted = true;
@@ -140,16 +155,14 @@ export default function App() {
     });
   };
 
-  const appDownloadPopup = showAppDownload ? (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-3xl border border-indigo-500/30 bg-slate-900 shadow-2xl shadow-indigo-950/50 overflow-hidden">
-        <div className="p-6 text-center">
-          <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-600/30"><Flame className="w-9 h-9 text-white" /></div>
-          <h2 className="text-xl font-black text-white">Get PrepXAI on your phone</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">Download the Android app for a faster, app-like study experience.</p>
-          <a href="https://cdn.jsdelivr.net/gh/siddhantgautam606-tech/apexprep-jee@a33921559f635af714905ee81d77d9766f115678/public/PrepXAI.apk" className="mt-5 w-full inline-flex items-center justify-center rounded-2xl bg-indigo-600 hover:bg-indigo-500 px-5 py-3.5 text-sm font-bold text-white transition shadow-lg shadow-indigo-600/20">Download Android App</a>
-          <button onClick={() => { localStorage.setItem('prepxai_app_download_dismissed','1'); setShowAppDownload(false); }} className="mt-3 w-full py-2 text-xs font-semibold text-slate-400 hover:text-white transition">Not now</button>
-        </div>
+  const mandatoryUpdateScreen = updateRequired ? (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950 p-6 text-center">
+      <div className="w-full max-w-md rounded-3xl border border-indigo-500/30 bg-slate-900 p-7 shadow-2xl">
+        <img src="/icon-192.png" alt="PrepXAI" className="mx-auto mb-5 h-20 w-20 rounded-2xl object-cover" />
+        <h2 className="text-2xl font-black text-white">Update PrepXAI</h2>
+        <p className="mt-3 text-sm leading-6 text-slate-400">A newer version of PrepXAI is required to continue. Please update the app to keep using it.</p>
+        <p className="mt-2 text-xs text-slate-500">Installed: {APP_VERSION} · Required: {latestVersion}</p>
+        <a href={APP_UPDATE_URL} className="mt-6 inline-flex w-full items-center justify-center rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/20">Update App</a>
       </div>
     </div>
   ) : null;
@@ -188,13 +201,21 @@ export default function App() {
     );
   }
 
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 font-sans">
+        <AuthModal isOpen={true} onClose={() => {}} onAuthSuccess={(u) => setCurrentUser(u)} />
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen text-slate-100 flex flex-col font-sans transition-colors duration-300 ${isNeetInterface ? 'bg-slate-950 selection:bg-emerald-500 selection:text-white' : 'bg-slate-950 selection:bg-indigo-500 selection:text-white'}`}>
       <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between app-header-row">
           <div className="flex items-center gap-3 app-brand">
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${examTheme.gradient} flex items-center justify-center shadow-lg shadow-indigo-500/20 app-brand-icon`}>
-              <Flame className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-xl overflow-hidden border border-indigo-500/30 shadow-lg shadow-indigo-500/20 app-brand-icon">
+              <img src="/icon-192.png" alt="PrepXAI logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <span className="font-black text-lg tracking-tight text-white flex items-center gap-1.5 app-brand-title">
@@ -236,9 +257,9 @@ export default function App() {
           )}
 
           <div className="flex items-center gap-2 header-actions">
-            <a href="https://cdn.jsdelivr.net/gh/siddhantgautam606-tech/apexprep-jee@a33921559f635af714905ee81d77d9766f115678/public/PrepXAI.apk" download="PrepXAI.apk" className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/10 text-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs font-bold" title="Download PrepXAI Android app">
+            {!isNativeAndroid && <a href="https://cdn.jsdelivr.net/gh/siddhantgautam606-tech/apexprep-jee@a33921559f635af714905ee81d77d9766f115678/public/PrepXAI.apk" download="PrepXAI.apk" className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/10 text-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs font-bold" title="Download PrepXAI Android app">
               <Download className="w-4 h-4" /> Download App
-            </a>
+            </a>}
             {currentUser ? (
               <>
                 <button onClick={() => setActiveTab('connections')} className="connections-button flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-slate-700/80 bg-slate-900/80 text-slate-200 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white transition shadow-sm" title="Open Connections">
@@ -304,7 +325,7 @@ export default function App() {
           onAuthSuccess={(u) => { setCurrentUser(u); setShowAuthModal(false); }} />
       )}
 
-      {appDownloadPopup}
+      {mandatoryUpdateScreen}
     </div>
   );
 }
