@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Mail, Lock, User, Target, Loader2, ArrowLeft, ShieldCheck } from 'lucide-react';
 import {
   signUpUser,
   signInUser,
+  signInWithGoogle,
   sendPasswordResetEmail,
+  updatePassword,
 } from '../../services/authService';
 
-export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
-  const [mode, setMode] = useState('login');
+export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode = 'login' }) {
+  const [mode, setMode] = useState(initialMode);
+
+  useEffect(() => {
+    if (isOpen) setMode(initialMode);
+  }, [isOpen, initialMode]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -31,7 +37,16 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     setSuccessMsg('');
 
     try {
-      if (mode === 'forgot') {
+      if (mode === 'reset') {
+        if (password.length < 6) throw new Error('Password must be at least 6 characters.');
+        const result = await updatePassword(password);
+        if (result?.error) throw new Error(result.error);
+        const { getCurrentUser } = await import('../../services/authService');
+        const user = await getCurrentUser();
+        if (!user) throw new Error('Password updated. Please sign in again.');
+        onAuthSuccess(user);
+        onClose();
+      } else if (mode === 'forgot') {
         if (!email.trim()) throw new Error('Please enter your email address.');
 
         const result = await sendPasswordResetEmail(email);
@@ -66,7 +81,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
       setLoading(false);
     }
   };
-  const isRecovery = ['forgot', 'recovery-sent'].includes(mode);
+  const isRecovery = ['forgot', 'recovery-sent', 'reset'].includes(mode);
   const isSignup = mode === 'signup';
 
   return (
@@ -88,6 +103,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                 ? 'Forgot Password'
                 : mode === 'recovery-sent'
                   ? 'Check Your Email'
+                  : mode === 'reset'
+                    ? 'Create New Password'
                   : isSignup
                       ? 'Create PrepXAI Account'
                       : 'Welcome Back'}
@@ -116,6 +133,20 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
         )}
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          {mode === 'reset' && (
+            <>
+              <p className="text-sm text-slate-500">Choose a new password for your PrepXAI account.</p>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">New Password</label>
+                <div className="relative flex items-center">
+                  <Lock className="absolute left-3 h-4 w-4 text-slate-400" />
+                  <input type="password" required minLength={6} placeholder="At least 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-lg border border-slate-300 py-2 pr-3 pl-9 text-sm focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800" />
+                </div>
+              </div>
+              <SubmitButton loading={loading} label="Update Password" />
+            </>
+          )}
+
           {mode === 'forgot' && (
             <>
               <p className="text-sm text-slate-500">
@@ -191,6 +222,15 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                   </div>
                 </>
               )}
+
+              <button type="button" onClick={async () => {
+                setLoading(true); setErrorMsg('');
+                const result = await signInWithGoogle();
+                if (result?.error) { setErrorMsg(result.error); setLoading(false); }
+              }} disabled={loading} className="w-full rounded-lg border border-slate-300 py-2.5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+                Continue with Google
+              </button>
+              <div className="flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /><span>OR</span><span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /></div>
 
               <EmailField email={email} setEmail={setEmail} />
 
