@@ -334,7 +334,7 @@ export async function fetchQuestionsForTest(subject, chapter, count, exam = 'JEE
         }
         combined.push(...list.slice(0, targetCount));
       }
-      return combined.sort(() => 0.5 - Math.random()).map(shuffleCircleQuestionOptions);
+      return combined.map(shuffleCircleQuestionOptions);
     }
 
     let list = await buildForSubject(subject, requestedCount);
