@@ -2,12 +2,29 @@ import { useEffect, useMemo, useState } from 'react';
 import { Clock, ChevronLeft, ChevronRight, Flag, X } from 'lucide-react';
 
 export default function PYQSession({ session, currentUser, onExit }) {
-  const questions = useMemo(() => (Array.isArray(session?.questions) ? session.questions : []).map((q, idx) => ({
-    ...q,
-    id: q.id ?? idx + 1,
-    question: q.question || q.question_text || q.text || `Question ${idx + 1}`,
-    options: Array.isArray(q.options) ? q.options : []
-  })), [session]);
+  const questions = useMemo(() => {
+    const source = Array.isArray(session?.questions) ? session.questions : [];
+    return source.map((q, idx) => {
+      const base = {
+        ...q,
+        id: q.id ?? idx + 1,
+        question: q.question || q.question_text || q.text || `Question ${idx + 1}`,
+        options: Array.isArray(q.options) ? q.options : []
+      };
+      const correctIndex = Number(base.correctAnswer ?? base.correct_answer);
+      if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= base.options.length || base.options.length < 2) return base;
+      const pairs = base.options.map((option, index) => ({ option, index }));
+      for (let i = pairs.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+      }
+      return {
+        ...base,
+        options: pairs.map((p) => p.option),
+        correctAnswer: pairs.findIndex((p) => p.index === correctIndex)
+      };
+    });
+  }, [session]);
 
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -22,6 +39,32 @@ export default function PYQSession({ session, currentUser, onExit }) {
     }, 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  const subjectSections = useMemo(() => {
+    const names = session?.exam === 'NEET'
+      ? ['Physics', 'Chemistry', 'Biology']
+      : ['Physics', 'Chemistry', 'Mathematics'];
+    const sections = [];
+    let lastSubject = null;
+    questions.forEach((question, index) => {
+      const subject = names.includes(question?.subject) ? question.subject : null;
+      if (subject && subject !== lastSubject) {
+        sections.push({ subject, firstIndex: index });
+        lastSubject = subject;
+      }
+    });
+    return sections.length > 1 ? sections : [];
+  }, [questions, session?.exam]);
+
+  const activeSubject = subjectSections.find((section, index) => {
+    const next = subjectSections[index + 1];
+    return currentIdx >= section.firstIndex && (!next || currentIdx < next.firstIndex);
+  })?.subject;
+
+  const jumpToSubject = (subject) => {
+    const section = subjectSections.find((item) => item.subject === subject);
+    if (section) setCurrentIdx(section.firstIndex);
+  };
 
   const currentQ = questions[currentIdx];
 
@@ -80,6 +123,23 @@ export default function PYQSession({ session, currentUser, onExit }) {
             <span className="font-mono text-sm font-bold tracking-wider text-white">{formatTime(elapsedSeconds)}</span>
           </div>
         </div>
+
+        {subjectSections.length > 1 && (
+          <div className="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-lg">
+            <div className="flex items-center gap-2 overflow-x-auto">
+              {subjectSections.map((section) => (
+                <button
+                  key={section.subject}
+                  type="button"
+                  onClick={() => jumpToSubject(section.subject)}
+                  className={`flex-1 min-w-[130px] px-4 py-2.5 rounded-xl border text-xs font-bold transition ${activeSubject === section.subject ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'}`}
+                >
+                  {section.subject}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="pyq-main-grid flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-4 gap-3">
           <div className="pyq-question-panel lg:col-span-3 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between overflow-hidden">
