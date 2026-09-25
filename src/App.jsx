@@ -267,7 +267,7 @@ export default function App() {
           )}
 
           <div className="flex items-center gap-2 header-actions">
-            {!isNativeAndroid && <a href="https://cdn.jsdelivr.net/gh/siddhantgautam606-tech/apexprep-jee@a33921559f635af714905ee81d77d9766f115678/public/PrepXAI.apk" download="PrepXAI.apk" className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/10 text-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs font-bold" title="Download PrepXAI Android app">
+            {!isNativeAndroid && <a href="https://cdn.jsdelivr.net/gh/siddhantgautam606-tech/apexprep-jee@main/public/PrepXAI.apk" download="PrepXAI.apk" className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/10 text-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs font-bold" title="Download PrepXAI Android app">
               <Download className="w-4 h-4" /> Download App
             </a>}
             {currentUser ? (
