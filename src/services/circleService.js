@@ -106,7 +106,7 @@ export async function requestJoinCircle(circleId, userId) {
         circle_id: circleId,
         user_id: userId,
         role: 'member',
-        status: 'approved' // Automatically approve for seamless peer study
+        status: 'pending'
       }
     ]);
     if (error) throw error;
