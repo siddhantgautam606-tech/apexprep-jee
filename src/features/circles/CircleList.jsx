@@ -13,7 +13,9 @@ import {
   scheduleCircleTest, 
   deleteCircleTest, 
   getCircleAnnouncements, 
-  postAnnouncement, 
+  postAnnouncement,
+  updateCircleAnnouncementMode,
+  subscribeToCircleAnnouncements, 
   getCircleLeaderboard,
   fetchQuestionsForTest
 } from '../../services/circleService';
@@ -42,6 +44,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
   const [announcements, setAnnouncements] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [announcementMsg, setAnnouncementMsg] = useState('');
+  const [announcementMode, setAnnouncementMode] = useState('all_members');
 
   const chatBottomRef = useRef(null);
 
@@ -109,6 +112,15 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
   useEffect(() => {
     if (!selectedCircle) return;
 
+    const isMember = isUserAdmin(selectedCircle) || getMembershipStatus(selectedCircle.id) === 'approved';
+    if (!isMember) {
+      setCircleMembers({ approved: [], pending: [] });
+      setCircleTests([]);
+      setAnnouncements([]);
+      setLeaderboard([]);
+      return;
+    }
+
     const loadCircleDetails = async () => {
       const [members, tests, ann, lb] = await Promise.all([
         getCircleMembers(selectedCircle.id),
@@ -120,10 +132,22 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
       setCircleTests(tests.filter((test) => !test.exam || test.exam === exam));
       setAnnouncements(ann);
       setLeaderboard(lb);
+      setAnnouncementMode(selectedCircle.announcement_mode || 'all_members');
     };
 
     loadCircleDetails();
-  }, [selectedCircle, exam]);
+  }, [selectedCircle, exam, userMemberships]);
+
+  useEffect(() => {
+    if (!selectedCircle || !(isUserAdmin(selectedCircle) || getMembershipStatus(selectedCircle.id) === 'approved')) return;
+    const channel = subscribeToCircleAnnouncements(selectedCircle.id, async () => {
+      const latest = await getCircleAnnouncements(selectedCircle.id);
+      setAnnouncements(latest);
+    });
+    return () => {
+      if (channel) channel.unsubscribe();
+    };
+  }, [selectedCircle, userMemberships]);
 
   useEffect(() => {
     if (showAnnouncements && chatBottomRef.current) {
@@ -159,6 +183,15 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
       setNewCircleDesc('');
       loadCirclesData();
     }
+  };
+
+  const handleSelectCircle = (circle) => {
+    const status = getMembershipStatus(circle.id);
+    const allowed = circle.created_by === currentUser?.id || status === 'approved';
+    if (!allowed) return;
+    setSelectedCircle(circle);
+    setActiveTab('tests');
+    setShowAnnouncements(false);
   };
 
   const handleJoin = async (circleId) => {
@@ -301,6 +334,20 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
     }
   };
 
+  const handleAnnouncementModeChange = async (mode) => {
+    if (!selectedCircle || !isUserAdmin(selectedCircle)) return;
+    const previous = announcementMode;
+    setAnnouncementMode(mode);
+    const res = await updateCircleAnnouncementMode(selectedCircle.id, mode, currentUser.id);
+    if (res.error) {
+      setAnnouncementMode(previous);
+      alert('Could not update chat setting: ' + res.error);
+      return;
+    }
+    setSelectedCircle((prev) => prev ? { ...prev, announcement_mode: mode } : prev);
+    setCircles((prev) => prev.map((c) => c.id === selectedCircle.id ? { ...c, announcement_mode: mode } : c));
+  };
+
   const handleManageRequest = async (recordId, accept) => {
     await handleJoinRequest({ memberRecordId: recordId, accept });
     const members = await getCircleMembers(selectedCircle.id);
@@ -342,7 +389,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
               return (
                 <div
                   key={c.id}
-                  onClick={() => setSelectedCircle(c)}
+                  onClick={() => handleSelectCircle(c)}
                   className={`p-4 rounded-xl border cursor-pointer transition flex flex-col gap-2 ${
                     isSelected
                       ? 'bg-slate-800/90 border-indigo-500 shadow-md'
@@ -358,14 +405,14 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
                     )}
                   </div>
 
-                  {c.description && (
+                  {status === 'approved' && c.description && (
                     <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
                       {c.description}
                     </p>
                   )}
 
                   <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-800/60 mt-1">
-                    <span>Admin: {c.creator?.username || 'Aspirant'}</span>
+                    <span>{status === 'approved' ? `Admin: ${c.creator?.username || 'Aspirant'}` : 'Private circle'}</span>
                     <div className="flex items-center gap-2">
                       {status === 'approved' && (
                         <span className="text-emerald-400 font-medium">Joined</span>
@@ -429,6 +476,23 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
                 </div>
               </div>
 
+              {isUserAdmin(selectedCircle) && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-950/60 border border-slate-800 rounded-xl">
+                  <div>
+                    <p className="text-xs font-semibold text-white">Announcement chat permissions</p>
+                    <p className="text-[10px] text-slate-500">Choose who can send messages in this circle chat.</p>
+                  </div>
+                  <select
+                    value={announcementMode}
+                    onChange={(e) => handleAnnouncementModeChange(e.target.value)}
+                    className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 outline-none"
+                  >
+                    <option value="all_members">Everyone can chat</option>
+                    <option value="admin_only">Only admins can chat</option>
+                  </select>
+                </div>
+              )}
+
               <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
                 {[
                   { id: 'tests', label: 'Circle Tests', icon: Calendar },
@@ -445,6 +509,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
                       key={tab.id}
                       onClick={() => {
                         if (tab.id === 'chat') {
+                          setActiveTab('chat');
                           setShowAnnouncements(true);
                         } else {
                           setActiveTab(tab.id);
@@ -653,7 +718,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
                       </div>
                     </div>
                     <span className="text-[11px] text-slate-400 bg-slate-800/70 border border-slate-700/60 px-2.5 py-1 rounded-full">
-                      Announcements
+                      {announcementMode === 'admin_only' ? 'Admin-only chat' : 'Member chat'}
                     </span>
                   </div>
 
@@ -701,6 +766,11 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
                     <div ref={chatBottomRef} />
                   </div>
 
+                  {(!isUserAdmin(selectedCircle) && announcementMode === 'admin_only') ? (
+                    <div className="p-4 md:p-5 border-t border-slate-800 bg-slate-900/95 text-center text-xs text-slate-500 shrink-0">
+                      Only circle admins can send messages in this chat.
+                    </div>
+                  ) : (
                   <form
                     onSubmit={handlePostAnnouncement}
                     className="p-4 md:p-5 border-t border-slate-800 bg-slate-900/95 flex items-center gap-3 shrink-0"
@@ -720,6 +790,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
                       <Send className="w-4 h-4" />
                     </button>
                   </form>
+                  )}
                   </div>
                 </div>
               )}
