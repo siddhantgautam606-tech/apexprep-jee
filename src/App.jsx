@@ -177,7 +177,7 @@ export default function App() {
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-3xl border border-indigo-500/30 bg-slate-900 shadow-2xl shadow-indigo-950/50 overflow-hidden">
         <div className="p-6 text-center">
-          <img src="/icon-192.png" alt="PrepXAI" className="mx-auto mb-4 w-16 h-16 rounded-2xl object-cover" />
+          <img src="/prepxai_app_icon.jpg" alt="PrepXAI" className="mx-auto mb-4 w-16 h-16 rounded-2xl object-cover" />
           <h2 className="text-xl font-black text-white">Get PrepXAI on your phone</h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">Download the latest Android app for a faster, app-like study experience.</p>
           <a href={APP_UPDATE_URL} download="PrepXAI.apk" className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-500 px-5 py-3.5 text-sm font-bold text-white transition shadow-lg shadow-indigo-600/20"><Download className="w-4 h-4" /> Download Android App</a>
@@ -190,7 +190,7 @@ export default function App() {
   const mandatoryUpdateScreen = updateRequired ? (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950 p-6 text-center">
       <div className="w-full max-w-md rounded-3xl border border-indigo-500/30 bg-slate-900 p-7 shadow-2xl">
-        <img src="/icon-192.png" alt="PrepXAI" className="mx-auto mb-5 h-20 w-20 rounded-2xl object-cover" />
+        <img src="/prepxai_app_icon.jpg" alt="PrepXAI" className="mx-auto mb-5 h-20 w-20 rounded-2xl object-cover" />
         <h2 className="text-2xl font-black text-white">Update PrepXAI</h2>
         <p className="mt-3 text-sm leading-6 text-slate-400">A newer version of PrepXAI is required to continue. Please update the app to keep using it.</p>
         <p className="mt-2 text-xs text-slate-500">Installed: {APP_VERSION} · Required: {latestVersion}</p>
