@@ -39,6 +39,7 @@ export default function App() {
   const [activePYQSession, setActivePYQSession] = useState(null);
   const [updateRequired, setUpdateRequired] = useState(false);
   const [latestVersion, setLatestVersion] = useState(APP_VERSION);
+  const [showAppDownload, setShowAppDownload] = useState(false);
   const isNativeAndroid = typeof window !== 'undefined' && (window.Capacitor?.getPlatform?.() === 'android' || (/Android/i.test(navigator.userAgent) && window.Capacitor?.isNativePlatform?.()));
 
   useEffect(() => {
@@ -69,6 +70,13 @@ export default function App() {
     }
     checkForRequiredUpdate();
     return () => { cancelled = true; };
+  }, [isNativeAndroid]);
+
+  useEffect(() => {
+    const isAndroidMobileWeb = typeof window !== 'undefined' && !isNativeAndroid && /Android/i.test(navigator.userAgent);
+    if (!isAndroidMobileWeb) return;
+    const timer = setTimeout(() => setShowAppDownload(true), 1200);
+    return () => clearTimeout(timer);
   }, [isNativeAndroid]);
 
   useEffect(() => {
@@ -164,6 +172,20 @@ export default function App() {
       questions
     });
   };
+
+  const appDownloadPopup = showAppDownload ? (
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md rounded-3xl border border-indigo-500/30 bg-slate-900 shadow-2xl shadow-indigo-950/50 overflow-hidden">
+        <div className="p-6 text-center">
+          <img src="/icon-192.png" alt="PrepXAI" className="mx-auto mb-4 w-16 h-16 rounded-2xl object-cover" />
+          <h2 className="text-xl font-black text-white">Get PrepXAI on your phone</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">Download the latest Android app for a faster, app-like study experience.</p>
+          <a href={APP_UPDATE_URL} download="PrepXAI.apk" className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-500 px-5 py-3.5 text-sm font-bold text-white transition shadow-lg shadow-indigo-600/20"><Download className="w-4 h-4" /> Download Android App</a>
+          <button onClick={() => setShowAppDownload(false)} className="mt-3 w-full py-2 text-xs font-semibold text-slate-400 hover:text-white transition">Not now</button>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   const mandatoryUpdateScreen = updateRequired ? (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950 p-6 text-center">
@@ -267,7 +289,7 @@ export default function App() {
           )}
 
           <div className="flex items-center gap-2 header-actions">
-            {!isNativeAndroid && <a href="/PrepXAI.apk" download="PrepXAI.apk" className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/10 text-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs font-bold" title="Download PrepXAI Android app">
+            {!isNativeAndroid && <a href={APP_UPDATE_URL} download="PrepXAI.apk" className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/10 text-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs font-bold" title="Download PrepXAI Android app">
               <Download className="w-4 h-4" /> Download App
             </a>}
             {currentUser ? (
@@ -336,6 +358,7 @@ export default function App() {
       )}
 
       {mandatoryUpdateScreen}
+      {appDownloadPopup}
     </div>
   );
 }
