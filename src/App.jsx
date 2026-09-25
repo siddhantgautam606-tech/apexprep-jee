@@ -211,7 +211,7 @@ export default function App() {
     );
   }
 
-  if (!currentUser) {
+  if (isNativeAndroid && !currentUser) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 font-sans">
         <AuthModal isOpen={true} onClose={() => {}} onAuthSuccess={(u) => setCurrentUser(u)} />
