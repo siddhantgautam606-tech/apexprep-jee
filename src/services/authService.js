@@ -114,6 +114,21 @@ export async function signUpUser(emailArg, passwordArg, metadataArg = {}) {
 /**
  * Sign in existing user with email and password.
  */
+/** Sign in with Google OAuth. */
+export async function signInWithGoogle() {
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) throw error;
+    return { error: null };
+  } catch (err) {
+    console.error('Google sign in error:', err);
+    return { error: err.message };
+  }
+}
+
 export async function signInUser(emailArg, passwordArg) {
   const email = typeof emailArg === 'object' && emailArg !== null ? emailArg.email : emailArg;
   const password = typeof emailArg === 'object' && emailArg !== null ? emailArg.password : passwordArg;
@@ -146,7 +161,7 @@ export async function signInUser(emailArg, passwordArg) {
 export async function sendPasswordResetEmail(email) {
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(String(email).trim(), {
-      redirectTo: 'https://www.prepxai.co.in',
+      redirectTo: window.location.origin,
     });
     if (error) throw error;
     return { error: null };
