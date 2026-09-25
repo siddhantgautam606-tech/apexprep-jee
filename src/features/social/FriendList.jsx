@@ -40,7 +40,7 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
     const query = e.target.value;
     setSearchQuery(query);
 
-    if (query.trim().length < 2) {
+    if (query.trim().length < 4) {
       setSearchResults([]);
       return;
     }
@@ -86,7 +86,7 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
         <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
         <input
           type="text"
-          placeholder="Search aspirants..."
+          placeholder="Enter first 4 letters of username..."
           value={searchQuery}
           onChange={handleSearch}
           className="w-full rounded-xl border border-slate-800 bg-slate-950/70 py-2 pl-9 pr-4 text-sm focus:outline-hidden focus:border-blue-500 dark:text-white"
@@ -94,7 +94,7 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
       </div>
 
       {/* Search Results Dropdown / Panel */}
-      {searchQuery.trim().length >= 2 && (
+      {searchQuery.trim().length >= 4 && (
         <div className="mb-4 rounded-xl border border-slate-800 bg-slate-950/50 p-2 space-y-2">
           <p className="text-[11px] font-semibold text-slate-400 uppercase px-2">Aspirants Found</p>
           {searchLoading ? (
