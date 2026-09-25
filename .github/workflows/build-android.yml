@@ -35,10 +35,18 @@ jobs:
 
       - name: Apply PrepXAI Android branding and version
         run: |
+          test -f public/icon-192.png
           mkdir -p android/app/src/main/res/drawable
           cp public/icon-192.png android/app/src/main/res/drawable/prepxai_icon.png
-          sed -i 's/android:icon="@mipmap\/ic_launcher"/android:icon="@drawable\/prepxai_icon"/' android/app/src/main/AndroidManifest.xml
-          sed -i 's/android:roundIcon="@mipmap\/ic_launcher_round"/android:roundIcon="@drawable\/prepxai_icon"/' android/app/src/main/AndroidManifest.xml
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/src/main/AndroidManifest.xml')
+          s = p.read_text()
+          s = s.replace('android:icon="@mipmap/ic_launcher"', 'android:icon="@drawable/prepxai_icon"')
+          s = s.replace('android:roundIcon="@mipmap/ic_launcher_round"', 'android:roundIcon="@drawable/prepxai_icon"')
+          p.write_text(s)
+          assert '@drawable/prepxai_icon' in s
+          PY
           sed -i 's/versionCode [0-9][0-9]*/versionCode 2/' android/app/build.gradle
           sed -i 's/versionName "[^"]*"/versionName "1.0.1"/' android/app/build.gradle
 
