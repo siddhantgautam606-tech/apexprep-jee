@@ -57,44 +57,60 @@ export default function TestOrganizer({ currentUser, feedExam }) {
       : ({ 60: 25, 120: 50, 180: 75 }[safeDuration] || 25);
 
     try {
-      // 1. Try DB question pool
-      try {
-        if (typeof fetchQuestionsForTest === 'function') {
-          loadedQuestions = await fetchQuestionsForTest(
-            safeSubject,
-            primaryChapter,
-            safeCount,
-            exam
-          );
-        }
-      } catch (err) {
-        console.warn('DB fetch failed, using standard bank:', err);
-      }
+      const isFullSyllabus = safeSubject === 'All' || safeSubject === 'Full Syllabus';
 
-      // 2. Exam-specific standard question bank fallback.
-      // Full-syllabus tests are split into separate subject sections.
-      if (!Array.isArray(loadedQuestions) || loadedQuestions.length === 0) {
-        const isFullSyllabus = safeSubject === 'All' || safeSubject === 'Full Syllabus';
-        if (isFullSyllabus) {
-          const subjectCounts = exam === 'NEET'
-            ? { Physics: Math.ceil(safeCount * 0.25), Chemistry: Math.ceil(safeCount * 0.25), Biology: Math.floor(safeCount * 0.5) }
-            : { Physics: Math.ceil(safeCount / 3), Chemistry: Math.ceil((safeCount - Math.ceil(safeCount / 3)) / 2), Mathematics: Math.floor(safeCount / 3) };
+      // Full-syllabus tests are built subject-by-subject. This prevents a broad
+      // database query from mixing subjects before the CBT sections are created.
+      if (isFullSyllabus) {
+        const subjectCounts = exam === 'NEET'
+          ? { Physics: Math.floor(safeCount * 0.34), Chemistry: Math.floor(safeCount * 0.33), Biology: safeCount - Math.floor(safeCount * 0.34) - Math.floor(safeCount * 0.33) }
+          : { Physics: Math.ceil(safeCount / 3), Chemistry: Math.floor((safeCount - Math.ceil(safeCount / 3)) / 2), Mathematics: safeCount - Math.ceil(safeCount / 3) - Math.floor((safeCount - Math.ceil(safeCount / 3)) / 2) };
 
-          loadedQuestions = [];
-          for (const [subjectName, count] of Object.entries(subjectCounts)) {
-            const subjectQuestions = exam === 'NEET'
+        loadedQuestions = [];
+        for (const [subjectName, count] of Object.entries(subjectCounts)) {
+          let subjectQuestions = [];
+          try {
+            subjectQuestions = await fetchQuestionsForTest(subjectName, primaryChapter, count, exam);
+          } catch (err) {
+            console.warn(`DB fetch failed for ${subjectName}, using standard bank:`, err);
+          }
+
+          if (!Array.isArray(subjectQuestions) || subjectQuestions.length < count) {
+            const fallback = exam === 'NEET'
               ? getStandardNEETQuestions(subjectName, primaryChapter, count)
               : getStandardQuestions(subjectName, primaryChapter, count);
-            loadedQuestions.push(...(Array.isArray(subjectQuestions) ? subjectQuestions : []));
+            const existingIds = new Set((subjectQuestions || []).map((q) => q.id));
+            subjectQuestions = [
+              ...(subjectQuestions || []),
+              ...(Array.isArray(fallback) ? fallback.filter((q) => !existingIds.has(q.id)) : [])
+            ].slice(0, count);
           }
-        } else {
-          loadedQuestions = exam === 'NEET'
+
+          // Stamp the subject onto every question so the runner can derive
+          // sections from the actual question data rather than fixed indexes.
+          loadedQuestions.push(...subjectQuestions.map((q) => ({ ...q, subject: subjectName })));
+        }
+      } else {
+        try {
+          loadedQuestions = await fetchQuestionsForTest(safeSubject, primaryChapter, safeCount, exam);
+        } catch (err) {
+          console.warn('DB fetch failed, using standard bank:', err);
+        }
+
+        if (!Array.isArray(loadedQuestions) || loadedQuestions.length < safeCount) {
+          const fallback = exam === 'NEET'
             ? getStandardNEETQuestions(safeSubject, primaryChapter, safeCount)
             : getStandardQuestions(safeSubject, primaryChapter, safeCount);
+          const existingIds = new Set((loadedQuestions || []).map((q) => q.id));
+          loadedQuestions = [
+            ...(loadedQuestions || []),
+            ...(Array.isArray(fallback) ? fallback.filter((q) => !existingIds.has(q.id)) : [])
+          ].slice(0, safeCount);
         }
+        loadedQuestions = loadedQuestions.map((q) => ({ ...q, subject: q.subject || safeSubject }));
       }
 
-      // 3. Absolute failsafe generator
+      // Absolute failsafe generator
       if (!Array.isArray(loadedQuestions) || loadedQuestions.length === 0) {
         loadedQuestions = Array.from({ length: safeCount }, (_, i) => ({
           id: i + 1,
