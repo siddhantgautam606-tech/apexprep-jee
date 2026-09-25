@@ -33,16 +33,30 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
         : getStandardQuestions(sub === 'Full Syllabus' ? 'Physics' : sub, ch, count);
     }
 
-    return list.map((q, idx) => ({
-      ...q,
-      id: q.id || idx + 1,
-      question: formatMathSymbols(q.question || q.question_text || q.text || `Question ${idx + 1}`),
-      options: Array.isArray(q.options) 
-        ? q.options.map(opt => typeof opt === 'string' ? formatMathSymbols(opt) : opt?.text ? formatMathSymbols(opt.text) : String(opt))
-        : ['Option A', 'Option B', 'Option C', 'Option D'],
-      correctAnswer: q.correctAnswer !== undefined ? Number(q.correctAnswer) : q.correct_answer !== undefined ? Number(q.correct_answer) : 0,
-      explanation: formatMathSymbols(q.explanation || q.solution || '')
-    }));
+    return list.map((q, idx) => {
+      const base = {
+        ...q,
+        id: q.id || idx + 1,
+        question: formatMathSymbols(q.question || q.question_text || q.text || `Question ${idx + 1}`),
+        options: Array.isArray(q.options)
+          ? q.options.map(opt => typeof opt === 'string' ? formatMathSymbols(opt) : opt?.text ? formatMathSymbols(opt.text) : String(opt))
+          : ['Option A', 'Option B', 'Option C', 'Option D'],
+        correctAnswer: q.correctAnswer !== undefined ? Number(q.correctAnswer) : q.correct_answer !== undefined ? Number(q.correct_answer) : 0,
+        explanation: formatMathSymbols(q.explanation || q.solution || '')
+      };
+      const correctIndex = Number(base.correctAnswer);
+      if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= base.options.length || base.options.length < 2) return base;
+      const pairs = base.options.map((option, optionIndex) => ({ option, optionIndex }));
+      for (let i = pairs.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+      }
+      return {
+        ...base,
+        options: pairs.map((p) => p.option),
+        correctAnswer: pairs.findIndex((p) => p.optionIndex === correctIndex)
+      };
+    });
   }, [test, exam]);
 
   const [questions] = useState(initialQuestions);
