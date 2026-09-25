@@ -40,6 +40,7 @@ export default function App() {
   const [updateRequired, setUpdateRequired] = useState(false);
   const [latestVersion, setLatestVersion] = useState(APP_VERSION);
   const [showAppDownload, setShowAppDownload] = useState(false);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const isNativeAndroid = typeof window !== 'undefined' && (window.Capacitor?.getPlatform?.() === 'android' || (/Android/i.test(navigator.userAgent) && window.Capacitor?.isNativePlatform?.()));
 
   useEffect(() => {
@@ -83,6 +84,13 @@ export default function App() {
     let mounted = true;
 
     async function checkAuth() {
+      const recoveryUrl = typeof window !== 'undefined' && (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery'));
+      if (recoveryUrl) {
+        setPasswordRecovery(true);
+        setAuthChecked(true);
+        setShowAuthModal(true);
+        return;
+      }
       const user = await getCurrentUser();
       if (!mounted) return;
       setCurrentUser(user);
@@ -94,6 +102,16 @@ export default function App() {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
+
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true);
+        setCurrentUser(null);
+        setAuthChecked(true);
+        setShowAuthModal(true);
+        return;
+      }
+
+      if (passwordRecovery || (typeof window !== 'undefined' && window.location.hash.includes('type=recovery'))) return;
 
       if (event === 'SIGNED_OUT' || !session?.user) {
         setCurrentUser(null);
@@ -236,7 +254,11 @@ export default function App() {
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 font-sans">
-        <AuthModal isOpen={true} onClose={() => {}} onAuthSuccess={(u) => setCurrentUser(u)} />
+        <AuthModal isOpen={true} onClose={() => {}} initialMode={passwordRecovery ? 'reset' : 'login'} onAuthSuccess={(u) => {
+          setPasswordRecovery(false);
+          if (typeof window !== 'undefined') window.history.replaceState({}, document.title, window.location.pathname);
+          setCurrentUser(u);
+        }} />
       </div>
     );
   }
