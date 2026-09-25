@@ -97,3 +97,5 @@ jobs:
             done
             exit 1
           fi
+
+# Exact supplied icon build.
