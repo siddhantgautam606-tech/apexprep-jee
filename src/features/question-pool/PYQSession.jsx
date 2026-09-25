@@ -58,7 +58,7 @@ export default function PYQSession({ session, currentUser, onExit }) {
   }
 
   return (
-    <div className="h-screen max-h-screen overflow-hidden bg-slate-950 text-slate-100 p-3 sm:p-4">
+    <div className="pyq-session h-screen max-h-screen overflow-hidden bg-slate-950 text-slate-100 p-3 sm:p-4">
       <div className="h-full max-w-7xl mx-auto flex flex-col gap-3">
         <div className="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between gap-4 shadow-lg">
           <div className="flex items-center gap-3 min-w-0">
@@ -76,8 +76,8 @@ export default function PYQSession({ session, currentUser, onExit }) {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-4 gap-3">
-          <div className="lg:col-span-3 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between overflow-hidden">
+        <div className="pyq-main-grid flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-4 gap-3">
+          <div className="pyq-question-panel lg:col-span-3 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between overflow-hidden">
             <div>
               <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-5">
                 <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20">
@@ -134,7 +134,7 @@ export default function PYQSession({ session, currentUser, onExit }) {
               <span className="text-[10px] text-slate-500">{Object.keys(answers).length} attempted</span>
             </div>
 
-            <div className="grid grid-cols-5 gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
+            <div className="pyq-question-navigation grid grid-cols-5 gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
               {questions.map((_, idx) => {
                 const answered = answers[idx] !== undefined;
                 const marked = markedForReview[idx];
