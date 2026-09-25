@@ -265,47 +265,97 @@ export async function deleteCircleTest(testId) {
 /**
  * Question fetching helper for test scheduling
  */
+function normalizeCircleQuestion(q, idx) {
+  return {
+    id: q.id || idx + 1,
+    question: q.question,
+    options: Array.isArray(q.options) ? q.options : [],
+    correctAnswer: q.correctAnswer !== undefined ? q.correctAnswer : q.correct_answer,
+    explanation: q.explanation || '',
+    subject: q.subject,
+    chapter: q.chapter,
+    yearTag: q.year_tag || q.yearTag
+  };
+}
+
+function shuffleCircleQuestionOptions(question) {
+  if (!Array.isArray(question?.options) || question.options.length < 2) return question;
+  const correctIndex = Number(question.correctAnswer);
+  if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= question.options.length) return question;
+  const pairs = question.options.map((option, index) => ({ option, index }));
+  for (let i = pairs.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+  }
+  return {
+    ...question,
+    options: pairs.map((p) => p.option),
+    correctAnswer: pairs.findIndex((p) => p.index === correctIndex)
+  };
+}
+
 export async function fetchQuestionsForTest(subject, chapter, count, exam = 'JEE Main') {
   const normalizedExam = normalizeExam(exam);
   const requestedCount = Math.max(1, Number(count) || 10);
+  const subjects = normalizedExam === 'NEET'
+    ? ['Physics', 'Chemistry', 'Biology']
+    : ['Physics', 'Chemistry', 'Mathematics'];
+
+  const buildForSubject = async (targetSubject, targetCount) => {
+    try {
+      let query = supabase.from('custom_questions').select('*').eq('exam', normalizedExam);
+      if (targetSubject && targetSubject !== 'All' && targetSubject !== 'Full Syllabus') {
+        query = query.eq('subject', targetSubject);
+      }
+      if (chapter && chapter !== 'All') query = query.eq('chapter', chapter);
+      const { data, error } = await query.limit(Math.max(targetCount * 2, targetCount));
+      if (error) throw error;
+      return (data || []).map(normalizeCircleQuestion);
+    } catch {
+      return [];
+    }
+  };
 
   try {
-    let query = supabase.from('custom_questions').select('*').eq('exam', normalizedExam);
-
-    if (subject && subject !== 'All' && subject !== 'Full Syllabus') {
-      query = query.eq('subject', subject);
+    if (subject === 'All' || subject === 'Full Syllabus') {
+      const base = Math.floor(requestedCount / subjects.length);
+      let remainder = requestedCount % subjects.length;
+      const combined = [];
+      for (const targetSubject of subjects) {
+        const targetCount = base + (remainder-- > 0 ? 1 : 0);
+        if (targetCount <= 0) continue;
+        let list = await buildForSubject(targetSubject, targetCount);
+        if (list.length < targetCount) {
+          const needed = targetCount - list.length;
+          const fallback = normalizedExam === 'NEET'
+            ? getStandardNEETQuestions(targetSubject, chapter, needed)
+            : getStandardQuestions(targetSubject, chapter, needed);
+          list = [...list, ...fallback];
+        }
+        combined.push(...list.slice(0, targetCount));
+      }
+      return combined.sort(() => 0.5 - Math.random()).map(shuffleCircleQuestionOptions);
     }
-    if (chapter && chapter !== 'All') {
-      query = query.eq('chapter', chapter);
+
+    let list = await buildForSubject(subject, requestedCount);
+    if (list.length < requestedCount) {
+      const needed = requestedCount - list.length;
+      const fallback = normalizedExam === 'NEET'
+        ? getStandardNEETQuestions(subject, chapter, needed)
+        : getStandardQuestions(subject, chapter, needed);
+      list = [...list, ...fallback];
     }
-
-    const { data, error } = await query.limit(requestedCount);
-    if (error) throw error;
-
-    const dbQuestions = (data || []).map((q, idx) => ({
-      id: q.id || idx + 1,
-      question: q.question,
-      options: Array.isArray(q.options) ? q.options : [],
-      correctAnswer: q.correct_answer,
-      explanation: q.explanation || '',
-      subject: q.subject,
-      chapter: q.chapter,
-      yearTag: q.year_tag || q.yearTag
-    }));
-
-    if (dbQuestions.length >= requestedCount) return dbQuestions.slice(0, requestedCount);
-
-    const needed = requestedCount - dbQuestions.length;
-    const fallback = normalizedExam === 'NEET'
-      ? getStandardNEETQuestions(subject === 'All' || subject === 'Full Syllabus' ? 'All' : subject, chapter, needed)
-      : getStandardQuestions(subject === 'All' || subject === 'Full Syllabus' ? 'Physics' : subject, chapter, needed);
-
-    return [...dbQuestions, ...fallback].slice(0, requestedCount);
+    return list.slice(0, requestedCount).sort(() => 0.5 - Math.random()).map(shuffleCircleQuestionOptions);
   } catch (err) {
     console.warn('Questions table unavailable; using the exam-specific question bank:', err.message);
-    return normalizedExam === 'NEET'
-      ? getStandardNEETQuestions(subject === 'All' || subject === 'Full Syllabus' ? 'All' : subject, chapter, requestedCount)
-      : getStandardQuestions(subject === 'All' || subject === 'Full Syllabus' ? 'Physics' : subject, chapter, requestedCount);
+    const fallbackSubjects = subject === 'All' || subject === 'Full Syllabus' ? subjects : [subject];
+    const per = Math.ceil(requestedCount / fallbackSubjects.length);
+    const all = fallbackSubjects.flatMap((s) =>
+      normalizedExam === 'NEET'
+        ? getStandardNEETQuestions(s, chapter, per)
+        : getStandardQuestions(s, chapter, per)
+    );
+    return all.slice(0, requestedCount).map(shuffleCircleQuestionOptions);
   }
 }
 
@@ -422,20 +472,48 @@ export async function postAnnouncement(circleId, message, userId) {
   try {
     const { data, error } = await supabase
       .from('circle_announcements')
-      .insert([
-        {
-          circle_id: circleId,
-          created_by: userId,
-          message: message
-        }
-      ])
+      .insert([{ circle_id: circleId, created_by: userId, message }])
       .select()
       .single();
-
     if (error) throw error;
     return { data, error: null };
   } catch (err) {
     console.error('Error posting announcement:', err);
     return { data: null, error: err.message };
   }
+}
+
+export async function updateCircleAnnouncementMode(circleId, mode, userId) {
+  if (!circleId || !userId || !['all_members', 'admin_only'].includes(mode)) {
+    return { error: 'Invalid circle announcement setting.' };
+  }
+  try {
+    const { data, error } = await supabase
+      .from('circles')
+      .update({ announcement_mode: mode })
+      .eq('id', circleId)
+      .eq('created_by', userId)
+      .select()
+      .single();
+    if (error) throw error;
+    return { data, error: null };
+  } catch (err) {
+    console.error('Error updating announcement mode:', err);
+    return { data: null, error: err.message };
+  }
+}
+
+export function subscribeToCircleAnnouncements(circleId, onNewAnnouncement) {
+  if (!circleId) return null;
+  return supabase
+    .channel(`circle_announcements_${circleId}`)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'circle_announcements',
+      filter: `circle_id=eq.${circleId}`
+    }, (payload) => {
+      if (payload?.new) onNewAnnouncement(payload.new);
+    })
+    .subscribe();
 }
