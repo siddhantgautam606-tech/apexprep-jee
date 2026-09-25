@@ -4,7 +4,18 @@ import { Clock, ChevronLeft, ChevronRight, Flag, X } from 'lucide-react';
 export default function PYQSession({ session, currentUser, onExit }) {
   const questions = useMemo(() => {
     const source = Array.isArray(session?.questions) ? session.questions : [];
-    return source.map((q, idx) => {
+    const names = session?.exam === 'NEET'
+      ? ['Physics', 'Chemistry', 'Biology']
+      : ['Physics', 'Chemistry', 'Mathematics'];
+    const shouldGroup = session?.subject === 'All' || session?.subject === 'Full Syllabus';
+    const ordered = shouldGroup
+      ? [
+          ...names.flatMap((subject) => source.filter((q) => q?.subject === subject)),
+          ...source.filter((q) => !names.includes(q?.subject))
+        ]
+      : source;
+
+    return ordered.map((q, idx) => {
       const base = {
         ...q,
         id: q.id ?? idx + 1,
