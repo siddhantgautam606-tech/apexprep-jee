@@ -8,7 +8,7 @@ export async function searchUsers(searchTerm, currentUserId) {
     .from('profiles')
     .select('id, username, email, target_exam')
     .neq('id', currentUserId)
-    .ilike('username', `%${searchTerm.trim()}%`)
+    .ilike('username', `${searchTerm.trim()}%`)
     .limit(10);
 
   if (error) throw error;
