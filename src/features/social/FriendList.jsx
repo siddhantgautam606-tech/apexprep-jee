@@ -6,6 +6,8 @@ import {
   respondToFriendRequest,
   getFriendsList,
   getPendingRequests,
+  getFriendshipStatuses,
+  subscribeToFriendships,
 } from '../../services/socialService';
 
 export default function FriendList({ currentUser, onSelectFriend, activeFriendId }) {
@@ -13,8 +15,10 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
   const [pendingRequests, setPendingRequests] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [relationshipMap, setRelationshipMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [actionUserId, setActionUserId] = useState(null);
 
   const loadSocialData = async () => {
     if (!currentUser) return;
@@ -32,8 +36,38 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
     }
   };
 
+  const refreshSearchRelationships = async (users = searchResults) => {
+    if (!currentUser || !users.length) {
+      setRelationshipMap({});
+      return;
+    }
+
+    try {
+      const map = await getFriendshipStatuses(
+        currentUser.id,
+        users.map((user) => user.id)
+      );
+      setRelationshipMap(map);
+    } catch (err) {
+      console.error('Error loading friendship statuses:', err);
+    }
+  };
+
   useEffect(() => {
     loadSocialData();
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return undefined;
+
+    const channel = subscribeToFriendships(currentUser.id, async () => {
+      await loadSocialData();
+      await refreshSearchRelationships();
+    });
+
+    return () => {
+      channel?.unsubscribe?.();
+    };
   }, [currentUser]);
 
   const handleSearch = async (e) => {
@@ -42,6 +76,7 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
 
     if (query.trim().length < 4) {
       setSearchResults([]);
+      setRelationshipMap({});
       return;
     }
 
@@ -49,19 +84,30 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
     try {
       const results = await searchUsers(query, currentUser.id);
       setSearchResults(results);
+      const map = await getFriendshipStatuses(
+        currentUser.id,
+        results.map((user) => user.id)
+      );
+      setRelationshipMap(map);
     } catch (err) {
       console.error('Search error:', err);
+      setSearchResults([]);
+      setRelationshipMap({});
     } finally {
       setSearchLoading(false);
     }
   };
 
   const handleSendRequest = async (targetUserId) => {
+    setActionUserId(targetUserId);
     try {
       await sendFriendRequest(currentUser.id, targetUserId);
-      setSearchResults((prev) => prev.filter((u) => u.id !== targetUserId));
+      await loadSocialData();
+      await refreshSearchRelationships();
     } catch (err) {
       console.error('Failed to send friend request:', err);
+    } finally {
+      setActionUserId(null);
     }
   };
 
@@ -69,9 +115,75 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
     try {
       await respondToFriendRequest(friendshipId, status);
       await loadSocialData();
+      await refreshSearchRelationships();
     } catch (err) {
       console.error('Failed to respond to request:', err);
     }
+  };
+
+  const renderSearchAction = (user) => {
+    const relationship = relationshipMap[user.id];
+    const busy = actionUserId === user.id;
+
+    if (busy) {
+      return <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-400" />;
+    }
+
+    if (!relationship) {
+      return (
+        <button
+          onClick={() => handleSendRequest(user.id)}
+          className="flex items-center gap-1 rounded-md bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
+        >
+          <UserPlus className="h-3 w-3" /> Add Friend
+        </button>
+      );
+    }
+
+    if (relationship.status === 'accepted') {
+      return (
+        <span className="rounded-md bg-emerald-950/60 px-2 py-1 text-[10px] font-semibold text-emerald-400">
+          Friends
+        </span>
+      );
+    }
+
+    if (relationship.status === 'pending' && relationship.direction === 'outgoing') {
+      return (
+        <span className="rounded-md bg-amber-950/60 px-2 py-1 text-[10px] font-semibold text-amber-400">
+          Request Sent
+        </span>
+      );
+    }
+
+    if (relationship.status === 'pending' && relationship.direction === 'incoming') {
+      return (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => handleRespond(relationship.id, 'accepted')}
+            className="rounded-md bg-emerald-600 px-2 py-1 text-[10px] font-semibold text-white hover:bg-emerald-700"
+          >
+            Accept
+          </button>
+          <button
+            onClick={() => handleRespond(relationship.id, 'declined')}
+            className="rounded-md bg-rose-600 px-2 py-1 text-[10px] font-semibold text-white hover:bg-rose-700"
+          >
+            Reject
+          </button>
+        </div>
+      );
+    }
+
+    // A declined request remains visible and can be sent again.
+    return (
+      <button
+        onClick={() => handleSendRequest(user.id)}
+        className="flex items-center gap-1 rounded-md bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
+      >
+        <UserPlus className="h-3 w-3" /> Add Friend
+      </button>
+    );
   };
 
   return (
@@ -93,7 +205,7 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
         />
       </div>
 
-      {/* Search Results Dropdown / Panel */}
+      {/* Search Results */}
       {searchQuery.trim().length >= 4 && (
         <div className="mb-4 rounded-xl border border-slate-800 bg-slate-950/50 p-2 space-y-2">
           <p className="text-[11px] font-semibold text-slate-400 uppercase px-2">Aspirants Found</p>
@@ -110,12 +222,7 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
                   <p className="text-xs font-semibold dark:text-white">@{user.username}</p>
                   <span className="text-[10px] text-slate-400">{user.target_exam}</span>
                 </div>
-                <button
-                  onClick={() => handleSendRequest(user.id)}
-                  className="flex items-center gap-1 rounded-md bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
-                >
-                  <UserPlus className="h-3 w-3" /> Connect
-                </button>
+                {renderSearchAction(user)}
               </div>
             ))
           )}
@@ -139,12 +246,14 @@ export default function FriendList({ currentUser, onSelectFriend, activeFriendId
                   <button
                     onClick={() => handleRespond(req.id, 'accepted')}
                     className="p-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+                    title="Accept request"
                   >
                     <Check className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => handleRespond(req.id, 'declined')}
                     className="p-1 rounded-md bg-rose-600 text-white hover:bg-rose-700"
+                    title="Reject request"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
