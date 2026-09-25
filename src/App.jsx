@@ -50,9 +50,19 @@ export default function App() {
         if (!response.ok) return;
         const info = await response.json();
         const remoteVersion = String(info?.latestVersion || '').trim();
+        const minimumVersion = String(info?.minimumVersion || remoteVersion).trim();
         if (!remoteVersion || cancelled) return;
         setLatestVersion(remoteVersion);
-        if (remoteVersion !== APP_VERSION) setUpdateRequired(true);
+        const toParts = (version) => String(version).split('.').map((part) => Number.parseInt(part, 10) || 0);
+        const compareVersions = (a, b) => {
+          const aa = toParts(a);
+          const bb = toParts(b);
+          for (let i = 0; i < 3; i += 1) {
+            if (aa[i] !== bb[i]) return aa[i] > bb[i] ? 1 : -1;
+          }
+          return 0;
+        };
+        if (compareVersions(APP_VERSION, minimumVersion) < 0) setUpdateRequired(true);
       } catch (error) {
         console.warn('PrepXAI update check failed:', error);
       }
