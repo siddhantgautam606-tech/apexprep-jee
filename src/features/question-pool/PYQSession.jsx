@@ -12,6 +12,7 @@ export default function PYQSession({ session, currentUser, onExit }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState({});
   const [markedForReview, setMarkedForReview] = useState({});
+  const [feedback, setFeedback] = useState({});
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showExitWarning, setShowExitWarning] = useState(false);
 
@@ -32,7 +33,11 @@ export default function PYQSession({ session, currentUser, onExit }) {
   };
 
   const selectOption = (index) => {
+    if (answers[currentIdx] !== undefined) return;
+    const correctIndex = Number(currentQ?.correctAnswer ?? currentQ?.correct_answer);
+    const isCorrect = Number.isFinite(correctIndex) && index === correctIndex;
     setAnswers((prev) => ({ ...prev, [currentIdx]: index }));
+    setFeedback((prev) => ({ ...prev, [currentIdx]: { isCorrect, correctIndex } }));
   };
 
   const toggleMark = () => {
@@ -95,10 +100,22 @@ export default function PYQSession({ session, currentUser, onExit }) {
               <div className="flex flex-col gap-3">
                 {currentQ?.options?.map((opt, idx) => {
                   const selected = answers[currentIdx] === idx;
+                  const result = feedback[currentIdx];
+                  const isCorrect = result?.correctIndex === idx;
+                  const isWrong = selected && result && !result.isCorrect;
+                  const optionState = result
+                    ? isCorrect
+                      ? 'bg-emerald-600/20 border-emerald-500 text-emerald-100'
+                      : isWrong
+                        ? 'bg-rose-600/20 border-rose-500 text-rose-100'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400'
+                    : selected
+                      ? 'bg-indigo-600/20 border-indigo-500 text-white font-semibold'
+                      : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700';
                   return (
-                    <button key={idx} onClick={() => selectOption(idx)}
-                      className={`p-4 rounded-xl border text-sm text-left flex items-center gap-3 transition ${selected ? 'bg-indigo-600/20 border-indigo-500 text-white font-semibold' : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'}`}>
-                      <span className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border ${selected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'}`}>
+                    <button key={idx} onClick={() => selectOption(idx)} disabled={answers[currentIdx] !== undefined}
+                      className={`p-4 rounded-xl border text-sm text-left flex items-center gap-3 transition ${optionState}`}>
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border ${result && isCorrect ? 'bg-emerald-600 border-emerald-500 text-white' : result && isWrong ? 'bg-rose-600 border-rose-500 text-white' : selected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'}`}>
                         {String.fromCharCode(65 + idx)}
                       </span>
                       <span className="flex-1">{opt}</span>
@@ -106,6 +123,21 @@ export default function PYQSession({ session, currentUser, onExit }) {
                   );
                 })}
               </div>
+              {feedback[currentIdx] && (
+                <div className={`mt-4 rounded-xl border p-4 ${feedback[currentIdx].isCorrect ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-rose-500/30 bg-rose-500/10'}`}>
+                  <p className="text-sm font-bold text-white">
+                    {feedback[currentIdx].isCorrect ? 'Correct answer' : 'Incorrect answer'}
+                  </p>
+                  {!feedback[currentIdx].isCorrect && feedback[currentIdx].correctIndex >= 0 && (
+                    <p className="text-xs text-slate-300 mt-1">
+                      Correct option: {String.fromCharCode(65 + feedback[currentIdx].correctIndex)}
+                    </p>
+                  )}
+                  {currentQ?.explanation && (
+                    <p className="text-xs text-slate-400 mt-2 leading-relaxed">{currentQ.explanation}</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-4 mt-8">
