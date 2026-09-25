@@ -433,7 +433,9 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
                 {[
                   { id: 'tests', label: 'Circle Tests', icon: Calendar },
                   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
-                  { id: 'members', label: `Members (${circleMembers.approved.length})`, icon: Users },
+                  ...(isUserAdmin(selectedCircle)
+                    ? [{ id: 'members', label: `Members (${circleMembers.approved.length})`, icon: Users }]
+                    : []),
                   { id: 'chat', label: 'Announcements', icon: MessageSquare }
                 ].map((tab) => {
                   const Icon = tab.icon;
@@ -555,7 +557,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
                 </div>
               )}
 
-              {activeTab === 'members' && (
+              {activeTab === 'members' && isUserAdmin(selectedCircle) && (
                 <div className="flex flex-col gap-6">
                   {isUserAdmin(selectedCircle) && circleMembers.pending.length > 0 && (
                     <div className="flex flex-col gap-2.5">
@@ -630,7 +632,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
                         </div>
                         <div>
                           <h3 className="text-base font-bold text-white">Announcements</h3>
-                          <p className="text-[11px] text-slate-400 mt-0.5">#{selectedCircle.name} · {circleMembers.approved.length} members</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">#{selectedCircle.name} · {isUserAdmin(selectedCircle) ? `${circleMembers.approved.length} members` : 'Members private'}</p>
                         </div>
                       </div>
                       <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-800/70 border border-slate-700/60 px-3 py-1.5 rounded-full">
