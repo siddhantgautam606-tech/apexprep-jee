@@ -5,13 +5,17 @@ import {
   MessageSquare,
   ArrowLeft,
   CheckCheck,
+  Check,
   Circle
 } from 'lucide-react';
 import {
   getFriendsList,
   getDirectMessages,
   sendDirectMessage,
-  subscribeToDirectMessages
+  markMessageDelivered,
+  markMessageRead,
+  subscribeToOnlinePresence,
+  subscribeToUserMessages
 } from '../../services/socialService';
 
 export default function ChatWindow({ currentUser }) {
@@ -22,8 +26,14 @@ export default function ChatWindow({ currentUser }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingFriends, setLoadingFriends] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const activeFriendRef = useRef(null);
 
   const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    activeFriendRef.current = activeFriend;
+  }, [activeFriend]);
 
   useEffect(() => {
     async function loadFriends() {
@@ -43,10 +53,39 @@ export default function ChatWindow({ currentUser }) {
   }, [currentUser?.id]);
 
   useEffect(() => {
+    if (!currentUser?.id) return;
+    const channel = subscribeToUserMessages(
+      currentUser.id,
+      async (newMsg) => {
+        if (!newMsg) return;
+        await markMessageDelivered(newMsg.id, currentUser.id);
+        const active = activeFriendRef.current;
+        if (active?.id === newMsg.sender_id) {
+          await markMessageRead(newMsg.id, currentUser.id);
+          newMsg = { ...newMsg, status: 'read', read_at: new Date().toISOString() };
+        }
+        if (active?.id !== newMsg.sender_id) return;
+        setMessages((prev) => prev.some((m) => m?.id === newMsg.id) ? prev : [...prev, newMsg]);
+      },
+      (updatedMsg) => {
+        setMessages((prev) => prev.map((m) => m?.id === updatedMsg?.id ? { ...m, ...updatedMsg } : m));
+      }
+    );
+    return () => {
+      if (channel) channel.unsubscribe();
+    };
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const channel = subscribeToOnlinePresence(currentUser.id, setOnlineUsers);
+    return () => {
+      if (channel) channel.unsubscribe();
+    };
+  }, [currentUser?.id]);
+
+  useEffect(() => {
     if (!currentUser?.id || !activeFriend?.id) return;
-
-    let channel = null;
-
     async function loadChat() {
       setLoadingMessages(true);
       try {
@@ -55,27 +94,24 @@ export default function ChatWindow({ currentUser }) {
           ? [...history].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
           : [];
         setMessages(sorted);
+        await Promise.all(
+          sorted
+            .filter((m) => m.receiver_id === currentUser.id && m.status !== 'read')
+            .map((m) => markMessageRead(m.id, currentUser.id))
+        );
+        if (sorted.some((m) => m.receiver_id === currentUser.id && m.status !== 'read')) {
+          setMessages((prev) => prev.map((m) =>
+            m.receiver_id === currentUser.id ? { ...m, status: 'read', read_at: new Date().toISOString() } : m
+          ));
+        }
       } catch (err) {
         console.error('Failed to load messages:', err);
         setMessages([]);
       } finally {
         setLoadingMessages(false);
       }
-
-      channel = subscribeToDirectMessages(currentUser.id, activeFriend.id, (newMsg) => {
-        if (!newMsg) return;
-        setMessages((prev) => {
-          if (prev.some((m) => m?.id === newMsg.id)) return prev;
-          return [...prev, newMsg];
-        });
-      });
     }
-
     loadChat();
-
-    return () => {
-      if (channel) channel.unsubscribe();
-    };
   }, [activeFriend?.id, currentUser?.id]);
 
   useEffect(() => {
@@ -168,7 +204,7 @@ export default function ChatWindow({ currentUser }) {
                     <div className="w-11 h-11 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 font-bold text-sm">
                       {initial}
                     </div>
-                    <Circle className="w-3 h-3 text-emerald-500 fill-emerald-500 absolute bottom-0 right-0" />
+                    <Circle className={`w-3 h-3 absolute bottom-0 right-0 ${onlineUsers.includes(f.id) ? 'text-emerald-500 fill-emerald-500' : 'text-slate-600 fill-slate-600'}`} />
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -210,8 +246,8 @@ export default function ChatWindow({ currentUser }) {
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     @{activeFriend.username || activeFriend.user?.username || 'Peer'}
                   </h3>
-                  <span className="text-[11px] text-emerald-400 flex items-center gap-1">
-                    <Circle className="w-2 h-2 fill-emerald-400" /> Active Aspirant
+                  <span className={`text-[11px] flex items-center gap-1 ${onlineUsers.includes(activeFriend.id) ? 'text-emerald-400' : 'text-slate-500'}`}>
+                    <Circle className={`w-2 h-2 ${onlineUsers.includes(activeFriend.id) ? 'fill-emerald-400' : 'fill-slate-600'}`} /> {onlineUsers.includes(activeFriend.id) ? 'Online' : 'Offline'}
                   </span>
                 </div>
               </div>
@@ -258,7 +294,13 @@ export default function ChatWindow({ currentUser }) {
                       </div>
                       <span className="text-[10px] text-slate-500 mt-1 px-1 flex items-center gap-1">
                         {time}
-                        {isMine && <CheckCheck className="w-3 h-3 text-indigo-400" />}
+                        {isMine && (
+                          m.status === 'read'
+                            ? <CheckCheck className="w-3 h-3 text-sky-400" title="Read" />
+                            : m.status === 'delivered'
+                              ? <CheckCheck className="w-3 h-3 text-slate-300" title="Delivered" />
+                              : <Check className="w-3 h-3 text-slate-400" title="Sent" />
+                        )}
                       </span>
                     </div>
                   );
