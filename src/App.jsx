@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
 import { APP_VERSION, APP_UPDATE_URL, APP_VERSION_URL } from './config/appVersion';
 import { 
   BookOpen, 
@@ -104,6 +105,26 @@ export default function App() {
     }
     checkAuth();
 
+    let nativeUrlListener;
+    if (isNativeAndroid) {
+      nativeUrlListener = CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
+        if (!url || !url.startsWith('co.prepxai.app://auth/callback')) return;
+        try {
+          const callbackUrl = new URL(url);
+          const params = new URLSearchParams(callbackUrl.hash.replace(/^#/, '') || callbackUrl.search.replace(/^\?/, ''));
+          const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token');
+          if (accessToken && refreshToken) {
+            await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+            const user = await getCurrentUser();
+            if (user) setCurrentUser(user);
+          }
+        } catch (error) {
+          console.error('Native OAuth callback error:', error);
+        }
+      });
+    }
+
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
 
@@ -148,6 +169,7 @@ export default function App() {
     return () => {
       mounted = false;
       authListener?.subscription?.unsubscribe();
+      nativeUrlListener?.remove?.();
     };
   }, []);
 
@@ -264,8 +286,12 @@ export default function App() {
     );
   }
 
+  if (isNativeAndroid && updateRequired) {
+    return mandatoryUpdateScreen;
+  }
+
   if (!currentUser) {
-    if (!isNativeAndroid && !passwordRecovery) {
+    if (!passwordRecovery) {
       return (
         <>
           <BrandingPage onLogin={() => setShowAuthModal(true)} />
@@ -285,7 +311,7 @@ export default function App() {
 
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 font-sans">
-        <AuthModal isOpen={true} onClose={() => {}} initialMode={passwordRecovery ? 'reset' : 'login'} onAuthSuccess={(u) => {
+        <AuthModal isOpen={true} onClose={() => {}} initialMode="reset" onAuthSuccess={(u) => {
           setPasswordRecovery(false);
           if (typeof window !== 'undefined') window.history.replaceState({}, document.title, window.location.pathname);
           setCurrentUser(u);
