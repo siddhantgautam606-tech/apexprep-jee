@@ -20,6 +20,7 @@ import AnalyticsDashboard from './features/analytics/AnalyticsDashboard';
 import ChatWindow from './features/social/ChatWindow';
 import AuthModal from './features/auth/AuthModal';
 import OnboardingModal from './features/auth/OnboardingModal';
+import LegalPage from './features/legal/LegalPage';
 import ProfilePanel from './features/auth/ProfilePanel';
 import Connections from './features/social/Connections';
 
@@ -43,6 +44,7 @@ export default function App() {
   const [showAppDownload, setShowAppDownload] = useState(false);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
   const isNativeAndroid = typeof window !== 'undefined' && (window.Capacitor?.getPlatform?.() === 'android' || (/Android/i.test(navigator.userAgent) && window.Capacitor?.isNativePlatform?.()));
+  const legalPath = typeof window !== 'undefined' ? window.location.pathname.replace(/\\/+$/, '') || '/' : '/';
 
   useEffect(() => {
     if (!isNativeAndroid) return;
@@ -238,6 +240,14 @@ export default function App() {
         onExit={() => setActivePYQSession(null)}
       />
     );
+  }
+
+  if (legalPath === '/privacy' || legalPath === '/privacy-policy') {
+    return <LegalPage type="privacy" />;
+  }
+
+  if (legalPath === '/terms' || legalPath === '/terms-of-service') {
+    return <LegalPage type="terms" />;
   }
 
   if (!authChecked) {
