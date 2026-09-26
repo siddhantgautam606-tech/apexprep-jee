@@ -146,8 +146,11 @@ export async function signUpUser(emailArg, passwordArg, metadataArg = {}) {
       await supabase.from('profiles').upsert([{
         id: data.user.id,
         username: metadata.username || String(email).split('@')[0],
+        email: String(email).trim(),
         target_exam: metadata.target_exam || 'JEE Main'
-      }]).catch(() => {});
+      }]).catch((profileError) => {
+        console.warn('Profile creation after signup failed:', profileError);
+      });
     }
 
     return { data, error: null };
