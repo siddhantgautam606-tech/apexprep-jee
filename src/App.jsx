@@ -133,9 +133,10 @@ export default function App() {
             setDeveloperExamOverride(localStorage.getItem('apexprep_dev_exam') || null);
           }
         } else {
-          setCurrentUser(null);
-          clearTestHistory();
-          setShowProfile(false);
+          // A valid Auth session may briefly outlive a profile/API read.
+          // Do not convert that transient read failure into a logout.
+          // SIGNED_OUT is handled explicitly above and is the only auth event
+          // that should clear the current user.
         }
       }, 0);
     });
