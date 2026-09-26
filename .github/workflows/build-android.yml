@@ -124,12 +124,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PrepXAI-Android
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
       - name: Publish APK to website
         run: |
-          cp android/app/build/outputs/apk/release/app-release.apk public/PrepXAI.apk
+          APK_PATH=$(find android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n 1)
+          test -n "$APK_PATH"
+          cp "$APK_PATH" public/PrepXAI.apk
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/PrepXAI.apk
