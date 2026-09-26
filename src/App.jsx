@@ -21,6 +21,7 @@ import ChatWindow from './features/social/ChatWindow';
 import AuthModal from './features/auth/AuthModal';
 import OnboardingModal from './features/auth/OnboardingModal';
 import LegalPage from './features/legal/LegalPage';
+import BrandingPage from './features/branding/BrandingPage';
 import ProfilePanel from './features/auth/ProfilePanel';
 import Connections from './features/social/Connections';
 
@@ -264,6 +265,24 @@ export default function App() {
   }
 
   if (!currentUser) {
+    if (!isNativeAndroid && !passwordRecovery) {
+      return (
+        <>
+          <BrandingPage onLogin={() => setShowAuthModal(true)} />
+          {showAuthModal && (
+            <AuthModal
+              isOpen={showAuthModal}
+              onClose={() => setShowAuthModal(false)}
+              onAuthSuccess={(u) => {
+                setCurrentUser(u);
+                setShowAuthModal(false);
+              }}
+            />
+          )}
+        </>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 font-sans">
         <AuthModal isOpen={true} onClose={() => {}} initialMode={passwordRecovery ? 'reset' : 'login'} onAuthSuccess={(u) => {
