@@ -19,6 +19,8 @@ export async function getCurrentUser() {
 
     if (profileError) {
       console.error('Error fetching current user profile:', profileError);
+      // Keep the valid Auth session even if the profile query has a transient
+      // network, RLS, or database failure.
     }
 
     let resolvedProfile = profile;
@@ -70,7 +72,7 @@ export async function getCurrentUser() {
     };
   } catch (err) {
     console.error('Error fetching current user:', err);
-    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+    // Never revoke a valid session because a profile/session read failed.
     return null;
   }
 }
@@ -140,12 +142,10 @@ export async function signInUser(emailArg, passwordArg) {
     });
     if (error) throw error;
 
+    // signInWithPassword already created the Auth session. Profile loading
+    // is secondary and must not turn a successful login into a logout.
     const user = await getCurrentUser();
-    if (!user) {
-      throw new Error('Your account is no longer available. Please sign in again.');
-    }
-
-    return { data: user, error: null };
+    return { data: user || data?.user || null, error: null };
   } catch (err) {
     console.error('Sign in error:', err);
     return { data: null, error: err.message };
