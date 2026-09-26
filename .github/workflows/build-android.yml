@@ -24,6 +24,21 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Refresh lockfile for Capacitor mobile plugins
+        run: npm install --package-lock-only
+
+      - name: Commit lockfile updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfile unchanged"
+          else
+            git commit -m "Update npm lockfile for mobile dependencies"
+            git push origin HEAD:main
+          fi
+
       - name: Build web app
         run: npm run build
 
@@ -54,8 +69,41 @@ jobs:
           assert 'android:icon="@drawable/prepxai_icon"' in s
           PY
 
-          sed -i 's/versionCode [0-9][0-9]*/versionCode 4/' android/app/build.gradle
-          sed -i 's/versionName "[^"]*"/versionName "1.0.3"/' android/app/build.gradle
+          sed -i 's/versionCode [0-9][0-9]*/versionCode 5/' android/app/build.gradle
+          sed -i 's/versionName "[^"]*"/versionName "1.0.4"/' android/app/build.gradle
+
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('android/app/build.gradle')
+          s = p.read_text()
+          # Release builds are smaller and faster while retaining the existing
+          # debug signing identity used by the currently distributed APK.
+          s = re.sub(r'(release\\s*\\{[^{}]*?)minifyEnabled\\s+false', r'\\1minifyEnabled true', s, count=1, flags=re.S)
+          if 'shrinkResources true' not in s:
+              s = re.sub(r'(release\\s*\\{[^{}]*?minifyEnabled\\s+true)', r'\\1\\n            shrinkResources true', s, count=1, flags=re.S)
+          if 'signingConfig signingConfigs.debug' not in s:
+              s = re.sub(r'(release\\s*\\{)', r'\\1\\n            signingConfig signingConfigs.debug', s, count=1)
+          p.write_text(s)
+          PY
+
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('android/app/src/main/AndroidManifest.xml')
+          s = p.read_text()
+          marker = '<intent-filter>\\n                <action android:name="android.intent.action.VIEW" />'
+          if 'co.prepxai.app' not in s:
+              intent = '''            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="co.prepxai.app" android:host="auth" android:pathPrefix="/callback" />
+            </intent-filter>\n'''
+              s = s.replace('</activity>', intent + '        </activity>', 1)
+          p.write_text(s)
+          assert 'co.prepxai.app' in s
+          PY
 
       - name: Setup Java 21
         uses: actions/setup-java@v4
@@ -68,20 +116,20 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
-      - name: Build debug APK
+      - name: Build optimized release APK
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleRelease
 
       - name: Upload PrepXAI APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: PrepXAI-Android
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
       - name: Publish APK to website
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk public/PrepXAI.apk
+          cp android/app/build/outputs/apk/release/app-release.apk public/PrepXAI.apk
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/PrepXAI.apk
