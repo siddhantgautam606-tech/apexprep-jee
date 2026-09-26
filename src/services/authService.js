@@ -23,42 +23,19 @@ export async function getCurrentUser() {
       // network, RLS, or database failure.
     }
 
-    let resolvedProfile = profile;
+    const resolvedProfile = profile;
+
     if (!resolvedProfile) {
-      const email = authUser.email || '';
-      const baseUsername = (authUser.user_metadata?.username
-        || email.split('@')[0]
-        || 'student')
-        .toLowerCase()
-        .replace(/[^a-z0-9_]/g, '_')
-        .slice(0, 24) || 'student';
-
-      const profilePayload = {
+      return {
         id: authUser.id,
-        username: baseUsername,
-        target_exam: authUser.user_metadata?.target_exam || 'JEE Main'
+        email: authUser.email,
+        username: '',
+        target_exam: '',
+        role: 'student',
+        is_admin: false,
+        created_at: authUser.created_at,
+        needsOnboarding: true,
       };
-
-      const firstAttempt = await supabase
-        .from('profiles')
-        .upsert([profilePayload], { onConflict: 'id' })
-        .select('*')
-        .maybeSingle();
-
-      if (!firstAttempt.error) {
-        resolvedProfile = firstAttempt.data;
-      } else {
-        const fallbackAttempt = await supabase
-          .from('profiles')
-          .upsert([{
-            ...profilePayload,
-            username: `student_${authUser.id.slice(0, 8)}`
-          }], { onConflict: 'id' })
-          .select('*')
-          .maybeSingle();
-
-        if (!fallbackAttempt.error) resolvedProfile = fallbackAttempt.data;
-      }
     }
 
     return {
@@ -74,6 +51,73 @@ export async function getCurrentUser() {
     console.error('Error fetching current user:', err);
     // Never revoke a valid session because a profile/session read failed.
     return null;
+  }
+}
+
+/**
+ * Complete the profile for a newly authenticated OAuth user.
+ * This is intentionally separate from getCurrentUser so a first-time
+ * Google user is not silently assigned a placeholder profile before
+ * choosing their nickname and exam.
+ */
+export async function completeOnboarding({ username, target_exam }) {
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    const authUser = session?.user;
+    if (!authUser) throw new Error('Your session has expired. Please sign in again.');
+
+    const cleanUsername = String(username || '').trim();
+    const cleanExam = String(target_exam || '').trim();
+
+    if (!cleanUsername) throw new Error('Please choose a nickname.');
+    if (cleanUsername.length < 3 || cleanUsername.length > 24) {
+      throw new Error('Nickname must be between 3 and 24 characters.');
+    }
+    if (!/^[A-Za-z0-9_]+$/.test(cleanUsername)) {
+      throw new Error('Nickname can contain only letters, numbers, and underscores.');
+    }
+    if (!['JEE Main', 'JEE Advanced', 'NEET'].includes(cleanExam)) {
+      throw new Error('Please choose a valid exam.');
+    }
+
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('username', cleanUsername)
+      .neq('id', authUser.id)
+      .maybeSingle();
+
+    if (existing) throw new Error('That nickname is already taken. Please choose another.');
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .upsert([{
+        id: authUser.id,
+        username: cleanUsername,
+        email: authUser.email || '',
+        target_exam: cleanExam,
+      }], { onConflict: 'id' })
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    return {
+      data: {
+        id: authUser.id,
+        email: authUser.email,
+        username: profile.username,
+        target_exam: profile.target_exam,
+        role: profile.role || 'student',
+        is_admin: profile.is_admin === true,
+        created_at: authUser.created_at,
+      },
+      error: null,
+    };
+  } catch (err) {
+    console.error('Onboarding error:', err);
+    return { data: null, error: err.message };
   }
 }
 
