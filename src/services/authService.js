@@ -1,4 +1,6 @@
 import { supabase } from './supabaseClient';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 /**
  * Get the current authenticated user from Supabase Auth.
@@ -166,11 +168,22 @@ export async function signUpUser(emailArg, passwordArg, metadataArg = {}) {
 /** Sign in with Google OAuth. */
 export async function signInWithGoogle() {
   try {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const isNative = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+    const redirectTo = isNative ? 'co.prepxai.app://auth/callback' : 'https://www.prepxai.co.in';
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: 'https://www.prepxai.co.in' }
+      options: {
+        redirectTo,
+        ...(isNative ? { skipBrowserRedirect: true } : {})
+      }
     });
     if (error) throw error;
+
+    if (isNative && data?.url) {
+      await Browser.open({ url: data.url, presentationStyle: 'popover' });
+    }
+
     return { error: null };
   } catch (err) {
     console.error('Google sign in error:', err);
