@@ -44,7 +44,7 @@ export default function App() {
   const [showAppDownload, setShowAppDownload] = useState(false);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
   const isNativeAndroid = typeof window !== 'undefined' && (window.Capacitor?.getPlatform?.() === 'android' || (/Android/i.test(navigator.userAgent) && window.Capacitor?.isNativePlatform?.()));
-  const legalPath = typeof window !== 'undefined' ? window.location.pathname.replace(/\\/+$/, '') || '/' : '/';
+  const legalPath = typeof window !== 'undefined' ? window.location.pathname : '/';
 
   useEffect(() => {
     if (!isNativeAndroid) return;
