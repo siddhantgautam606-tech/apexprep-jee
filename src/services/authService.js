@@ -168,7 +168,12 @@ export async function signUpUser(emailArg, passwordArg, metadataArg = {}) {
 /** Sign in with Google OAuth. */
 export async function signInWithGoogle() {
   try {
-    const isNative = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+    // Capacitor's runtime platform is the source of truth inside the APK.
+    // Keep a window.Capacitor fallback for builds where the bridge is exposed
+    // globally before the module runtime initializes.
+    const capacitorPlatform = Capacitor.getPlatform?.();
+    const globalPlatform = typeof window !== 'undefined' ? window.Capacitor?.getPlatform?.() : null;
+    const isNative = capacitorPlatform === 'android' || globalPlatform === 'android';
     const redirectTo = isNative ? 'co.prepxai.app://auth/callback' : 'https://www.prepxai.co.in';
 
     const { data, error } = await supabase.auth.signInWithOAuth({
