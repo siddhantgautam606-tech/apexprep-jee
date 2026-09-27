@@ -59,8 +59,8 @@ jobs:
           m.write_text(s)
           g=Path("android/app/build.gradle")
           x=g.read_text()
-          x=re.sub(r'versionCode\s+\d+','versionCode 6',x,count=1)
-          x=re.sub(r'versionName\s+"[^"]+"','versionName "1.0.5"',x,count=1)
+          x=re.sub(r'versionCode\s+\d+','versionCode 7',x,count=1)
+          x=re.sub(r'versionName\s+"[^"]+"','versionName "1.0.6"',x,count=1)
           g.write_text(x)
           PY
 
@@ -84,15 +84,15 @@ jobs:
           set -e
           APK=$(find android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n 1)
           test -n "$APK"
-          cp "$APK" PrepXAI-1.0.5.apk
-          ls -lh PrepXAI-1.0.5.apk
+          cp "$APK" PrepXAI-1.0.6.apk
+          ls -lh PrepXAI-1.0.6.apk
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.5
-          name: PrepXAI Android v1.0.5
-          body: PrepXAI Android version 1.0.5
-          files: PrepXAI-1.0.5.apk
+          tag_name: v1.0.6
+          name: PrepXAI Android v1.0.6
+          body: PrepXAI Android version 1.0.6
+          files: PrepXAI-1.0.6.apk
           overwrite_files: true
           make_latest: true
