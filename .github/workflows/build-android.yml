@@ -1,9 +1,10 @@
-name: Build PrepXAI Android APK
+name: Build and Publish PrepXAI Android APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   android-apk:
@@ -15,29 +16,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node 22
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
       - name: Install dependencies
-        run: npm install
-
-      - name: Refresh lockfile for Capacitor mobile plugins
-        run: npm install --package-lock-only
-
-      - name: Commit lockfile updates
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          if git diff --cached --quiet; then
-            echo "Lockfile unchanged"
-          else
-            git commit -m "Update npm lockfile for mobile dependencies [skip ci]"
-            git push origin HEAD:main
-          fi
+        run: npm ci
 
       - name: Build web app
         run: npm run build
@@ -48,47 +34,29 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Apply exact PrepXAI app icon and version
+      - name: Apply PrepXAI icon, version, and OAuth deep link
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p android/app/src/main/res/drawable-nodpi
-
-          # Use the exact app-icon artwork supplied for PrepXAI.
           cp public/prepxai_app_icon.jpg android/app/src/main/res/drawable-nodpi/prepxai_icon.jpg
 
           python - <<'PY'
           from pathlib import Path
           import re
-          p = Path('android/app/src/main/AndroidManifest.xml')
-          s = p.read_text()
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          s = manifest.read_text()
           s = re.sub(r'android:icon="[^"]+"', 'android:icon="@drawable/prepxai_icon"', s, count=1)
           if 'android:roundIcon=' in s:
               s = re.sub(r'android:roundIcon="[^"]+"', 'android:roundIcon="@drawable/prepxai_icon"', s, count=1)
           else:
-              s = s.replace('android:icon="@drawable/prepxai_icon"', 'android:icon="@drawable/prepxai_icon"\n        android:roundIcon="@drawable/prepxai_icon"', 1)
-          p.write_text(s)
-          assert 'android:icon="@drawable/prepxai_icon"' in s
-          PY
+              s = s.replace(
+                  'android:icon="@drawable/prepxai_icon"',
+                  'android:icon="@drawable/prepxai_icon"\n        android:roundIcon="@drawable/prepxai_icon"',
+                  1
+              )
 
-          sed -i 's/versionCode [0-9][0-9]*/versionCode 6/' android/app/build.gradle
-          sed -i 's/versionName "[^"]*"/versionName "1.0.5"/' android/app/build.gradle
-
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          p = Path('android/app/build.gradle')
-          s = p.read_text()
-          s = re.sub(r'(release\s*\{[^{}]*?)minifyEnabled\s+false', r'\1minifyEnabled true', s, count=1, flags=re.S)
-          if 'shrinkResources true' not in s:
-              s = re.sub(r'(release\s*\{[^{}]*?minifyEnabled\s+true)', r'\1\n            shrinkResources true', s, count=1, flags=re.S)
-          if 'signingConfig signingConfigs.debug' not in s:
-              s = re.sub(r'(release\s*\{)', r'\1\n            signingConfig signingConfigs.debug', s, count=1)
-          p.write_text(s)
-          PY
-
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('android/app/src/main/AndroidManifest.xml')
-          s = p.read_text()
           if 'co.prepxai.app' not in s:
               intent = '''            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -98,8 +66,16 @@ jobs:
             </intent-filter>
 '''
               s = s.replace('</activity>', intent + '        </activity>', 1)
-          p.write_text(s)
+
+          manifest.write_text(s)
+          assert '@drawable/prepxai_icon' in s
           assert 'co.prepxai.app' in s
+
+          gradle = Path("android/app/build.gradle")
+          g = gradle.read_text()
+          g = re.sub(r'versionCode\s+\d+', 'versionCode 6', g, count=1)
+          g = re.sub(r'versionName\s+"[^"]+"', 'versionName "1.0.5"', g, count=1)
+          gradle.write_text(g)
           PY
 
       - name: Setup Java 21
@@ -113,36 +89,27 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
-      - name: Build optimized release APK
+      - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease
 
-      - name: Upload PrepXAI APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: PrepXAI-Android
-          path: android/app/build/outputs/apk/release/*.apk
-          if-no-files-found: error
-
-      - name: Publish versioned APK to website
+      - name: Prepare APK
+        shell: bash
         run: |
-          APK_PATH=$(find android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n 1)
+          set -euo pipefail
+          APK_PATH="$(find android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n 1)"
           test -n "$APK_PATH"
-          mkdir -p public
-          cp "$APK_PATH" public/PrepXAI-1.0.5.apk
-          cp "$APK_PATH" public/PrepXAI.apk
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/PrepXAI-1.0.5.apk public/PrepXAI.apk
-          if git diff --cached --quiet; then
-            echo "APK unchanged"
-          else
-            git commit -m "Publish PrepXAI Android 1.0.5 APK [skip ci]"
-            for attempt in 1 2 3 4 5; do
-              if git push origin HEAD:main; then
-                exit 0
-              fi
-              git pull --rebase origin main
-            done
-            exit 1
-          fi
+          cp "$APK_PATH" PrepXAI-1.0.5.apk
+          ls -lh PrepXAI-1.0.5.apk
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.5
+          name: PrepXAI Android v1.0.5
+          body: |
+            PrepXAI Android app version 1.0.5.
+            This release contains the current production Android APK.
+          files: PrepXAI-1.0.5.apk
+          overwrite_files: true
+          make_latest: true
