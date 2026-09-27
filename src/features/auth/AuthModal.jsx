@@ -229,7 +229,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                 if (result?.error) { setErrorMsg(result.error); setLoading(false); }
               }} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-lg border border-slate-300 py-2.5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
                 <GoogleIcon />
-                Continue with Google
+                <span>Continue with Google</span>
               </button>
               <div className="flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /><span>OR</span><span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /></div>
 
