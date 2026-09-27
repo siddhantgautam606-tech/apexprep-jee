@@ -6,6 +6,7 @@ import {
   signInWithGoogle,
   sendPasswordResetEmail,
   updatePassword,
+  redeemAppLoginCode,
 } from '../../services/authService';
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode = 'login' }) {
@@ -21,6 +22,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [pairingCode, setPairingCode] = useState('');
+  const isNativeAndroid = typeof window !== 'undefined' && window.Capacitor?.getPlatform?.() === 'android';
 
   if (!isOpen) return null;
 
@@ -37,7 +40,16 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
     setSuccessMsg('');
 
     try {
-      if (mode === 'reset') {
+      if (mode === 'pair') {
+        if (!/^[A-Za-z0-9]{8}$/.test(pairingCode.trim())) {
+          throw new Error('Enter the 8-character code shown on the website.');
+        }
+        const result = await redeemAppLoginCode(pairingCode.trim());
+        if (result?.error) throw new Error(result.error);
+        if (!result?.data) throw new Error('App login could not be completed.');
+        onAuthSuccess(result.data);
+        onClose();
+      } else if (mode === 'reset') {
         if (password.length < 6) throw new Error('Password must be at least 6 characters.');
         const result = await updatePassword(password);
         if (result?.error) throw new Error(result.error);
@@ -82,6 +94,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
     }
   };
   const isRecovery = ['forgot', 'recovery-sent', 'reset'].includes(mode);
+  const isPairing = mode === 'pair';
   const isSignup = mode === 'signup';
 
   return (
@@ -89,7 +102,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900 dark:text-white">
         <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            {isRecovery && (
+            {(isRecovery || isPairing) && (
               <button
                 type="button"
                 onClick={() => goTo('login')}
@@ -105,6 +118,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                   ? 'Check Your Email'
                   : mode === 'reset'
                     ? 'Create New Password'
+                  : isPairing
+                    ? 'Use Website Login'
                   : isSignup
                       ? 'Create PrepXAI Account'
                       : 'Welcome Back'}
@@ -133,6 +148,33 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
         )}
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          {mode === 'pair' && (
+            <>
+              <div className="rounded-xl border border-indigo-500/20 bg-indigo-950/30 p-4">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">Already logged in on the PrepXAI website?</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  On the website, open <strong>Connect App</strong> and enter the one-time code below.
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Website Login Code</label>
+                <input
+                  type="text"
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  autoComplete="one-time-code"
+                  maxLength={8}
+                  required
+                  placeholder="ABCD2345"
+                  value={pairingCode}
+                  onChange={(e) => setPairingCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
+                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-center font-mono text-lg font-bold tracking-[0.18em] focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800"
+                />
+              </div>
+              <SubmitButton loading={loading} label="Log In to APK" />
+            </>
+          )}
+
           {mode === 'reset' && (
             <>
               <p className="text-sm text-slate-500">Choose a new password for your PrepXAI account.</p>
@@ -182,7 +224,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
             </div>
           )}
 
-          {!isRecovery && (
+          {!isRecovery && !isPairing && (
             <>
               {isSignup && (
                 <>
@@ -268,7 +310,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
           )}
         </form>
 
-        {!isRecovery && (
+        {!isRecovery && !isPairing && (
           <>
           <div className="mt-4 text-center text-sm text-slate-500">
             {isSignup ? 'Already have an account?' : "Don't have an account?"}{' '}
@@ -290,6 +332,15 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
         )}
       </div>
     </div>
+  );
+}
+
+function LinkIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0 fill-none stroke-current stroke-2">
+      <path d="M10 13a5 5 0 0 0 7.07.07l2-2a5 5 0 0 0-7.07-7.07l-1.15 1.15" />
+      <path d="M14 11a5 5 0 0 0-7.07-.07l-2 2A5 5 0 0 0 7 20l1.15-1.15" />
+    </svg>
   );
 }
 
