@@ -287,3 +287,50 @@ export const getUser = getCurrentUser;
 export const logout = signOutUser;
 export const login = signInUser;
 export const register = signUpUser;
+
+
+/**
+ * Create a short-lived one-time code that links the currently logged-in
+ * website session to the Android app.
+ */
+export async function createAppLoginPairing() {
+  try {
+    const { data, error } = await supabase.functions.invoke('app-login-pairing', {
+      body: { action: 'create' },
+    });
+    if (error) throw error;
+    return { data, error: null, ...data };
+  } catch (err) {
+    console.error('App pairing creation error:', err);
+    return { data: null, error: err.message || 'Could not create an app login code.' };
+  }
+}
+
+/**
+ * Redeem a website-generated pairing code inside the Android app.
+ * The backend returns a one-time Supabase magic-link token hash; verifying
+ * it creates the normal persistent Supabase session in this app instance.
+ */
+export async function redeemAppLoginCode(code) {
+  try {
+    const { data, error } = await supabase.functions.invoke('app-login-pairing', {
+      body: { action: 'redeem', code: String(code || '').trim() },
+    });
+    if (error) throw error;
+    if (!data?.token_hash) throw new Error(data?.error || 'That code could not be used.');
+
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      token_hash: data.token_hash,
+      type: data.type || 'magiclink',
+    });
+    if (verifyError) throw verifyError;
+
+    const user = await getCurrentUser();
+    if (!user) throw new Error('The app login was completed, but your profile could not be loaded.');
+
+    return { data: user, error: null };
+  } catch (err) {
+    console.error('App pairing redemption error:', err);
+    return { data: null, error: err.message || 'Could not complete app login.' };
+  }
+}
