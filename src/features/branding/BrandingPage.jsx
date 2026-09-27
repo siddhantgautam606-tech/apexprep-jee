@@ -79,6 +79,8 @@ function FeatureCard({ feature, active, onClick }) {
 
 export default function BrandingPage({ onLogin }) {
   const [activeFeature, setActiveFeature] = useState('learn');
+  const [activeStep, setActiveStep] = useState(0);
+  const [examPreview, setExamPreview] = useState('JEE');
 
   const selected = features.find((feature) => feature.id === activeFeature) || features[0];
 
@@ -143,6 +145,42 @@ export default function BrandingPage({ onLogin }) {
                 <div key={label} className="rounded-xl border border-slate-800 bg-slate-900/45 px-3 py-3 text-xs font-semibold text-slate-400">
                   <Icon className="mx-auto mb-1.5 h-4 w-4 text-indigo-400" />{label}
                 </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-10 sm:py-16">
+          <div className="rounded-3xl border border-slate-800 bg-slate-900/55 p-6 shadow-2xl shadow-black/20 sm:p-8">
+            <div className="flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-xl">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-400">A preparation loop</p>
+                <h2 className="mt-2 text-2xl font-black tracking-tight text-white sm:text-3xl">From learning to knowing where you stand.</h2>
+                <p className="mt-3 text-sm leading-6 text-slate-400">Move through a simple cycle instead of jumping between disconnected tools.</p>
+              </div>
+              <div className="grid grid-cols-4 gap-1 rounded-2xl border border-slate-800 bg-slate-950/70 p-1">
+                {[['Learn','01'],['Practice','02'],['Test','03'],['Improve','04']].map(([label, number], index) => (
+                  <button key={label} type="button" onClick={() => setActiveStep(index)}
+                    className={`min-w-0 rounded-xl px-2 py-3 text-center transition ${activeStep === index ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-200'}`}>
+                    <span className="block text-[9px] font-black tracking-widest opacity-70">{number}</span>
+                    <span className="mt-1 block text-[10px] font-bold sm:text-xs">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mt-7 grid gap-4 sm:grid-cols-4">
+              {[
+                ['Learn','Understand the topic in focused chapters and subtopics.'],
+                ['Practice','Reinforce it with timed questions and PYQs.'],
+                ['Test','Combine chapters into realistic CBT-style tests.'],
+                ['Improve','Use your performance to decide what to work on next.']
+              ].map(([title, description], index) => (
+                <button key={title} type="button" onClick={() => setActiveStep(index)}
+                  className={`rounded-2xl border p-4 text-left transition ${activeStep === index ? 'border-indigo-500/40 bg-indigo-500/10' : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'}`}>
+                  <div className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black ${activeStep === index ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`}>{index + 1}</div>
+                  <h3 className="text-sm font-bold text-white">{title}</h3>
+                  <p className="mt-1.5 text-xs leading-5 text-slate-500">{description}</p>
+                </button>
               ))}
             </div>
           </div>
