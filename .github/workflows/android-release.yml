@@ -1,0 +1,98 @@
+name: PrepXAI Android Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web
+        run: npm run build
+
+      - name: Add Android
+        run: npx cap add android
+
+      - name: Sync Android
+        run: npx cap sync android
+
+      - name: Configure PrepXAI
+        shell: bash
+        run: |
+          set -e
+          mkdir -p android/app/src/main/res/drawable-nodpi
+          cp public/prepxai_app_icon.jpg android/app/src/main/res/drawable-nodpi/prepxai_icon.jpg
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          m=Path("android/app/src/main/AndroidManifest.xml")
+          s=m.read_text()
+          s=re.sub(r'android:icon="[^"]+"','android:icon="@drawable/prepxai_icon"',s,count=1)
+          if 'android:roundIcon=' in s:
+              s=re.sub(r'android:roundIcon="[^"]+"','android:roundIcon="@drawable/prepxai_icon"',s,count=1)
+          else:
+              s=s.replace('android:icon="@drawable/prepxai_icon"','android:icon="@drawable/prepxai_icon"\n        android:roundIcon="@drawable/prepxai_icon"',1)
+          if 'co.prepxai.app' not in s:
+              intent='''            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="co.prepxai.app" android:host="auth" android:pathPrefix="/callback" />
+            </intent-filter>
+'''
+              s=s.replace('</activity>',intent+'        </activity>',1)
+          m.write_text(s)
+          g=Path("android/app/build.gradle")
+          x=g.read_text()
+          x=re.sub(r'versionCode\s+\d+','versionCode 6',x,count=1)
+          x=re.sub(r'versionName\s+"[^"]+"','versionName "1.0.5"',x,count=1)
+          g.write_text(x)
+          PY
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
+
+      - name: Build APK
+        working-directory: android
+        run: ./gradlew assembleRelease
+
+      - name: Prepare release asset
+        run: |
+          set -e
+          APK=$(find android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n 1)
+          test -n "$APK"
+          cp "$APK" PrepXAI-1.0.5.apk
+          ls -lh PrepXAI-1.0.5.apk
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.5
+          name: PrepXAI Android v1.0.5
+          body: PrepXAI Android version 1.0.5
+          files: PrepXAI-1.0.5.apk
+          overwrite_files: true
+          make_latest: true
