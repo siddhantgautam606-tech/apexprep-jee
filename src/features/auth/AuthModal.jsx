@@ -3,6 +3,7 @@ import { X, Mail, Lock, User, Target, Loader2, ArrowLeft, ShieldCheck } from 'lu
 import {
   signUpUser,
   signInUser,
+  signInWithGoogle,
   sendPasswordResetEmail,
   updatePassword,
   redeemAppLoginCode,
@@ -264,7 +265,20 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                 </>
               )}
 
-              <div className="flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /><span>OR</span><span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /></div>
+              {!isNativeAndroid && (
+                <>
+                  <button type="button" onClick={async () => {
+                    setLoading(true); setErrorMsg('');
+                    const result = await signInWithGoogle();
+                    if (result?.error) { setErrorMsg(result.error); setLoading(false); }
+                  }} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-lg border border-slate-300 py-2.5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+                    <GoogleIcon />
+                    <span>Continue with Google</span>
+                  </button>
+                  <div className="flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /><span>OR</span><span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /></div>
+                </>
+              )}
+<span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /><span>OR</span><span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /></div>
 
               <EmailField email={email} setEmail={setEmail} />
 
@@ -335,6 +349,17 @@ function LinkIcon() {
   );
 }
 
+
+function GoogleIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0">
+      <path fill="#4285F4" d="M21.6 12.23c0-.73-.07-1.43-.2-2.1H12v3.98h5.38a4.6 4.6 0 0 1-1.99 3.02v2.51h3.22c1.89-1.74 2.99-4.3 2.99-7.41Z"/>
+      <path fill="#34A853" d="M12 22c2.7 0 4.97-.89 6.63-2.36l-3.22-2.51c-.89.6-2.03.96-3.41.96-2.61 0-4.82-1.76-5.61-4.13H3.06v2.59A10 10 0 0 0 12 22Z"/>
+      <path fill="#FBBC05" d="M6.39 13.96A6 6 0 0 1 6.08 12c0-.68.12-1.34.31-1.96V7.45H3.06A10 10 0 0 0 2 12c0 1.61.39 3.13 1.06 4.55l3.33-2.59Z"/>
+      <path fill="#EA4335" d="M12 5.91c1.47 0 2.79.51 3.83 1.51l2.87-2.87C16.96 2.85 14.7 2 12 2a10 10 0 0 0-8.94 5.45l3.33 2.59C7.18 7.67 9.39 5.91 12 5.91Z"/>
+    </svg>
+  );
+}
 
 function EmailField({ email, setEmail }) {
   return (
