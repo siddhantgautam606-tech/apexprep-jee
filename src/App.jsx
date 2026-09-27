@@ -103,27 +103,49 @@ export default function App() {
       if (!user) clearTestHistory();
       setAuthChecked(true);
     }
-    checkAuth();
+    const handleNativeOAuthCallback = async (url) => {
+      if (!isNativeAndroid || !url || !url.startsWith('co.prepxai.app://auth/callback')) return false;
+      try {
+        const callbackUrl = new URL(url);
+        const params = new URLSearchParams(callbackUrl.hash.replace(/^#/, '') || callbackUrl.search.replace(/^\?/, ''));
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        const code = params.get('code');
+        const flowId = params.get('sb_flow_id');
+
+        let authError = null;
+        if (code) {
+          const result = await supabase.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined);
+          authError = result.error;
+        } else if (accessToken && refreshToken) {
+          const result = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+          authError = result.error;
+        }
+
+        if (authError) throw authError;
+        const user = await getCurrentUser();
+        if (user) {
+          setCurrentUser(user);
+          setShowAuthModal(false);
+        }
+        return true;
+      } catch (error) {
+        console.error('Native OAuth callback error:', error);
+        return false;
+      }
+    };
 
     let nativeUrlListener;
     if (isNativeAndroid) {
-      nativeUrlListener = CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
-        if (!url || !url.startsWith('co.prepxai.app://auth/callback')) return;
-        try {
-          const callbackUrl = new URL(url);
-          const params = new URLSearchParams(callbackUrl.hash.replace(/^#/, '') || callbackUrl.search.replace(/^\?/, ''));
-          const accessToken = params.get('access_token');
-          const refreshToken = params.get('refresh_token');
-          if (accessToken && refreshToken) {
-            await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-            const user = await getCurrentUser();
-            if (user) setCurrentUser(user);
-          }
-        } catch (error) {
-          console.error('Native OAuth callback error:', error);
-        }
+      nativeUrlListener = CapacitorApp.addListener('appUrlOpen', ({ url }) => {
+        handleNativeOAuthCallback(url);
       });
+      CapacitorApp.getLaunchUrl().then(({ url }) => {
+        if (url) handleNativeOAuthCallback(url);
+      }).catch((error) => console.warn('Native launch URL check failed:', error));
     }
+
+    checkAuth();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
