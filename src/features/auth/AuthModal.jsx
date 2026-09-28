@@ -3,6 +3,8 @@ import { X, Mail, Lock, User, Target, Loader2, ArrowLeft, ShieldCheck } from 'lu
 import {
   signUpUser,
   signInUser,
+  getCurrentUser,
+  completeOnboarding,
   sendPasswordResetEmail,
   updatePassword,
   redeemAppLoginCode,
@@ -74,8 +76,20 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
         });
 
         if (result?.error) throw new Error(result.error);
-        if (result?.data) onAuthSuccess(result.data);
-        onClose();
+        if (result?.data?.session) {
+          let user = await getCurrentUser();
+          if (user?.needsOnboarding) {
+            const completion = await completeOnboarding({ username, target_exam: targetExam });
+            if (completion?.error) throw new Error(completion.error);
+            user = completion.data;
+          }
+          if (!user) throw new Error('Your account was created, but the profile could not be loaded. Please log in.');
+          onAuthSuccess(user);
+          onClose();
+        } else {
+          setMode('signup-confirmation');
+          setSuccessMsg('');
+        }
       } else {
         const result = await signInUser(email, password);
         if (result?.error) throw new Error(result.error);
@@ -92,7 +106,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
       setLoading(false);
     }
   };
-  const isRecovery = ['forgot', 'recovery-sent', 'reset'].includes(mode);
+  const isRecovery = ['forgot', 'recovery-sent', 'reset', 'signup-confirmation'].includes(mode);
   const isPairing = mode === 'pair';
   const isSignup = mode === 'signup';
 
@@ -196,6 +210,25 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
               <EmailField email={email} setEmail={setEmail} />
               <SubmitButton loading={loading} label="Send Login Link" />
             </>
+          )}
+
+          {mode === 'signup-confirmation' && (
+            <div className="space-y-5">
+              <div className="rounded-xl bg-blue-50 p-5 text-center dark:bg-blue-950/30">
+                <Mail className="mx-auto mb-3 h-8 w-8 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Confirm your email</h3>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                  If this email is eligible for a new account, check <strong>{email}</strong> for a confirmation message and follow its instructions before logging in.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => goTo('login')}
+                className="w-full rounded-lg border border-slate-300 py-2.5 font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Back to Login
+              </button>
+            </div>
           )}
 
           {mode === 'recovery-sent' && (
