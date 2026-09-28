@@ -316,6 +316,15 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
               {isSignup ? 'Log in' : 'Sign up'}
             </button>
           </div>
+          {isNativeAndroid && mode === 'login' && (
+            <button
+              type="button"
+              onClick={() => goTo('pair')}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-3 text-sm font-semibold text-indigo-200 transition hover:bg-indigo-500/20"
+            >
+              <LinkIcon /> Continue with Website
+            </button>
+          )}
           <div className="mt-4 text-center text-[11px] leading-5 text-slate-500">
             By continuing, you agree to our{' '}
             <a href="/terms" className="font-semibold text-slate-400 hover:text-indigo-300 hover:underline">Terms of Service</a>
