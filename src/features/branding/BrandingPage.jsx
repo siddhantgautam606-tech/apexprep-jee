@@ -77,7 +77,7 @@ function FeatureCard({ feature, active, onClick }) {
   );
 }
 
-export default function BrandingPage({ onLogin }) {
+export default function BrandingPage({ onLogin, onSignup }) {
   const [activeFeature, setActiveFeature] = useState('learn');
   const [activeStep, setActiveStep] = useState(0);
   const [examPreview, setExamPreview] = useState('JEE');
@@ -105,13 +105,22 @@ export default function BrandingPage({ onLogin }) {
               <p className="text-[10px] font-medium text-slate-500">Peer Study & CBT Simulator</p>
             </div>
           </a>
-          <button
-            type="button"
-            onClick={onLogin}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500"
-          >
-            Log in <ArrowRight className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onLogin}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2.5 text-xs font-bold text-slate-200 transition hover:border-indigo-500/40 hover:text-white"
+            >
+              Log in
+            </button>
+            <button
+              type="button"
+              onClick={onSignup}
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500"
+            >
+              Sign up <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
 
