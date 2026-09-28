@@ -38,7 +38,6 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [activeTab, setActiveTab] = useState('cbt');
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authInitialMode, setAuthInitialMode] = useState('login');
   const [showProfile, setShowProfile] = useState(false);
   const [developerExamOverride, setDeveloperExamOverride] = useState(null);
   const [activeCircleTest, setActiveCircleTest] = useState(null);
@@ -320,14 +319,10 @@ export default function App() {
     if (!passwordRecovery) {
       return (
         <>
-          <BrandingPage
-            onLogin={() => { setAuthInitialMode('login'); setShowAuthModal(true); }}
-            onSignup={() => { setAuthInitialMode('signup'); setShowAuthModal(true); }}
-          />
+          <BrandingPage onLogin={() => setShowAuthModal(true)} />
           {showAuthModal && (
             <AuthModal
               isOpen={showAuthModal}
-              initialMode={authInitialMode}
               onClose={() => setShowAuthModal(false)}
               onAuthSuccess={(u) => {
                 setCurrentUser(u);
