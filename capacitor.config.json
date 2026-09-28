@@ -1,0 +1,8 @@
+{
+  "appId": "co.prepxai.app",
+  "appName": "PrepXAI",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  }
+}
