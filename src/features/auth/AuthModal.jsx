@@ -129,8 +129,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                 ? 'Forgot Password'
                 : mode === 'recovery-sent'
                   ? 'Check Your Email'
-                  : mode === 'reset'
-                    ? 'Create New Password'
+                  : mode === 'signup-confirmation'
+                    ? 'Confirm Email'
+                    : mode === 'reset'
+                      ? 'Create New Password'
                   : isPairing
                     ? 'Use Website Login'
                   : isSignup
