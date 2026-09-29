@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   ArrowRight, BookOpen, Brain, CheckCircle2, ChevronDown, Clock3,
-  Flame, LineChart, MessageCircle, Sparkles, Target, Users, Zap
+  Flame, LineChart, MessageCircle, Sparkles, Target, Users, Zap, Download
 } from 'lucide-react';
+import { APP_UPDATE_URL } from '../../config/appVersion';
 
 const features = [
   {
@@ -133,6 +134,9 @@ export default function BrandingPage({ onLogin }) {
               <button type="button" onClick={onLogin} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-7 py-4 text-sm font-black text-white shadow-xl shadow-indigo-600/20 transition hover:-translate-y-0.5 hover:bg-indigo-500 sm:w-auto">
                 Start with PrepXAI <ArrowRight className="h-4 w-4" />
               </button>
+              <a href={APP_UPDATE_URL} download="PrepXAI.apk" className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-indigo-500/40 bg-indigo-500/10 px-7 py-4 text-sm font-bold text-indigo-200 transition hover:bg-indigo-600 hover:text-white sm:w-auto">
+                <Download className="h-4 w-4" /> Download Android App
+              </a>
               <a href="#features" className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-700 bg-slate-900/60 px-7 py-4 text-sm font-bold text-slate-300 transition hover:border-indigo-500/40 hover:text-white sm:w-auto">
                 Explore features
               </a>
