@@ -320,6 +320,7 @@ export default function App() {
       return (
         <>
           <BrandingPage onLogin={() => setShowAuthModal(true)} />
+          {appDownloadPopup}
           {showAuthModal && (
             <AuthModal
               isOpen={showAuthModal}
