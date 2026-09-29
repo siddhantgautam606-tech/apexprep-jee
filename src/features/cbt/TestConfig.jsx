@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Play, Settings2, RotateCcw } from 'lucide-react';
 import { JEE_SYLLABUS } from '../../data/syllabusData';
 import { NEET_SYLLABUS } from '../../data/neetSyllabusData';
@@ -12,6 +12,7 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
   const selectedChapters = Array.isArray(config?.selectedChapters) 
     ? config.selectedChapters 
     : ['All'];
+  const [chapterSearch, setChapterSearch] = useState('');
 
   // Dynamically extract all available chapters for the selected subject
   const availableChapters = useMemo(() => {
@@ -98,14 +99,14 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
   const selectedDuration = Number(config?.durationMinutes) || 60;
 
   return (
-    <div className="max-w-2xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-2xl">
+    <div className="w-full max-w-2xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl box-border">
       <div className="flex items-center gap-3 border-b border-slate-800 pb-5 mb-6">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isNeet ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30' : 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'}`}>
           <Settings2 className="w-5 h-5" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-white">Configure {examConfig.label} Practice Exam</h2>
-          <p className="text-xs text-slate-400">Select {examConfig.label} subjects, chapters, and test duration.</p>
+          <h2 className="text-base sm:text-lg font-bold text-white leading-snug">Configure {examConfig.label} Practice Exam</h2>
+          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">Select {examConfig.label} subjects, chapters, and test duration.</p>
         </div>
       </div>
 
@@ -146,12 +147,23 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
             </button>
           </div>
 
-          <div className="max-h-48 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-wrap gap-1.5">
+          <div className="mb-2">
+            <label htmlFor="chapter-search" className="sr-only">Search chapters</label>
+            <input
+              id="chapter-search"
+              type="search"
+              value={chapterSearch}
+              onChange={(e) => setChapterSearch(e.target.value)}
+              placeholder="Search chapters..."
+              className="w-full min-h-[44px] bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:border-indigo-500 transition"
+            />
+          </div>
+          <div className="max-h-64 sm:max-h-48 overflow-y-auto overscroll-contain bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-wrap gap-2 [-webkit-overflow-scrolling:touch]">
             {/* All Chapters Chip */}
             <button
               type="button"
               onClick={() => handleToggleChapter('All')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+              className={`min-h-[44px] px-3 py-2 rounded-lg text-sm sm:text-xs text-left font-medium transition ${
                 selectedChapters.includes('All')
                   ? isNeet ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                   : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
@@ -161,14 +173,14 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
             </button>
 
             {/* Individual Chapter Chips */}
-            {availableChapters.map((ch, idx) => {
+            {availableChapters.filter((ch) => ch.toLowerCase().includes(chapterSearch.trim().toLowerCase())).map((ch, idx) => {
               const isSelected = !selectedChapters.includes('All') && selectedChapters.includes(ch);
               return (
                 <button
                   key={idx}
                   type="button"
                   onClick={() => handleToggleChapter(ch)}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+                  className={`min-h-[44px] px-3 py-2 rounded-lg text-sm sm:text-xs text-left font-medium transition ${
                     isSelected
                       ? isNeet ? 'bg-emerald-600 text-white shadow-sm' : 'bg-indigo-600 text-white shadow-sm'
                       : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
@@ -178,6 +190,9 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
                 </button>
               );
             })}
+            {chapterSearch.trim() && !availableChapters.some((ch) => ch.toLowerCase().includes(chapterSearch.trim().toLowerCase())) && (
+              <p className="w-full px-2 py-3 text-center text-xs text-slate-500">No chapters match your search.</p>
+            )}
           </div>
         </div>
 
@@ -192,7 +207,7 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
                   key={preset.minutes}
                   type="button"
                   onClick={() => onChangeConfig({ ...config, durationMinutes: preset.minutes, questionCount: preset.questions })}
-                  className={`py-3 rounded-xl border text-xs font-bold transition ${selected ? (isNeet ? 'bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-600/20' : 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-600/20') : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'}`}
+                  className={`min-h-[60px] py-3 px-1 rounded-xl border text-xs sm:text-sm font-bold transition ${selected ? (isNeet ? 'bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-600/20' : 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-600/20') : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'}`}
                 >
                   <span className="block">{preset.minutes} Minutes</span>
                   <span className="block mt-1 text-[10px] font-medium opacity-80">{preset.questions} Questions</span>
