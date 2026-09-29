@@ -619,3 +619,89 @@
   }
 }
 
+
+
+/* Focused Android/mobile usability polish: preserve existing layouts and behavior. */
+@media (max-width: 767px) {
+  .app-main,
+  .app-main > *,
+  .app-main section,
+  .app-main form {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .app-main {
+    padding-left: max(10px, env(safe-area-inset-left)) !important;
+    padding-right: max(10px, env(safe-area-inset-right)) !important;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .app-main button,
+  .app-main a[role="button"],
+  .app-main input,
+  .app-main select {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  .app-main input,
+  .app-main select,
+  .app-main textarea {
+    font-size: 16px !important;
+    max-width: 100%;
+  }
+
+  .app-main button {
+    overflow-wrap: anywhere;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .app-main button:active {
+    transform: scale(0.985);
+  }
+
+  .app-main :is(.overflow-y-auto, .overflow-auto, [class*="overflow-y-scroll"]) {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  .app-main :is(.rounded-xl, .rounded-2xl, .rounded-3xl) {
+    overflow-wrap: anywhere;
+  }
+
+  /* Keep full-screen dialogs usable on short Android displays. */
+  body > #root [class*="fixed"][class*="inset-0"] > [class*="max-h-"] {
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-nav {
+    padding-left: max(6px, env(safe-area-inset-left)) !important;
+    padding-right: max(6px, env(safe-area-inset-right)) !important;
+  }
+
+  .mobile-nav button {
+    min-height: 54px !important;
+    user-select: none;
+  }
+
+  :is(button, a, input, select, textarea):focus-visible {
+    outline: 2px solid #818cf8;
+    outline-offset: 2px;
+  }
+}
+
+@media (max-width: 380px) {
+  .app-main {
+    padding-left: max(7px, env(safe-area-inset-left)) !important;
+    padding-right: max(7px, env(safe-area-inset-right)) !important;
+  }
+
+  .mobile-nav button {
+    font-size: 9px !important;
+    gap: 3px !important;
+  }
+}
