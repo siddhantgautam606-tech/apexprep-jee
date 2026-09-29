@@ -266,9 +266,21 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
               )}
 
               {isNativeAndroid && mode === 'login' && (
-                <div className="rounded-xl border border-indigo-500/20 bg-indigo-50 p-3 text-sm text-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
-                  Sign in with the same email and password you use on the PrepXAI website.
-                </div>
+                <>
+                  <div className="rounded-xl border border-indigo-500/20 bg-indigo-50 p-3 text-sm text-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
+                    Sign in with the same email and password you use on the PrepXAI website.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => goTo('pair')}
+                    disabled={loading}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-indigo-500/40 py-2.5 font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-400/30 dark:text-indigo-200 dark:hover:bg-indigo-950/40"
+                  >
+                    <LinkIcon />
+                    <span>Continue with Website Code</span>
+                  </button>
+                  <div className="flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /><span>OR</span><span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /></div>
+                </>
               )}
               {!isNativeAndroid && mode === 'login' && (
                 <>
