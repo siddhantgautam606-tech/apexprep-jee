@@ -451,20 +451,21 @@ export default function App() {
           </div>
         </div>
 
-        <div className="mobile-nav flex md:hidden border-t border-slate-800/80 px-2 py-1.5 overflow-x-auto gap-1">
+        <div className="mobile-nav flex md:hidden border-t border-slate-800/80 px-2 py-2 gap-2" role="navigation" aria-label="Main navigation">
           {[
             { id: 'cbt', label: 'CBT', icon: BookOpen },
             { id: 'circles', label: 'Circles', icon: Users },
             { id: 'pool', label: 'PYQS', icon: HelpCircle },
             { id: 'analytics', label: 'Analytics', icon: BarChart2 },
-            { id: 'chat', label: 'Chat', icon: MessageSquare }
+            { id: 'chat', label: 'Chat', icon: MessageSquare },
+            { id: 'connections', label: 'Connections', icon: Users }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${isActive ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}>
-                <Icon className="w-3.5 h-3.5" />
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} aria-current={isActive ? "page" : undefined}
+                className={`mobile-nav-item flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 ${isActive ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"}`}>
+                <Icon className="w-4 h-4 shrink-0" />
                 {tab.label}
               </button>
             );
