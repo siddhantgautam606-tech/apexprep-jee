@@ -720,3 +720,23 @@
   .chat-page-main > .chat-window { flex:1 1 auto; min-height:0!important; height:auto!important; max-height:none!important; overflow:hidden!important; border-radius:16px!important; }
   .chat-page-main .chat-window .chat-messages { min-height:0!important; max-height:none!important; flex:1 1 auto; }
 }
+
+/* Keep the CBT question palette from expanding the question panel.
+   The number grid scrolls internally when it exceeds the available height. */
+.cbt-question-number-list {
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
+  grid-auto-rows: 36px;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  .cbt-question-number-list {
+    flex: 0 1 auto !important;
+    max-height: 280px !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+  }
+}
