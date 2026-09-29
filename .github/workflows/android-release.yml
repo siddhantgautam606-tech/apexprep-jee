@@ -58,6 +58,9 @@ jobs:
           g = gradle.read_text()
           g = re.sub(r'versionCode\s+\d+', 'versionCode 7', g, count=1)
           g = re.sub(r'versionName\s+"[^"]+"', 'versionName "1.0.6"', g, count=1)
+          g, count = re.subn(r'(buildTypes\\s*\\{\\s*release\\s*\\{)', r'\\1\\n        signingConfig signingConfigs.debug', g, count=1)
+          if count != 1:
+              raise SystemExit('Could not configure release APK signing')
           gradle.write_text(g)
           PY
 
@@ -83,6 +86,7 @@ jobs:
           APK=$(find android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n 1)
           test -n "$APK"
           cp "$APK" PrepXAI-1.0.6.apk
+          apksigner verify --verbose PrepXAI-1.0.6.apk
           ls -lh PrepXAI-1.0.6.apk
 
       - name: Publish APK release
