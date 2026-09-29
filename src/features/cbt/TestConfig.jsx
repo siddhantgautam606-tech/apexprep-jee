@@ -94,7 +94,7 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
   };
 
   const durationPresets = isNeet
-    ? [{ minutes: 60, questions: 100 }, { minutes: 120, questions: 200 }, { minutes: 180, questions: 300 }]
+    ? [{ minutes: 60, questions: 60 }, { minutes: 120, questions: 90 }, { minutes: 180, questions: 180 }]
     : [{ minutes: 60, questions: 25 }, { minutes: 120, questions: 50 }, { minutes: 180, questions: 75 }];
   const selectedDuration = Number(config?.durationMinutes) || 60;
 
