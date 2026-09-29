@@ -437,7 +437,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
         <div className="cbt-palette lg:col-span-1 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Question Palette</h3>
           
-          <div className="grid grid-cols-5 gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
+          <div className="cbt-question-number-list grid grid-cols-5 gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
             {questions.map((_, idx) => {
               const isAnswered = answers[idx] !== undefined;
               const isMarked = markedForReview[idx];
