@@ -359,7 +359,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen text-slate-100 flex flex-col font-sans transition-colors duration-300 ${isNeetInterface ? 'bg-slate-950 selection:bg-emerald-500 selection:text-white' : 'bg-slate-950 selection:bg-indigo-500 selection:text-white'}`}>
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
+      {activeTab !== 'chat' && <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between app-header-row">
           <div className="flex items-center gap-3 app-brand">
             <div className="w-10 h-10 rounded-xl overflow-hidden border border-indigo-500/30 shadow-lg shadow-indigo-500/20 app-brand-icon">
@@ -471,14 +471,14 @@ export default function App() {
             );
           })}
         </div>
-      </header>
+      </header>}
 
-      <main className="app-main flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+      <main className={`app-main flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 ${activeTab === "chat" ? "chat-page-main" : ""}`}>
         {activeTab === 'cbt' && <TestOrganizer currentUser={currentUser} feedExam={feedExam} />}
         {activeTab === 'circles' && <CircleList currentUser={currentUser} feedExam={feedExam} onSelectTestToTake={handleLaunchCircleTest} />}
         {activeTab === 'pool' && <QuestionPool currentUser={currentUser} feedExam={feedExam} onStartPractice={handleLaunchPYQPractice} />}
         {activeTab === 'analytics' && <AnalyticsDashboard currentUser={currentUser} />}
-        {activeTab === 'chat' && <ChatWindow currentUser={currentUser} />}
+        {activeTab === 'chat' && <><div className="chat-page-backbar"><button type="button" onClick={() => setActiveTab('cbt')} className="chat-page-back"><span aria-hidden="true">‹</span> Back</button><span>Messages</span></div><ChatWindow currentUser={currentUser} /></>}
         {activeTab === 'connections' && <Connections currentUser={currentUser} />}
       </main>
 
