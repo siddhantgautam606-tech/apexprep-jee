@@ -705,3 +705,18 @@
     gap: 3px !important;
   }
 }
+
+
+/* Android touch navigation and full-height chat view */
+@media (max-width: 767px) {
+  .mobile-nav { justify-content:flex-start!important; align-items:center!important; overflow-x:auto!important; overflow-y:hidden!important; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain; scrollbar-width:none; white-space:nowrap; }
+  .mobile-nav::-webkit-scrollbar { display:none; }
+  .mobile-nav .mobile-nav-item { flex:0 0 auto!important; width:auto!important; min-width:max-content!important; min-height:42px!important; flex-direction:row!important; white-space:nowrap!important; padding:9px 13px!important; }
+  .app-header-row { padding-top:max(10px,env(safe-area-inset-top))!important; padding-bottom:8px!important; }
+  .chat-page-main { width:100%!important; max-width:none!important; height:100dvh!important; min-height:100dvh!important; max-height:100dvh!important; overflow:hidden!important; display:flex!important; flex-direction:column!important; padding:max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom))!important; box-sizing:border-box!important; }
+  .chat-page-backbar { flex:0 0 42px; display:flex; align-items:center; gap:14px; padding:0 6px 8px; color:#f8fafc; font-size:14px; font-weight:700; }
+  .chat-page-back { min-height:38px!important; display:inline-flex; align-items:center; gap:5px; color:#c7d2fe; background:transparent; border:0; font-size:13px; font-weight:700; }
+  .chat-page-back span { font-size:26px; line-height:1; }
+  .chat-page-main > .chat-window { flex:1 1 auto; min-height:0!important; height:auto!important; max-height:none!important; overflow:hidden!important; border-radius:16px!important; }
+  .chat-page-main .chat-window .chat-messages { min-height:0!important; max-height:none!important; flex:1 1 auto; }
+}
