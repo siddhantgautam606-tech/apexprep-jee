@@ -50,13 +50,7 @@ jobs:
           else:
               s = s.replace('android:icon="@drawable/prepxai_icon"', 'android:icon="@drawable/prepxai_icon"\n        android:roundIcon="@drawable/prepxai_icon"', 1)
           if 'co.prepxai.app' not in s:
-              intent = '''            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="co.prepxai.app" android:host="auth" android:pathPrefix="/callback" />
-            </intent-filter>
-'''
+              intent = (\n                  '            <intent-filter>\\n'\n                  '                <action android:name="android.intent.action.VIEW" />\\n'\n                  '                <category android:name="android.intent.category.DEFAULT" />\\n'\n                  '                <category android:name="android.intent.category.BROWSABLE" />\\n'\n                  '                <data android:scheme="co.prepxai.app" android:host="auth" android:pathPrefix="/callback" />\\n'\n                  '            </intent-filter>\\n'\n              )
               s = s.replace('</activity>', intent + '        </activity>', 1)
           manifest.write_text(s)
 
