@@ -410,10 +410,11 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setShowAppPairing(true)}
-                  className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-700/80 bg-slate-900/80 text-slate-200 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white transition text-xs font-bold"
+                  className="inline-flex items-center gap-2 px-2.5 sm:px-3.5 py-2.5 rounded-xl border border-slate-700/80 bg-slate-900/80 text-slate-200 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white transition text-xs font-bold"
                   title="Connect the Android app to this account"
+                  aria-label="Connect the Android app to this account"
                 >
-                  <Link2 className="w-4 h-4" /> Connect App
+                  <Link2 className="w-4 h-4" /> <span className="hidden sm:inline">Connect App</span>
                 </button>
                 <a href={APP_UPDATE_URL} download="PrepXAI.apk" className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-indigo-500/30 bg-indigo-600/10 text-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs font-bold" title="Download PrepXAI Android app">
                   <Download className="w-4 h-4" /> Download App
