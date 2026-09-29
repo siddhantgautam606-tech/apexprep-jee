@@ -470,6 +470,17 @@ export default function App() {
               </button>
             );
           })}
+          {!isNativeAndroid && /Android/i.test(navigator.userAgent) && (
+            <button
+              type="button"
+              onClick={() => setShowAppPairing(true)}
+              className="mobile-nav-item flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+              aria-label="Connect the Android app to this account"
+            >
+              <Link2 className="w-4 h-4 shrink-0" />
+              Connect App
+            </button>
+          )}
         </div>
       </header>}
 
