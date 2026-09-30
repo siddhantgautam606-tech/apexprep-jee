@@ -740,3 +740,22 @@
     overflow-y: auto !important;
   }
 }
+
+
+/* Keep the CBT question/options in a scrollable viewport while the action bar stays visible. */
+.cbt-question-content {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  .cbt-question-content {
+    flex: none !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    padding-right: 0 !important;
+  }
+}
