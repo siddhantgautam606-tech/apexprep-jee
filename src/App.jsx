@@ -232,13 +232,14 @@ export default function App() {
     });
   };
 
-  const handleLaunchPYQPractice = (questions, subject = 'All') => {
+  const handleLaunchPYQPractice = (questions, subject = 'All', chapter = 'All') => {
     if (!Array.isArray(questions) || questions.length === 0) return;
     setActivePYQSession({
       id: `pyq-session-${Date.now()}`,
       title: `${feedExam} PYQS Session`,
       exam: feedExam,
       subject,
+      chapter,
       questions
     });
   };
@@ -488,7 +489,7 @@ export default function App() {
         {activeTab === 'cbt' && <TestOrganizer currentUser={currentUser} feedExam={feedExam} />}
         {activeTab === 'circles' && <CircleList currentUser={currentUser} feedExam={feedExam} onSelectTestToTake={handleLaunchCircleTest} />}
         {activeTab === 'pool' && <QuestionPool currentUser={currentUser} feedExam={feedExam} onStartPractice={handleLaunchPYQPractice} />}
-        {activeTab === 'analytics' && <AnalyticsDashboard currentUser={currentUser} />}
+        {activeTab === 'analytics' && <AnalyticsDashboard currentUser={currentUser} feedExam={feedExam} onStartChapterPractice={handleLaunchPYQPractice} />}
         {activeTab === 'chat' && <><div className="chat-page-backbar"><button type="button" onClick={() => setActiveTab('cbt')} className="chat-page-back"><span aria-hidden="true">‹</span> Back</button><span>Messages</span></div><ChatWindow currentUser={currentUser} /></>}
         {activeTab === 'connections' && <Connections currentUser={currentUser} />}
       </main>
