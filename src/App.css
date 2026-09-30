@@ -721,13 +721,23 @@
   .chat-page-main .chat-window .chat-messages { min-height:0!important; max-height:none!important; flex:1 1 auto; }
 }
 
-/* Keep the CBT question palette from expanding the question panel.
-   The number grid scrolls internally when it exceeds the available height. */
+/* Scroll the CBT question palette internally without expanding the test layout. */
 .cbt-question-number-list {
   min-height: 0;
+  max-height: 320px;
   overflow-y: auto;
   align-content: start;
   grid-auto-rows: 36px;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Keep long questions/options independently scrollable; action buttons remain outside. */
+.cbt-question-content {
+  min-height: 0;
+  max-height: 60dvh;
+  flex: 1 1 auto;
+  overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }
@@ -739,23 +749,13 @@
     min-height: 0 !important;
     overflow-y: auto !important;
   }
-}
 
-
-/* Keep the CBT question/options in a scrollable viewport while the action bar stays visible. */
-.cbt-question-content {
-  min-height: 0;
-  flex: 1 1 auto;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  -webkit-overflow-scrolling: touch;
-}
-
-@media (max-width: 767px) {
   .cbt-question-content {
-    flex: none !important;
-    min-height: auto !important;
-    overflow: visible !important;
-    padding-right: 0 !important;
+    flex: 0 1 auto !important;
+    min-height: 0 !important;
+    max-height: 55dvh !important;
+    overflow-y: auto !important;
+    padding-right: 4px !important;
+    -webkit-overflow-scrolling: touch;
   }
 }
