@@ -453,6 +453,17 @@ export default function App() {
         </div>
 
         <div className="mobile-nav flex md:hidden border-t border-slate-800/80 px-2 py-2 gap-2" role="navigation" aria-label="Main navigation">
+          {!isNativeAndroid && /Android/i.test(navigator.userAgent) && (
+            <button
+              type="button"
+              onClick={() => setShowAppPairing(true)}
+              className="mobile-nav-item mobile-connect-item flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 text-indigo-100 bg-indigo-600/20 border border-indigo-400/50 hover:bg-indigo-600/40"
+              aria-label="Connect the Android app to this account"
+            >
+              <Link2 className="w-4 h-4 shrink-0" />
+              Connect App
+            </button>
+          )}
           {[
             { id: 'cbt', label: 'CBT', icon: BookOpen },
             { id: 'circles', label: 'Circles', icon: Users },
@@ -471,17 +482,16 @@ export default function App() {
               </button>
             );
           })}
-          {!isNativeAndroid && /Android/i.test(navigator.userAgent) && (
-            <button
-              type="button"
-              onClick={() => setShowAppPairing(true)}
-              className="mobile-nav-item flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
-              aria-label="Connect the Android app to this account"
-            >
-              <Link2 className="w-4 h-4 shrink-0" />
-              Connect App
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setShowProfile((value) => !value)}
+            aria-label="Open Profile"
+            aria-pressed={showProfile}
+            className={`mobile-nav-item flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 ${showProfile ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"}`}
+          >
+            <span className="w-5 h-5 rounded-full bg-indigo-500/25 border border-indigo-400/30 flex items-center justify-center text-indigo-300 text-[10px] font-bold">{(currentUser.username || 'A')[0].toUpperCase()}</span>
+            Profile
+          </button>
         </div>
       </header>}
 
