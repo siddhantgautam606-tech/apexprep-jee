@@ -353,8 +353,8 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
       {/* Main Grid: Question Panel & Palette */}
       <div className="cbt-main-grid flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-4 gap-3">
         {/* Left: Question Content */}
-        <div className="cbt-question-panel lg:col-span-3 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col justify-between">
-          <div>
+        <div className="cbt-question-panel lg:col-span-3 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col justify-between overflow-hidden">
+          <div className="cbt-question-content min-h-0 flex-1 overflow-y-auto pr-2">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
               <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">
                 Q {currentIdx + 1} / {questions.length}
