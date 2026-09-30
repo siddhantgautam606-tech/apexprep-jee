@@ -153,7 +153,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
     setExamResult(stats);
     setIsSubmitted(true);
 
-    if (currentUser?.id) { saveTestAttempt({ userId: currentUser.id, testQuestions: questions, userAnswers: answers, examResults: stats, durationMinutes: Math.max(0, Math.round(totalTimeTaken / 60)) }); }
+    if (currentUser?.id) { await saveTestAttempt({ userId: currentUser.id, testQuestions: questions, userAnswers: answers, examResults: stats, durationMinutes: Math.max(0, Math.round(totalTimeTaken / 60)) }); }
 
     // If this test belongs to a study circle, save submission to Supabase
     if (test?.circleId || test?.circle_id) {
