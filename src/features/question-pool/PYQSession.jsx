@@ -154,7 +154,7 @@ export default function PYQSession({ session, currentUser, onExit }) {
 
         <div className="pyq-main-grid flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-4 gap-3">
           <div className="pyq-question-panel lg:col-span-3 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between overflow-hidden">
-            <div>
+            <div key={currentIdx} className="pyq-question-content min-h-0 flex-1 overflow-y-auto pr-2">
               <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-5">
                 <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20">
                   Question {currentIdx + 1} of {questions.length}
