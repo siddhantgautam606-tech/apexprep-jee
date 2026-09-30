@@ -61,7 +61,7 @@ export default function PYQSession({ session, currentUser, onExit }) {
       : ['Physics', 'Chemistry', 'Mathematics'];
     const sections = [];
     let lastSubject = null;
-    questions.forEach((question, index) => {
+    activeQuestions.forEach((question, index) => {
       const subject = names.includes(question?.subject) ? question.subject : null;
       if (subject && subject !== lastSubject) {
         sections.push({ subject, firstIndex: index });
