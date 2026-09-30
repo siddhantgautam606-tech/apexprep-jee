@@ -759,3 +759,22 @@
     -webkit-overflow-scrolling: touch;
   }
 }
+
+
+/* Keep PYQ question, options and explanation scrollable inside the fixed session panel. */
+.pyq-question-content {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  .pyq-session .pyq-question-content {
+    flex: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-right: 0 !important;
+  }
+}
