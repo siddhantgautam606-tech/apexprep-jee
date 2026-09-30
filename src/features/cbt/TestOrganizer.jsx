@@ -14,7 +14,7 @@ export default function TestOrganizer({ currentUser, feedExam }) {
     selectedChapters: ['All'],
     chapter: 'All',
     durationMinutes: 60,
-    questionCount: exam === 'NEET' ? 100 : 25
+    questionCount: exam === 'NEET' ? 60 : 25
   });
 
   const [activeTest, setActiveTest] = useState(null);
@@ -52,9 +52,13 @@ export default function TestOrganizer({ currentUser, feedExam }) {
     const safeChapterLabel = chaptersList.includes('All') ? 'All' : chaptersList.join(', ');
     const primaryChapter = chaptersList.includes('All') ? 'All' : chaptersList[0];
     const safeDuration = [60, 120, 180].includes(Number(config?.durationMinutes)) ? Number(config.durationMinutes) : 60;
-    const safeCount = exam === 'NEET'
-      ? ({ 60: 100, 120: 200, 180: 300 }[safeDuration] || 100)
-      : ({ 60: 25, 120: 50, 180: 75 }[safeDuration] || 25);
+    const countPresets = exam === 'NEET'
+      ? { 60: 60, 120: 90, 180: 180 }
+      : { 60: 25, 120: 50, 180: 75 };
+    const configuredCount = Number(config?.questionCount);
+    const safeCount = Object.values(countPresets).includes(configuredCount)
+      ? configuredCount
+      : (countPresets[safeDuration] || (exam === 'NEET' ? 60 : 25));
 
     try {
       const isFullSyllabus = safeSubject === 'All' || safeSubject === 'Full Syllabus';
@@ -63,7 +67,7 @@ export default function TestOrganizer({ currentUser, feedExam }) {
       // database query from mixing subjects before the CBT sections are created.
       if (isFullSyllabus) {
         const subjectCounts = exam === 'NEET'
-          ? { Physics: Math.floor(safeCount * 0.34), Chemistry: Math.floor(safeCount * 0.33), Biology: safeCount - Math.floor(safeCount * 0.34) - Math.floor(safeCount * 0.33) }
+          ? ({ 60: { Physics: 15, Chemistry: 15, Biology: 30 }, 90: { Physics: 23, Chemistry: 22, Biology: 45 }, 180: { Physics: 45, Chemistry: 45, Biology: 90 } }[safeCount])
           : { Physics: Math.ceil(safeCount / 3), Chemistry: Math.floor((safeCount - Math.ceil(safeCount / 3)) / 2), Mathematics: safeCount - Math.ceil(safeCount / 3) - Math.floor((safeCount - Math.ceil(safeCount / 3)) / 2) };
 
         loadedQuestions = [];
@@ -88,7 +92,7 @@ export default function TestOrganizer({ currentUser, feedExam }) {
 
           // Stamp the subject onto every question so the runner can derive
           // sections from the actual question data rather than fixed indexes.
-          loadedQuestions.push(...subjectQuestions.map((q) => ({ ...q, subject: subjectName })));
+          loadedQuestions.push(...subjectQuestions.slice(0, count).map((q) => ({ ...q, subject: subjectName })));
         }
       } else {
         try {
@@ -107,7 +111,9 @@ export default function TestOrganizer({ currentUser, feedExam }) {
             ...(Array.isArray(fallback) ? fallback.filter((q) => !existingIds.has(q.id)) : [])
           ].slice(0, safeCount);
         }
-        loadedQuestions = loadedQuestions.map((q) => ({ ...q, subject: q.subject || safeSubject }));
+        loadedQuestions = loadedQuestions
+          .slice(0, safeCount)
+          .map((q) => ({ ...q, subject: q.subject || safeSubject }));
       }
 
       // Absolute failsafe generator
@@ -120,6 +126,9 @@ export default function TestOrganizer({ currentUser, feedExam }) {
           explanation: `Standard ${exam} concept application.`
         }));
       }
+
+      // Never pass more questions to the runner than the selected preset.
+      loadedQuestions = loadedQuestions.slice(0, safeCount);
 
       setActiveTest({
         id: 'practice-' + Date.now(),
