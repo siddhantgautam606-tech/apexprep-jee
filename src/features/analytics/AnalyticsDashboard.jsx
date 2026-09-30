@@ -1,24 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { BarChart3, AlertOctagon, TrendingUp, Target, BookOpen, Award } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { BarChart3, TrendingUp, Target } from 'lucide-react';
 import { getCombinedAnalytics } from '../../services/analyticsService';
-import { getFilteredQuestions } from '../../services/questionService';
 
-export default function AnalyticsDashboard({ currentUser, feedExam, onStartChapterPractice }) {
+export default function AnalyticsDashboard({ currentUser }) {
   const [analytics, setAnalytics] = useState({ hasData:false,totalTests:0,averageScore:0,averageAccuracy:0,totalAttemptedQuestions:0,chapterMastery:[],weakChapters:[],moderateChapters:[],strongChapters:[],recentAttempts:[] });
   useEffect(() => { let active=true; (async()=>{ if(!currentUser?.id){setAnalytics({ hasData:false,totalTests:0,averageScore:0,averageAccuracy:0,totalAttemptedQuestions:0,chapterMastery:[],weakChapters:[],moderateChapters:[],strongChapters:[],recentAttempts:[] }); return;} const result=await getCombinedAnalytics(currentUser.id); if(active)setAnalytics(result); })(); return()=>{active=false;}; }, [currentUser?.id]);
-  const chapterGroups = useMemo(() => [
-    { label:'Strong Chapters', items:analytics.strongChapters || [], tone:'emerald', note:'75% accuracy or higher' },
-    { label:'Chapters to Improve', items:analytics.moderateChapters || [], tone:'amber', note:'45–74% accuracy' },
-    { label:'Weak Chapters', items:analytics.weakChapters || [], tone:'rose', note:'Below 45% accuracy' }
-  ], [analytics]);
   const chapterTotal = analytics.chapterMastery.length;
   const strongPct = chapterTotal ? analytics.strongChapters.length / chapterTotal * 100 : 0;
   const moderatePct = chapterTotal ? (analytics.strongChapters.length + analytics.moderateChapters.length) / chapterTotal * 100 : 0;
-  const startChapter = (chapter) => {
-    const questions=getFilteredQuestions({subject:chapter.subject,chapter:chapter.chapter,exam:feedExam || currentUser?.target_exam});
-    if(questions.length) onStartChapterPractice?.(questions,chapter.subject,chapter.chapter);
-  };
-  const attempted=analytics.totalAttemptedQuestions || 0;
+const attempted=analytics.totalAttemptedQuestions || 0;
   const accuracy=Math.max(0,Math.min(100,Number(analytics.averageAccuracy)||0));
   const correctCount=Math.round(attempted*accuracy/100);
   if (!analytics.hasData) return (
@@ -52,7 +42,11 @@ export default function AnalyticsDashboard({ currentUser, feedExam, onStartChapt
         <div className="flex items-center gap-2 mb-1"><Target className="w-4 h-4 text-indigo-400"/><h3 className="text-sm font-bold text-white">Chapter-wise performance</h3></div><p className="text-xs text-slate-500 mb-4">Use these results to decide what to revise next.</p>
         {analytics.chapterMastery.length ? <div className="flex flex-col gap-4">{analytics.chapterMastery.slice().sort((a,b)=>a.accuracy-b.accuracy).map(ch=><div key={`${ch.subject}-${ch.chapter}`}><div className="flex justify-between items-center gap-3 text-xs mb-1.5"><span className="text-slate-300 font-medium truncate">{ch.subject} · {ch.chapter}<span className="text-slate-500 ml-2">({ch.total} attempted)</span></span><span className="font-mono font-bold text-white">{ch.accuracy}%</span></div><div className="h-2.5 rounded-full bg-slate-800 overflow-hidden"><div className={`h-full rounded-full ${ch.status==='Strong'?'bg-emerald-500':ch.status==='Weak'?'bg-rose-500':'bg-amber-500'}`} style={{width:`${Math.max(0,Math.min(100,ch.accuracy))}%`}}/></div></div>)}</div>:<p className="text-xs text-slate-500">Chapter-level responses are not available yet.</p>}
       </section>
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">{chapterGroups.map(group=><div key={group.label} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3"><div><h3 className={`text-sm font-bold ${group.tone==='emerald'?'text-emerald-400':group.tone==='rose'?'text-rose-400':'text-amber-400'}`}>{group.label}</h3><p className="text-[11px] text-slate-500 mt-1">{group.note}</p></div>{group.items.length?group.items.map(ch=><div key={`${ch.subject}-${ch.chapter}`} className="rounded-xl bg-slate-950/70 border border-slate-800 p-3"><div className="flex justify-between gap-2 items-start"><div className="min-w-0"><p className="text-xs text-slate-300 font-semibold break-words">{ch.chapter}</p><p className="text-[10px] text-slate-500 mt-1">{ch.subject} · {ch.total} attempted</p></div><span className="text-xs font-mono font-bold text-white">{ch.accuracy}%</span></div>{group.tone==='rose'&&<button onClick={()=>startChapter(ch)} className="mt-3 w-full rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold py-2.5 flex items-center justify-center gap-2"><BookOpen className="w-3.5 h-3.5"/>Start Practice</button>}</div>):<p className="text-xs text-slate-600">No chapters in this category yet.</p>}</div>)}</section>
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4"><h3 className="text-sm font-bold text-rose-400">Needs practice</h3><p className="text-xs text-slate-400 mt-1">Chapters that need more revision.</p><p className="text-lg font-bold text-white mt-2">{analytics.weakChapters.length} chapters</p></div>
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4"><h3 className="text-sm font-bold text-amber-400">In progress</h3><p className="text-xs text-slate-400 mt-1">Chapters to keep improving.</p><p className="text-lg font-bold text-white mt-2">{analytics.moderateChapters.length} chapters</p></div>
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4"><h3 className="text-sm font-bold text-emerald-400">Strong zone</h3><p className="text-xs text-slate-400 mt-1">Chapters where you're doing well.</p><p className="text-lg font-bold text-white mt-2">{analytics.strongChapters.length} chapters</p></div>
+      </section>
       <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5"><h3 className="text-sm font-bold text-white mb-4">Recent test history</h3><div className="overflow-x-auto"><table className="w-full text-xs text-left text-slate-300"><thead><tr className="border-b border-slate-800 text-slate-500"><th className="pb-3">Date</th><th className="pb-3">Questions</th><th className="pb-3">Duration</th><th className="pb-3 text-center">Score</th><th className="pb-3 text-right">Accuracy</th></tr></thead><tbody>{analytics.recentAttempts.map(at=><tr key={at.id} className="border-b border-slate-800/60 last:border-0"><td className="py-3 font-mono text-slate-400">{new Date(at.timestamp).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</td><td className="py-3">{at.questionCount} Questions</td><td className="py-3">{at.durationMinutes} mins</td><td className="py-3 text-center font-bold text-indigo-400">{at.score} / {at.totalPossibleScore}</td><td className="py-3 text-right font-mono font-bold text-emerald-400">{at.accuracy}%</td></tr>)}</tbody></table></div></section>
     </div>
   );
