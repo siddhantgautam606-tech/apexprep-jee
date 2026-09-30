@@ -38,6 +38,10 @@ export default function PYQSession({ session, currentUser, onExit }) {
   }, [session]);
 
   const [currentIdx, setCurrentIdx] = useState(0);
+  const [selectedChapter, setSelectedChapter] = useState('All');
+  const chapterOptions = useMemo(() => Array.from(new Set(questions.map((q) => String(q?.chapter || q?.chapterId || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b)), [questions]);
+  const activeQuestions = useMemo(() => selectedChapter === 'All' ? questions : questions.filter((q) => String(q?.chapter || q?.chapterId || '').trim() === selectedChapter), [questions, selectedChapter]);
+  useEffect(() => { setCurrentIdx(0); setAnswers({}); setMarkedForReview({}); setFeedback({}); }, [selectedChapter]);
   const [answers, setAnswers] = useState({});
   const [markedForReview, setMarkedForReview] = useState({});
   const [feedback, setFeedback] = useState({});
@@ -65,7 +69,7 @@ export default function PYQSession({ session, currentUser, onExit }) {
       }
     });
     return sections.length > 1 ? sections : [];
-  }, [questions, session?.exam]);
+  }, [activeQuestions, session?.exam]);
 
   const activeSubject = subjectSections.find((section, index) => {
     const next = subjectSections[index + 1];
@@ -77,7 +81,7 @@ export default function PYQSession({ session, currentUser, onExit }) {
     if (section) setCurrentIdx(section.firstIndex);
   };
 
-  const currentQ = questions[currentIdx];
+  const currentQ = activeQuestions[currentIdx];
 
   const formatTime = (seconds) => {
     const h = Math.floor(seconds / 3600);
@@ -105,7 +109,7 @@ export default function PYQSession({ session, currentUser, onExit }) {
     onExit?.();
   };
 
-  if (!questions.length) {
+  if (!activeQuestions.length) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
@@ -126,7 +130,7 @@ export default function PYQSession({ session, currentUser, onExit }) {
             </button>
             <div className="min-w-0">
               <h1 className="text-sm sm:text-base font-bold text-white truncate">{session.title || `${session.exam} PYQS Session`}</h1>
-              <p className="text-[10px] text-slate-500">{session.exam} • {session.subject || 'All Subjects'} • Practice Session</p>
+              <p className="text-[10px] text-slate-500">{session.exam} • {session.subject || 'All Subjects'} • {selectedChapter === 'All' ? 'All Chapters' : selectedChapter} • Practice Session</p>
             </div>
           </div>
           <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 shrink-0">
@@ -134,6 +138,17 @@ export default function PYQSession({ session, currentUser, onExit }) {
             <span className="font-mono text-sm font-bold tracking-wider text-white">{formatTime(elapsedSeconds)}</span>
           </div>
         </div>
+
+        {chapterOptions.length > 1 && (
+          <div className="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl px-3 py-2 flex flex-col sm:flex-row sm:items-center gap-2 shadow-lg">
+            <label htmlFor="pyq-chapter-select" className="text-xs font-semibold text-slate-300 shrink-0">Choose Chapter</label>
+            <select id="pyq-chapter-select" value={selectedChapter} onChange={(e) => setSelectedChapter(e.target.value)} className="w-full sm:w-auto min-w-0 sm:min-w-[240px] bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500">
+              <option value="All">All Available Chapters</option>
+              {chapterOptions.map((chapter) => <option key={chapter} value={chapter}>{chapter}</option>)}
+            </select>
+            <span className="text-[11px] text-slate-500">{activeQuestions.length} questions</span>
+          </div>
+        )}
 
         {subjectSections.length > 1 && (
           <div className="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-lg">
@@ -157,7 +172,7 @@ export default function PYQSession({ session, currentUser, onExit }) {
             <div key={currentIdx} className="pyq-question-content min-h-0 flex-1 overflow-y-auto pr-2">
               <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-5">
                 <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20">
-                  Question {currentIdx + 1} of {questions.length}
+                  Question {currentIdx + 1} of {activeQuestions.length}
                 </span>
                 <span className="text-[11px] text-slate-500">
                   {currentQ?.yearTag || currentQ?.year_tag || 'PYQ'}
@@ -223,7 +238,7 @@ export default function PYQSession({ session, currentUser, onExit }) {
                   className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 rounded-xl text-xs font-semibold flex items-center gap-1">
                   <ChevronLeft className="w-4 h-4" /> Previous
                 </button>
-                <button disabled={currentIdx === questions.length - 1} onClick={() => setCurrentIdx((i) => Math.min(questions.length - 1, i + 1))}
+                <button disabled={currentIdx === activeQuestions.length - 1} onClick={() => setCurrentIdx((i) => Math.min(activeQuestions.length - 1, i + 1))}
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 rounded-xl text-xs font-semibold flex items-center gap-1">
                   Next <ChevronRight className="w-4 h-4" />
                 </button>
@@ -238,7 +253,7 @@ export default function PYQSession({ session, currentUser, onExit }) {
             </div>
 
             <div className="pyq-question-navigation grid grid-cols-5 gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
-              {questions.map((_, idx) => {
+              {activeQuestions.map((_, idx) => {
                 const answered = answers[idx] !== undefined;
                 const marked = markedForReview[idx];
                 const current = idx === currentIdx;
