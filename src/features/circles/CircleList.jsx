@@ -53,7 +53,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
     subject: 'All',
     selectedChapters: ['All'],
     durationMinutes: 60,
-    questionCount: exam === 'NEET' ? 100 : 25,
+    questionCount: exam === 'NEET' ? 60 : 25,
     windowStart: '',
     windowEnd: ''
   });
@@ -247,7 +247,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
       const testExam = exam;
       const duration = [60, 120, 180].includes(Number(newTest.durationMinutes)) ? Number(newTest.durationMinutes) : 60;
       const qNum = testExam === 'NEET'
-        ? ({ 60: 100, 120: 200, 180: 300 }[duration] || 100)
+        ? ({ 60: 60, 120: 90, 180: 180 }[duration] || 60)
         : ({ 60: 25, 120: 50, 180: 75 }[duration] || 25);
       const chapterLabel = newTest.selectedChapters.includes('All')
         ? 'All'
@@ -938,7 +938,7 @@ export default function CircleList({ currentUser, onSelectTestToTake, feedExam }
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">Test Duration</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[60, 120, 180].map((minutes) => {
-                    const questions = exam === 'NEET' ? ({ 60: 100, 120: 200, 180: 300 }[minutes]) : ({ 60: 25, 120: 50, 180: 75 }[minutes]);
+                    const questions = exam === 'NEET' ? ({ 60: 60, 120: 90, 180: 180 }[minutes]) : ({ 60: 25, 120: 50, 180: 75 }[minutes]);
                     const selected = Number(newTest.durationMinutes) === minutes;
                     return (
                       <button key={minutes} type="button" onClick={() => setNewTest({ ...newTest, durationMinutes: minutes, questionCount: questions })}
