@@ -83,10 +83,9 @@ export default function TestOrganizer({ currentUser, feedExam }) {
             const fallback = exam === 'NEET'
               ? getStandardNEETQuestions(subjectName, primaryChapter, count)
               : getStandardQuestions(subjectName, primaryChapter, count);
-            const existingIds = new Set((subjectQuestions || []).map((q) => q.id));
             subjectQuestions = [
               ...(subjectQuestions || []),
-              ...(Array.isArray(fallback) ? fallback.filter((q) => !existingIds.has(q.id)) : [])
+              ...(Array.isArray(fallback) ? fallback : [])
             ].slice(0, count);
           }
 
@@ -105,10 +104,9 @@ export default function TestOrganizer({ currentUser, feedExam }) {
           const fallback = exam === 'NEET'
             ? getStandardNEETQuestions(safeSubject, primaryChapter, safeCount)
             : getStandardQuestions(safeSubject, primaryChapter, safeCount);
-          const existingIds = new Set((loadedQuestions || []).map((q) => q.id));
           loadedQuestions = [
             ...(loadedQuestions || []),
-            ...(Array.isArray(fallback) ? fallback.filter((q) => !existingIds.has(q.id)) : [])
+            ...(Array.isArray(fallback) ? fallback : [])
           ].slice(0, safeCount);
         }
         loadedQuestions = loadedQuestions
