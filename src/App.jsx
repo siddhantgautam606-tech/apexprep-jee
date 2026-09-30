@@ -453,7 +453,7 @@ export default function App() {
         </div>
 
         <div className="mobile-nav flex md:hidden border-t border-slate-800/80 px-2 py-2 gap-2" role="navigation" aria-label="Main navigation">
-          {!isNativeAndroid && /Android/i.test(navigator.userAgent) && (
+          {/Android/i.test(navigator.userAgent) && (
             <button
               type="button"
               onClick={() => setShowAppPairing(true)}
