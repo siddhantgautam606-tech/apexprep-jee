@@ -2141,7 +2141,7 @@ export const MATHEMATICS_QUESTIONS = [
     options: ['1', '2', '3', '4'],
     correctAnswer: 2,
     explanation: 'Since α and β satisfy x² - 6x - 2 = 0, multiplying by x^(n-2) yields aₙ - 6aₙ₋₁ - 2aₙ₋₂ = 0. For n = 10: a₁₀ - 2a₈ = 6a₉ => (a₁₀ - 2a₈)/(2a₉) = 6/2 = 3.'
-  }
+  },
   ...Array.from({ length: 100 }, (_, i) => {
     const n = Math.floor(i / 10) + 1;
     const variant = i % 10;
