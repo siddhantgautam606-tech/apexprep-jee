@@ -669,9 +669,8 @@ export const QUESTIONS_POOL = [
     options: ['Continuous and differentiable with f\'(0) = 0', 'Continuous but not differentiable', 'Discontinuous', 'f\'(0) does not exist'],
     correctIndex: 0,
     explanation: 'For x ≥ 0, f(x) = x² => f\'(0⁺) = 0. For x < 0, f(x) = -x² => f\'(0⁻) = 0. Left-hand derivative equals right-hand derivative = 0, so it is both continuous and differentiable.'
-  }
+  },
 
-  
   // Additional original JEE Main-style practice questions (distinct from the question bank)
   ...Array.from({ length: 100 }, (_, i) => {
     const n = i + 1;
