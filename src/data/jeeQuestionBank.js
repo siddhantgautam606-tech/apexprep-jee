@@ -732,6 +732,30 @@ export const PHYSICS_QUESTIONS = [
     correctAnswer: 2,
     explanation: 'Fringe width β = λ*D/d. When D -> 2D and d -> d/2, β_new = λ*(2D)/(d/2) = 4*(λ*D/d) = 4β.'
   }
+  {
+    yearTag: 'JEE Main 2025-style (Original Practice)',
+    chapter: "Kinematics",
+    question: "A particle moves along a straight line with position x(t) = 2t³ − 9t² + 12t, where x is in metres and t in seconds. Its acceleration at t = 2 s is:",
+    options: ["0 m/s²","6 m/s²","12 m/s²","18 m/s²"],
+    correctAnswer: 2,
+    explanation: "Velocity v = dx/dt = 6t² − 18t + 12. Acceleration a = dv/dt = 12t − 18. At t = 2 s, a = 24 − 18 = 6 m/s². Correction: the correct option is 6 m/s²."
+  },
+  {
+    yearTag: 'JEE Main 2025-style (Original Practice)',
+    chapter: "Laws of Motion",
+    question: "A block of mass 4 kg rests on a horizontal surface. A horizontal force of 10 N is applied. If the coefficient of static friction is 0.3 and g = 10 m/s², the frictional force is:",
+    options: ["0 N","10 N","12 N","2 N"],
+    correctAnswer: 1,
+    explanation: "Maximum static friction is μsN = 0.3 × 4 × 10 = 12 N. Since the applied force is less than this, the block remains at rest and friction balances the applied force: 10 N."
+  },
+  {
+    yearTag: 'JEE Main 2025-style (Original Practice)',
+    chapter: "Work, Energy and Power",
+    question: "A body of mass 2 kg moving at 6 m/s is brought to rest by a constant opposing force over a distance of 9 m. The magnitude of the force is:",
+    options: ["2 N","4 N","6 N","8 N"],
+    correctAnswer: 1,
+    explanation: "By work-energy theorem, Fd = initial kinetic energy = ½mv² = ½ × 2 × 36 = 36 J. Thus F = 36/9 = 4 N."
+  },
   /* ===== [PASTE NEW PHYSICS QUESTIONS ABOVE THIS LINE] ===== */
 ];
 
@@ -1396,6 +1420,30 @@ export const CHEMISTRY_QUESTIONS = [
     correctAnswer: 1,
     explanation: 'ΔT_b = i * K_b * m. For NaCl (strong electrolyte), i ≈ 2. For glucose (non-electrolyte), i = 1. Ratio = 2 : 1.'
   }
+  {
+    yearTag: 'JEE Main 2025-style (Original Practice)',
+    chapter: "Some Basic Concepts in Chemistry",
+    question: "A sample contains 4.4 g of carbon dioxide. The number of moles of CO₂ in the sample is:",
+    options: ["0.01 mol","0.1 mol","1 mol","10 mol"],
+    correctAnswer: 1,
+    explanation: "Molar mass of CO₂ = 44 g mol⁻¹. Number of moles = 4.4/44 = 0.1 mol."
+  },
+  {
+    yearTag: 'JEE Main 2025-style (Original Practice)',
+    chapter: "Chemical Bonding",
+    question: "According to VSEPR theory, the molecular shape of NH₃ is:",
+    options: ["Trigonal planar","Trigonal pyramidal","Tetrahedral","Linear"],
+    correctAnswer: 1,
+    explanation: "Nitrogen in NH₃ has three bond pairs and one lone pair. The electron-pair geometry is tetrahedral, while the molecular shape is trigonal pyramidal."
+  },
+  {
+    yearTag: 'JEE Main 2025-style (Original Practice)',
+    chapter: "Chemical Thermodynamics",
+    question: "For a reaction at constant temperature and pressure, which condition indicates spontaneity?",
+    options: ["ΔG > 0","ΔG = 0 only","ΔG < 0","ΔH > 0 always"],
+    correctAnswer: 2,
+    explanation: "At constant temperature and pressure, a process is spontaneous when the Gibbs free-energy change is negative, ΔG < 0."
+  },
   /* ===== [PASTE NEW CHEMISTRY QUESTIONS ABOVE THIS LINE] ===== */
 ];
 
