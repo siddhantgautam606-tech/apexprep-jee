@@ -679,7 +679,7 @@ export const QUESTIONS_POOL = [
     const a = 2 + (i % 9);
     const b = 3 + ((i * 3) % 11);
     const c = 1 + ((i * 7) % 8);
-    const answer = mode === 0 ? Math.min(a, b) : mode === 1 ? a / c : mode === 2 ? b - c : mode === 3 ? a - c : a;
+    const answer = mode === 0 ? a + b : mode === 1 ? a * c : mode === 2 ? b + c : mode === 3 ? a - c : a * c;
     const options = [answer, answer + 2, answer - 1, answer + 5].map(String);
     const shift = i % 4;
     const shuffled = options.slice(shift).concat(options.slice(0, shift));
@@ -713,7 +713,7 @@ export const QUESTIONS_POOL = [
     const a = 2 + (i % 9);
     const b = 3 + ((i * 3) % 11);
     const c = 1 + ((i * 7) % 8);
-    const answer = mode === 0 ? a + b : mode === 1 ? a * c : mode === 2 ? b + c : mode === 3 ? a * a - c : (a + b) * c;
+    const answer = mode === 0 ? Math.min(a, b) : mode === 1 ? a / c : mode === 2 ? b - c : mode === 3 ? a - c : a;
     const options = [answer, answer + 2, answer - 1, answer + 5].map(String);
     const shift = i % 4;
     const shuffled = options.slice(shift).concat(options.slice(0, shift));
