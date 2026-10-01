@@ -731,7 +731,7 @@ export const PHYSICS_QUESTIONS = [
     options: ['Halved', 'Doubled', 'Four times', 'Unchanged'],
     correctAnswer: 2,
     explanation: 'Fringe width β = λ*D/d. When D -> 2D and d -> d/2, β_new = λ*(2D)/(d/2) = 4*(λ*D/d) = 4β.'
-  }
+  },
   {
     yearTag: 'JEE Main 2025-style (Original Practice)',
     chapter: "Kinematics",
@@ -1436,7 +1436,7 @@ export const CHEMISTRY_QUESTIONS = [
     options: ['1 : 1', '2 : 1', '1 : 2', '3 : 1'],
     correctAnswer: 1,
     explanation: 'ΔT_b = i * K_b * m. For NaCl (strong electrolyte), i ≈ 2. For glucose (non-electrolyte), i = 1. Ratio = 2 : 1.'
-  }
+  },
   {
     yearTag: 'JEE Main 2025-style (Original Practice)',
     chapter: "Some Basic Concepts in Chemistry",
