@@ -737,7 +737,7 @@ export const PHYSICS_QUESTIONS = [
     chapter: "Kinematics",
     question: "A particle moves along a straight line with position x(t) = 2t³ − 9t² + 12t, where x is in metres and t in seconds. Its acceleration at t = 2 s is:",
     options: ["0 m/s²","6 m/s²","12 m/s²","18 m/s²"],
-    correctAnswer: 2,
+    correctAnswer: 1,
     explanation: "Velocity v = dx/dt = 6t² − 18t + 12. Acceleration a = dv/dt = 12t − 18. At t = 2 s, a = 24 − 18 = 6 m/s². Correction: the correct option is 6 m/s²."
   },
   {
