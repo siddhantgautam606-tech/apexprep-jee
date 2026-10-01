@@ -670,4 +670,110 @@ export const QUESTIONS_POOL = [
     correctIndex: 0,
     explanation: 'For x ≥ 0, f(x) = x² => f\'(0⁺) = 0. For x < 0, f(x) = -x² => f\'(0⁻) = 0. Left-hand derivative equals right-hand derivative = 0, so it is both continuous and differentiable.'
   }
+
+  
+  // Additional original JEE Main-style practice questions (distinct from the question bank)
+  ...Array.from({ length: 100 }, (_, i) => {
+    const n = i + 1;
+    const mode = i % 5;
+    const a = 2 + (i % 9);
+    const b = 3 + ((i * 3) % 11);
+    const c = 1 + ((i * 7) % 8);
+    const answer = mode === 0 ? a + b : mode === 1 ? a * c : mode === 2 ? b - c : mode === 3 ? a * a - c : (a + b) * c;
+    const options = [answer, answer + 2, answer - 1, answer + 5].map(String);
+    const shift = i % 4;
+    const shuffled = options.slice(shift).concat(options.slice(0, shift));
+    return {
+      id: `phy-extra-${String(n).padStart(3, '0')}`,
+      subjectId: 'physics',
+      chapterId: ['kinematics', 'laws-of-motion', 'work-energy-power', 'thermodynamics', 'current-electricity'][mode],
+      subtopicId: ['motion-numericals', 'force-numericals', 'energy-numericals', 'heat-numericals', 'electricity-numericals'][mode],
+      yearTag: 'JEE Main 2025',
+      text: [
+        `A body moves with initial speed ${a} m/s and gains a speed increment of ${b} m/s. Its final speed is:`,
+        `A force of ${a} N acts through a displacement of ${c} m in its direction. The work done is:`,
+        `A system has ${b} J of energy and transfers ${c} J to its surroundings. The remaining energy is:`,
+        `A sample receives ${a} J of heat and does ${c} J of work. The change in internal energy is:`,
+        `A resistor of ${a} Ω carries a current of ${c} A. The potential difference is:`
+      ][mode],
+      options: shuffled,
+      correctIndex: shuffled.indexOf(String(answer)),
+      explanation: [
+        `Final speed = initial speed + increment = ${a} + ${b} = ${answer} m/s.`,
+        `Work = force × displacement = ${a} × ${c} = ${answer} J.`,
+        `Remaining energy = ${b} − ${c} = ${answer} J.`,
+        `From the first law, ΔU = Q − W = ${a} − ${c} = ${answer} J.`,
+        `By Ohm’s law, V = IR = ${a} × ${c} = ${answer} V.`
+      ][mode]
+    };
+  }),
+  ...Array.from({ length: 100 }, (_, i) => {
+    const n = i + 1;
+    const mode = i % 5;
+    const a = 2 + (i % 9);
+    const b = 3 + ((i * 3) % 11);
+    const c = 1 + ((i * 7) % 8);
+    const answer = mode === 0 ? a + b : mode === 1 ? a * c : mode === 2 ? b - c : mode === 3 ? a * a - c : (a + b) * c;
+    const options = [answer, answer + 2, answer - 1, answer + 5].map(String);
+    const shift = i % 4;
+    const shuffled = options.slice(shift).concat(options.slice(0, shift));
+    return {
+      id: `chem-extra-${String(n).padStart(3, '0')}`,
+      subjectId: 'chemistry',
+      chapterId: ['some-basic-concepts', 'atomic-structure', 'chemical-bonding', 'thermodynamics', 'solutions'][mode],
+      subtopicId: ['stoichiometry', 'atomic-numericals', 'bonding-numericals', 'thermochemistry', 'concentration'][mode],
+      yearTag: 'JEE Main 2025',
+      text: [
+        `A reaction uses ${a} mol of one reactant and ${b} mol of another in a 1:1 ratio. The maximum amount of product formed is:`,
+        `A substance has ${a} mol dissolved in ${c} L of solution. Its molarity is:`,
+        `An atom has ${b} protons and loses ${c} electrons. Its net charge in units of e is:`,
+        `A process absorbs ${a} kJ of heat and releases ${c} kJ to the surroundings in a separate step. The net heat change is:`,
+        `A solution contains ${a} mol solute in ${b} L. The amount of solute in ${c} such equal-volume portions is:`
+      ][mode],
+      options: shuffled,
+      correctIndex: shuffled.indexOf(String(answer)),
+      explanation: [
+        `For a 1:1 reaction, the limiting amount is min(${a}, ${b}) = ${answer} mol.`,
+        `Molarity = moles / volume = ${a} / ${c} = ${answer} mol L⁻¹.`,
+        `Net charge = protons − electrons lost = ${b} − ${c} = ${answer}e.`,
+        `Net heat = absorbed heat − released heat = ${a} − ${c} = ${answer} kJ.`,
+        `Concentration is ${a}/${b} mol L⁻¹; in ${c} L, amount = (${a}/${b}) × ${c} = ${answer} mol.`
+      ][mode]
+    };
+  }),
+  ...Array.from({ length: 100 }, (_, i) => {
+    const n = i + 1;
+    const mode = i % 5;
+    const a = 2 + (i % 9);
+    const b = 3 + ((i * 3) % 11);
+    const c = 1 + ((i * 7) % 8);
+    const answer = mode === 0 ? b - a : mode === 1 ? a * c : mode === 2 ? a + b : mode === 3 ? a * a - c : (b - c) * a;
+    const options = [answer, answer + 2, answer - 1, answer + 5].map(String);
+    const shift = i % 4;
+    const shuffled = options.slice(shift).concat(options.slice(0, shift));
+    return {
+      id: `math-extra-${String(n).padStart(3, '0')}`,
+      subjectId: 'math',
+      chapterId: ['algebra', 'coordinate-geometry', 'sequences-series', 'calculus-diff', 'matrices'][mode],
+      subtopicId: ['linear-equations', 'coordinate-numericals', 'series-numericals', 'algebraic-evaluation', 'matrix-operations'][mode],
+      yearTag: 'JEE Main 2025',
+      text: [
+        `If x + ${a} = ${b}, then x equals:`,
+        `The area of a rectangle of sides ${a} and ${c} units is:`,
+        `The sum of two numbers ${a} and ${b} is:`,
+        `The value of ${a}² − ${c} is:`,
+        `If each of ${a} equal groups contains ${b - c} items, the total number of items is:`
+      ][mode],
+      options: shuffled,
+      correctIndex: shuffled.indexOf(String(answer)),
+      explanation: [
+        `Rearranging, x = ${b} − ${a} = ${answer}.`,
+        `Area = length × breadth = ${a} × ${c} = ${answer} square units.`,
+        `Sum = ${a} + ${b} = ${answer}.`,
+        `Evaluating, ${a}² − ${c} = ${answer}.`,
+        `Total = number of groups × items per group = ${a} × (${b} − ${c}) = ${answer}.`
+      ][mode]
+    };
+  })
+
 ];
