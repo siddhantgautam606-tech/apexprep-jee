@@ -30,6 +30,8 @@ export default function ChatWindow({ currentUser }) {
   const activeFriendRef = useRef(null);
 
   const messagesEndRef = useRef(null);
+  const messageInputRef = useRef(null);
+  const isAndroidChat = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
 
   useEffect(() => {
     activeFriendRef.current = activeFriend;
@@ -135,6 +137,9 @@ export default function ChatWindow({ currentUser }) {
       }
     } catch (err) {
       console.error('Failed to send message:', err);
+    } finally {
+      // Keep the composer focused on Android so the user can continue typing.
+      if (isAndroidChat) messageInputRef.current?.focus({ preventScroll: true });
     }
   };
 
@@ -314,10 +319,16 @@ export default function ChatWindow({ currentUser }) {
               className="p-3 md:p-4 border-t border-slate-800 bg-slate-900/90 flex items-center gap-2"
             >
               <input
+                ref={messageInputRef}
                 type="text"
+                enterKeyHint="done"
                 placeholder={`Message @${activeFriend.username || activeFriend.user?.username || 'friend'}...`}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={(e) => {
+                  // Enter should not submit a chat message on Android; use the Send button.
+                  if (isAndroidChat && e.key === 'Enter') e.preventDefault();
+                }}
                 className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-200 outline-none focus:border-indigo-500 transition"
               />
 
