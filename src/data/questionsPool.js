@@ -692,7 +692,7 @@ export const QUESTIONS_POOL = [
       text: [
         `A body moves with initial speed ${a} m/s and gains a speed increment of ${b} m/s. Its final speed is:`,
         `A force of ${a} N acts through a displacement of ${c} m in its direction. The work done is:`,
-        `A system has ${b} J of energy and transfers ${c} J to its surroundings. The remaining energy is:`,
+        `A system has ${b} J of energy and receives ${c} J from its surroundings. Its total energy is:`,
         `A sample receives ${a} J of heat and does ${c} J of work. The change in internal energy is:`,
         `A resistor of ${a} Ω carries a current of ${c} A. The potential difference is:`
       ][mode],
@@ -701,7 +701,7 @@ export const QUESTIONS_POOL = [
       explanation: [
         `Final speed = initial speed + increment = ${a} + ${b} = ${answer} m/s.`,
         `Work = force × displacement = ${a} × ${c} = ${answer} J.`,
-        `Remaining energy = ${b} − ${c} = ${answer} J.`,
+        `Total energy = ${b} + ${c} = ${answer} J.`,
         `From the first law, ΔU = Q − W = ${a} − ${c} = ${answer} J.`,
         `By Ohm’s law, V = IR = ${a} × ${c} = ${answer} V.`
       ][mode]
@@ -713,7 +713,7 @@ export const QUESTIONS_POOL = [
     const a = 2 + (i % 9);
     const b = 3 + ((i * 3) % 11);
     const c = 1 + ((i * 7) % 8);
-    const answer = mode === 0 ? a + b : mode === 1 ? a * c : mode === 2 ? b - c : mode === 3 ? a * a - c : (a + b) * c;
+    const answer = mode === 0 ? a + b : mode === 1 ? a * c : mode === 2 ? b + c : mode === 3 ? a * a - c : (a + b) * c;
     const options = [answer, answer + 2, answer - 1, answer + 5].map(String);
     const shift = i % 4;
     const shuffled = options.slice(shift).concat(options.slice(0, shift));
@@ -728,7 +728,7 @@ export const QUESTIONS_POOL = [
         `A substance has ${a} mol dissolved in ${c} L of solution. Its molarity is:`,
         `An atom has ${b} protons and loses ${c} electrons. Its net charge in units of e is:`,
         `A process absorbs ${a} kJ of heat and releases ${c} kJ to the surroundings in a separate step. The net heat change is:`,
-        `A solution contains ${a} mol solute in ${b} L. The amount of solute in ${c} such equal-volume portions is:`
+        `A solution contains ${a} mol solute in ${b} L. The amount of solute in ${b} L of this solution is:`
       ][mode],
       options: shuffled,
       correctIndex: shuffled.indexOf(String(answer)),
@@ -747,7 +747,7 @@ export const QUESTIONS_POOL = [
     const a = 2 + (i % 9);
     const b = 3 + ((i * 3) % 11);
     const c = 1 + ((i * 7) % 8);
-    const answer = mode === 0 ? b - a : mode === 1 ? a * c : mode === 2 ? a + b : mode === 3 ? a * a - c : (b - c) * a;
+    const answer = mode === 0 ? b - a : mode === 1 ? a * c : mode === 2 ? a + b : mode === 3 ? a * a - c : (b + c) * a;
     const options = [answer, answer + 2, answer - 1, answer + 5].map(String);
     const shift = i % 4;
     const shuffled = options.slice(shift).concat(options.slice(0, shift));
@@ -762,7 +762,7 @@ export const QUESTIONS_POOL = [
         `The area of a rectangle of sides ${a} and ${c} units is:`,
         `The sum of two numbers ${a} and ${b} is:`,
         `The value of ${a}² − ${c} is:`,
-        `If each of ${a} equal groups contains ${b - c} items, the total number of items is:`
+        `If each of ${a} equal groups contains ${b + c} items, the total number of items is:`
       ][mode],
       options: shuffled,
       correctIndex: shuffled.indexOf(String(answer)),
@@ -771,7 +771,7 @@ export const QUESTIONS_POOL = [
         `Area = length × breadth = ${a} × ${c} = ${answer} square units.`,
         `Sum = ${a} + ${b} = ${answer}.`,
         `Evaluating, ${a}² − ${c} = ${answer}.`,
-        `Total = number of groups × items per group = ${a} × (${b} − ${c}) = ${answer}.`
+        `Total = number of groups × items per group = ${a} × (${b} + ${c}) = ${answer}.`
       ][mode]
     };
   })
