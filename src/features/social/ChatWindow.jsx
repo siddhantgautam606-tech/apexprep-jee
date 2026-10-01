@@ -36,6 +36,25 @@ export default function ChatWindow({ currentUser }) {
   useEffect(() => {
     activeFriendRef.current = activeFriend;
   }, [activeFriend]);
+  useEffect(() => {
+    if (!isAndroidChat || typeof window === 'undefined') return;
+    const viewport = window.visualViewport;
+    const updateChatViewport = () => {
+      const height = viewport?.height || window.innerHeight;
+      document.documentElement.style.setProperty('--chat-viewport-height', `${height}px`);
+    };
+    updateChatViewport();
+    viewport?.addEventListener('resize', updateChatViewport);
+    viewport?.addEventListener('scroll', updateChatViewport);
+    window.addEventListener('resize', updateChatViewport);
+    return () => {
+      viewport?.removeEventListener('resize', updateChatViewport);
+      viewport?.removeEventListener('scroll', updateChatViewport);
+      window.removeEventListener('resize', updateChatViewport);
+      document.documentElement.style.removeProperty('--chat-viewport-height');
+    };
+  }, [isAndroidChat]);
+
 
   useEffect(() => {
     async function loadFriends() {
