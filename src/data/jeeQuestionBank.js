@@ -756,6 +756,23 @@ export const PHYSICS_QUESTIONS = [
     correctAnswer: 1,
     explanation: "By work-energy theorem, Fd = initial kinetic energy = ½mv² = ½ × 2 × 36 = 36 J. Thus F = 36/9 = 4 N."
   },
+  ...Array.from({ length: 100 }, (_, i) => {
+    const n = Math.floor(i / 10) + 1;
+    const variant = i % 10;
+    const base = { yearTag: 'JEE Main 2025-style (Original Practice)' };
+    switch (variant) {
+      case 0: { const u=n*2, a=n, t=2; const v=u+a*t; return {...base,chapter:'Kinematics',question:`A particle has initial velocity ${u} m/s and constant acceleration ${a} m/s². Its velocity after ${t} s is:`,options:[`${v-2} m/s`,`${v} m/s`,`${v+2} m/s`,`${u} m/s`],correctAnswer:1,explanation:`Using v = u + at = ${u} + ${a}×${t} = ${v} m/s.`}; }
+      case 1: { const m=n, a=n+1, f=m*a; return {...base,chapter:'Laws of Motion',question:`A net force of ${f} N acts on a ${m} kg body. Its acceleration is:`,options:[`${a} m/s²`,`${f} m/s²`,`${m} m/s²`,`${a+1} m/s²`],correctAnswer:0,explanation:`Newton’s second law gives a = F/m = ${f}/${m} = ${a} m/s².`}; }
+      case 2: { const m=n, v=n+2, ke=m*v*v/2; return {...base,chapter:'Work, Energy and Power',question:`The kinetic energy of a ${m} kg object moving at ${v} m/s is:`,options:[`${ke*2} J`,`${ke} J`,`${m*v} J`,`${v*v} J`],correctAnswer:1,explanation:`K = ½mv² = ½×${m}×${v}² = ${ke} J.`}; }
+      case 3: { const r=n, f=n*2; const tau=r*f; return {...base,chapter:'Rotational Motion',question:`A perpendicular force of ${f} N acts at a distance ${r} m from an axis. The torque magnitude is:`,options:[`${f} N m`,`${tau} N m`,`${r+f} N m`,`${tau*2} N m`],correctAnswer:1,explanation:`For a perpendicular force, τ = rF = ${r}×${f} = ${tau} N m.`}; }
+      case 4: { const R=n*2, I=n, V=R*I; return {...base,chapter:'Current Electricity',question:`A resistor of ${R} Ω carries a current of ${I} A. The potential difference across it is:`,options:[`${R+I} V`,`${V} V`,`${I/R} V`,`${V+R} V`],correctAnswer:1,explanation:`By Ohm’s law, V = IR = ${I}×${R} = ${V} V.`}; }
+      case 5: { const q=n*2, v=n+1, w=q*v; return {...base,chapter:'Electrostatics',question:`A charge of ${q} C moves through a potential difference of ${v} V. The work done by the electric field in magnitude is:`,options:[`${q+v} J`,`${w} J`,`${w/2} J`,`${v} J`],correctAnswer:1,explanation:`Work magnitude W = qΔV = ${q}×${v} = ${w} J.`}; }
+      case 6: { const f=n*10, p=1/(f/100); return {...base,chapter:'Ray Optics',question:`A converging lens has focal length ${f} cm. Its power is:`,options:[`+${(100/f).toFixed(2)} D`,`-${(100/f).toFixed(2)} D`,`+${(f/100).toFixed(2)} D`,`-${(f/100).toFixed(2)} D`],correctAnswer:0,explanation:`Power P = 1/f (in metres) = 100/${f} = ${(100/f).toFixed(2)} D; a converging lens has positive power.`}; }
+      case 7: { const m=n*2, c=3, q=m*c; return {...base,chapter:'Thermal Physics',question:`How much heat is needed to raise the temperature of ${m} kg of a substance by 1 K if its specific heat capacity is 3 J kg⁻¹ K⁻¹?`,options:[`${m} J`,`${q} J`,`${q+3} J`,`${m/3} J`],correctAnswer:1,explanation:`Q = mcΔT = ${m}×3×1 = ${q} J.`}; }
+      case 8: { const f=n*2, d=n, work=f*d; return {...base,chapter:'Work, Energy and Power',question:`A constant force of ${f} N acts along the displacement of ${d} m. The work done is:`,options:[`${f+d} J`,`${work} J`,`${work*2} J`,`${f} J`],correctAnswer:1,explanation:`W = Fs cos 0° = ${f}×${d} = ${work} J.`}; }
+      default: { const lambda=n*2, nu=3e8/(lambda*1e-9); return {...base,chapter:'Dual Nature',question:`Light of wavelength ${lambda} nm travels in vacuum at 3×10⁸ m/s. Its frequency is:`,options:[`3×10⁸ Hz`,`${(nu/1e15).toFixed(2)}×10¹⁵ Hz`,`${(nu/1e12).toFixed(2)}×10¹² Hz`,`${lambda} Hz`],correctAnswer:1,explanation:`ν = c/λ = 3×10⁸/(${lambda}×10⁻⁹) = ${(nu/1e15).toFixed(2)}×10¹⁵ Hz.`}; }
+    }
+  }),
   /* ===== [PASTE NEW PHYSICS QUESTIONS ABOVE THIS LINE] ===== */
 ];
 
@@ -1444,6 +1461,23 @@ export const CHEMISTRY_QUESTIONS = [
     correctAnswer: 2,
     explanation: "At constant temperature and pressure, a process is spontaneous when the Gibbs free-energy change is negative, ΔG < 0."
   },
+  ...Array.from({ length: 100 }, (_, i) => {
+    const n = Math.floor(i / 10) + 1;
+    const variant = i % 10;
+    const base = { yearTag: 'JEE Main 2025-style (Original Practice)' };
+    switch (variant) {
+      case 0: { const mass=n*18; return {...base,chapter:'Some Basic Concepts in Chemistry',question:`The amount of water present in a sample of mass ${mass} g is:`,options:[`${n/2} mol`,`${n} mol`,`${n*2} mol`,`${mass} mol`],correctAnswer:1,explanation:`Molar mass of H₂O is 18 g mol⁻¹, so moles = ${mass}/18 = ${n} mol.`}; }
+      case 1: { const m=n, vol=2, M=m/vol; return {...base,chapter:'Solutions',question:`A solution contains ${m} mol of solute in 2 L of solution. Its molarity is:`,options:[`${M/2} mol L⁻¹`,`${M} mol L⁻¹`,`${m*vol} mol L⁻¹`,`${m+vol} mol L⁻¹`],correctAnswer:1,explanation:`Molarity = moles/volume = ${m}/2 = ${M} mol L⁻¹.`}; }
+      case 2: { const z= n+5, mass=z*2; return {...base,chapter:'Structure of Atom',question:`A neutral atom has atomic number ${z}. The number of electrons in the atom is:`,options:[`${mass}`,`${z}`,`${z+1}`,`2${z}`],correctAnswer:1,explanation:`For a neutral atom, number of electrons equals atomic number, ${z}.`}; }
+      case 3: { const h=n, ph=-Math.log10(h); const disp=h===1?'1':String(h); return {...base,chapter:'Equilibrium',question:`At 25°C, an ideal strong acid solution has [H⁺] = ${disp}×10⁻${h} mol L⁻¹. Its pH is:`,options:[`${h}`,`${h+1}`,`${Math.max(0,h-1)}`,`14−${h}`],correctAnswer:0,explanation:`pH = −log₁₀[H⁺]. For [H⁺] = 10⁻${h} mol L⁻¹, pH = ${h}.`}; }
+      case 4: { const x=n%4+1, oxidation=2*x; return {...base,chapter:'Redox Reactions',question:`In a neutral oxide M O, if oxygen has oxidation number −2, the oxidation number of M is:`,options:['−2','0','+1','+2'],correctAnswer:3,explanation:'The sum of oxidation numbers in a neutral compound is zero; M must be +2.'}; }
+      case 5: { const p=n*2, v=n, t=300, ratio=p*v; return {...base,chapter:'States of Matter',question:`For a fixed amount of ideal gas at constant temperature, pressure changes from ${p} atm to ${p*2} atm. If its initial volume is ${v} L, the final volume is:`,options:[`${v/2} L`,`${v} L`,`${v*2} L`,`${v*4} L`],correctAnswer:0,explanation:`Boyle’s law gives P₁V₁=P₂V₂; doubling pressure halves volume, so V₂=${v/2} L.`}; }
+      case 6: { const e=n, ans=e*2; return {...base,chapter:'Chemical Bonding',question:`How many electrons are shared in total in a molecule containing ${e} single covalent bonds?`,options:[`${e}`,`${ans}`,`${e*4}`,`1`],correctAnswer:1,explanation:`Each single covalent bond contains one shared pair, i.e. two electrons. Total = 2×${e} = ${ans}.`}; }
+      case 7: { const c=n*10, m=1, q=c*m; return {...base,chapter:'Chemical Thermodynamics',question:`A system absorbs ${q} J of heat and does no work. The change in its internal energy is:`,options:[`−${q} J`,`0 J`,`+${q} J`,`+${q*2} J`],correctAnswer:2,explanation:`First law: ΔU = q + w. Heat absorbed q=+${q} J and work w=0, hence ΔU=+${q} J.`}; }
+      case 8: { const n2=n*2; return {...base,chapter:'Chemical Kinetics',question:`For a first-order reaction, the half-life is t½. If the initial concentration is ${n2} mol L⁻¹, its concentration after one half-life is:`,options:[`${n2} mol L⁻¹`,`${n} mol L⁻¹`,`${n/2} mol L⁻¹`,`0 mol L⁻¹`],correctAnswer:1,explanation:`After one half-life, the concentration of a first-order reactant is half its initial value: ${n2}/2 = ${n} mol L⁻¹.`}; }
+      default: { const mass=n*2; return {...base,chapter:'Environmental Chemistry',question:`A pollutant concentration decreases from ${mass} mg L⁻¹ to ${n} mg L⁻¹. The percentage decrease is:`,options:['25%','50%','75%','100%'],correctAnswer:1,explanation:`Percentage decrease = ((${mass}−${n})/${mass})×100 = 50%.`}; }
+    }
+  }),
   /* ===== [PASTE NEW CHEMISTRY QUESTIONS ABOVE THIS LINE] ===== */
 ];
 
@@ -2108,6 +2142,23 @@ export const MATHEMATICS_QUESTIONS = [
     correctAnswer: 2,
     explanation: 'Since α and β satisfy x² - 6x - 2 = 0, multiplying by x^(n-2) yields aₙ - 6aₙ₋₁ - 2aₙ₋₂ = 0. For n = 10: a₁₀ - 2a₈ = 6a₉ => (a₁₀ - 2a₈)/(2a₉) = 6/2 = 3.'
   }
+  ...Array.from({ length: 100 }, (_, i) => {
+    const n = Math.floor(i / 10) + 1;
+    const variant = i % 10;
+    const base = { yearTag: 'JEE Main 2025-style (Original Practice)' };
+    switch (variant) {
+      case 0: { const a=n, d=2, term=a+4*d; return {...base,chapter:'Sequences and Series',question:`The first term of an arithmetic progression is ${a} and its common difference is 2. The fifth term is:`,options:[`${term-2}`,`${term}`,`${term+2}`,`${a+5*d}`],correctAnswer:1,explanation:`a₅ = a + 4d = ${a} + 8 = ${term}.`}; }
+      case 1: { const a=n, b=2*n+1; return {...base,chapter:'Quadratic Equations',question:`The sum of the roots of x² − ${a+b}x + ${a*b} = 0 is:`,options:[`${a*b}`,`${a+b}`,`${a-b}`,`−${a+b}`],correctAnswer:1,explanation:`For ax²+bx+c=0, sum of roots = −b/a. Here the sum is ${a+b}.`}; }
+      case 2: { const power=n%5+1, val=2**(power-1)*power; return {...base,chapter:'Differential Calculus',question:`If f(x)=x^${power}, then f′(2) is:`,options:[`${val-power}`,`${val}`,`${val+2}`,`${2**power}`],correctAnswer:1,explanation:`f′(x)=${power}x^${power-1}; hence f′(2)=${power}×2^${power-1}=${val}.`}; }
+      case 3: { const k=n%8+1, val=1/(k+1); return {...base,chapter:'Integral Calculus',question:`The value of ∫₀¹ x^${k} dx is:`,options:[`1/${k}`,`1/${k+1}`,`${k}`,`1`],correctAnswer:1,explanation:`∫₀¹xᵏdx=[xᵏ⁺¹/(${k+1})]₀¹=1/(${k+1}).`}; }
+      case 4: { const x1=n, y1=n*2, x2=n+3, y2=y1+6; return {...base,chapter:'Coordinate Geometry',question:`The slope of the line passing through (${x1}, ${y1}) and (${x2}, ${y2}) is:`,options:['1','2','3','4'],correctAnswer:1,explanation:`Slope = (y₂−y₁)/(x₂−x₁)=6/3=2.`}; }
+      case 5: { const r=n, area=r*r; return {...base,chapter:'Coordinate Geometry',question:`The squared distance of the point (${r}, 0) from the origin is:`,options:[`${r}`,`${area}`,`${2*r}`,`${area+1}`],correctAnswer:1,explanation:`Distance squared = x²+y² = ${r}²+0 = ${area}.`}; }
+      case 6: { const a=n, b=n+2, c=n+3, det=a*c-b*b; return {...base,chapter:'Matrices and Determinants',question:`The determinant of the matrix [[${a}, ${b}], [${b}, ${c}]] is:`,options:[`${a*c}`,`${det}`,`${b*b}`,`${a+c}`],correctAnswer:1,explanation:`For a 2×2 matrix, determinant = ad−bc = ${a}×${c}−${b}² = ${det}.`}; }
+      case 7: { const k=n%6+1, val=k*k; return {...base,chapter:'Trigonometry',question:`If sin θ = 0 and θ = 0°, the value of cos²θ + sin²θ is:`,options:['0','1','2','−1'],correctAnswer:1,explanation:'Using the identity sin²θ+cos²θ=1, the value is 1.'}; }
+      case 8: { const k=n%7+2; return {...base,chapter:'Sets, Relations and Functions',question:`The value of log₂(${2**k}) is:`,options:[`${k-1}`,`${k}`,`${k+1}`,`${2*k}`],correctAnswer:1,explanation:`Since 2^${k} is the argument, log₂(2^${k})=${k}.`}; }
+      default: { const a=n, b=n+1, c=a+b; return {...base,chapter:'Complex Numbers',question:`If z = ${a} + ${b}i, then |z|² is:`,options:[`${c}`,`${a*a+b*b}`,`${a+b}`,`${a*a-b*b}`],correctAnswer:1,explanation:`|z|² = a²+b² = ${a*a}+${b*b}=${a*a+b*b}.`}; }
+    }
+  }),
   /* ===== [PASTE NEW MATHEMATICS QUESTIONS ABOVE THIS LINE] ===== */
 ];
 
