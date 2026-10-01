@@ -679,7 +679,7 @@ export const QUESTIONS_POOL = [
     const a = 2 + (i % 9);
     const b = 3 + ((i * 3) % 11);
     const c = 1 + ((i * 7) % 8);
-    const answer = mode === 0 ? a + b : mode === 1 ? a * c : mode === 2 ? b - c : mode === 3 ? a * a - c : (a + b) * c;
+    const answer = mode === 0 ? Math.min(a, b) : mode === 1 ? a / c : mode === 2 ? b - c : mode === 3 ? a - c : a;
     const options = [answer, answer + 2, answer - 1, answer + 5].map(String);
     const shift = i % 4;
     const shuffled = options.slice(shift).concat(options.slice(0, shift));
@@ -737,7 +737,7 @@ export const QUESTIONS_POOL = [
         `Molarity = moles / volume = ${a} / ${c} = ${answer} mol L⁻¹.`,
         `Net charge = protons − electrons lost = ${b} − ${c} = ${answer}e.`,
         `Net heat = absorbed heat − released heat = ${a} − ${c} = ${answer} kJ.`,
-        `Concentration is ${a}/${b} mol L⁻¹; in ${c} L, amount = (${a}/${b}) × ${c} = ${answer} mol.`
+        `The same solution volume contains the original ${a} mol of solute.`
       ][mode]
     };
   }),
