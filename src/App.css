@@ -778,3 +778,260 @@
     padding-right: 0 !important;
   }
 }
+
+
+/* =========================================================
+   CBT reference theme — scoped to the exam interface only.
+   Based on TEST 2.html: slate page, navy header, indigo
+   accents, white question/palette cards, green submit.
+   ========================================================= */
+.cbt-runner {
+  background: #f1f5f9;
+  color: #1e293b;
+  max-width: 1280px !important;
+}
+
+.cbt-runner .cbt-status-bar {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  border-radius: 0 !important;
+  box-shadow: 0 2px 8px rgba(15,23,42,.18) !important;
+  color: #fff !important;
+}
+
+.cbt-runner .cbt-status-bar .bg-slate-800 {
+  background: #1e293b !important;
+}
+.cbt-runner .cbt-status-bar .text-slate-400 { color: #94a3b8 !important; }
+.cbt-runner .cbt-status-bar .text-indigo-400 { color: #818cf8 !important; }
+.cbt-runner .cbt-status-actions > div {
+  background: #020617 !important;
+  border-color: #334155 !important;
+}
+.cbt-runner .cbt-status-actions .text-amber-400 { color: #f59e0b !important; }
+.cbt-runner .cbt-status-actions .bg-emerald-600 {
+  background: #059669 !important;
+}
+.cbt-runner .cbt-status-actions .bg-emerald-600:hover {
+  background: #10b981 !important;
+}
+
+.cbt-runner .cbt-subject-bar {
+  background: #1e293b !important;
+  border-color: #1e293b !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.cbt-runner .cbt-subject-bar button {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #94a3b8 !important;
+  border-radius: 0 !important;
+}
+.cbt-runner .cbt-subject-bar button:hover {
+  color: #fff !important;
+}
+.cbt-runner .cbt-subject-bar button.bg-indigo-600 {
+  background: #0f172a !important;
+  border-color: #818cf8 !important;
+  color: #fff !important;
+}
+
+.cbt-runner .cbt-question-panel,
+.cbt-runner .cbt-palette {
+  background: #fff !important;
+  border-color: #e2e8f0 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 8px rgba(15,23,42,.06) !important;
+  color: #1e293b !important;
+}
+
+.cbt-runner .cbt-question-panel .border-b,
+.cbt-runner .cbt-question-panel .border-t,
+.cbt-runner .cbt-palette .border-t {
+  border-color: #e2e8f0 !important;
+}
+.cbt-runner .cbt-question-panel .text-slate-100 {
+  color: #0f172a !important;
+}
+.cbt-runner .cbt-question-panel .text-slate-400,
+.cbt-runner .cbt-palette .text-slate-400 {
+  color: #475569 !important;
+}
+.cbt-runner .cbt-question-panel .bg-indigo-500\/10 {
+  background: #eef2ff !important;
+}
+.cbt-runner .cbt-question-panel .border-indigo-500\/20 {
+  border-color: #c7d2fe !important;
+}
+.cbt-runner .cbt-question-panel .text-indigo-400 {
+  color: #3730a3 !important;
+}
+.cbt-runner .cbt-question-panel .text-emerald-400 {
+  color: #065f46 !important;
+}
+.cbt-runner .cbt-question-panel .text-rose-400 {
+  color: #9f1239 !important;
+}
+
+.cbt-runner .cbt-question-panel .bg-slate-950\/60,
+.cbt-runner .cbt-question-panel .bg-slate-950 {
+  background: #fff !important;
+}
+.cbt-runner .cbt-question-panel .border-slate-800 {
+  border-color: #e2e8f0 !important;
+}
+.cbt-runner .cbt-question-panel .text-slate-300 {
+  color: #334155 !important;
+}
+.cbt-runner .cbt-question-panel button:hover {
+  background: #f8fafc !important;
+}
+.cbt-runner .cbt-question-panel button.bg-indigo-600\/20 {
+  background: #eef2ff !important;
+  border-color: #6366f1 !important;
+  color: #312e81 !important;
+}
+.cbt-runner .cbt-question-panel button .bg-indigo-600 {
+  background: #4f46e5 !important;
+  border-color: #6366f1 !important;
+}
+
+.cbt-runner .cbt-action-bar button.bg-slate-800 {
+  background: #e2e8f0 !important;
+  color: #334155 !important;
+}
+.cbt-runner .cbt-action-bar button.bg-indigo-600 {
+  background: #4f46e5 !important;
+}
+.cbt-runner .cbt-action-bar button.bg-indigo-600:hover {
+  background: #4338ca !important;
+}
+.cbt-runner .cbt-action-bar button.bg-purple-600\/20 {
+  background: #faf5ff !important;
+  border-color: #d8b4fe !important;
+  color: #7e22ce !important;
+}
+
+.cbt-runner .cbt-palette h3 {
+  color: #475569 !important;
+}
+.cbt-runner .cbt-palette .bg-slate-950 {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+.cbt-runner .cbt-palette .bg-indigo-600 {
+  background: #4f46e5 !important;
+  border-color: #6366f1 !important;
+}
+.cbt-runner .cbt-palette .bg-emerald-600 {
+  background: #059669 !important;
+  border-color: #059669 !important;
+}
+.cbt-runner .cbt-palette .bg-purple-600 {
+  background: #9333ea !important;
+  border-color: #9333ea !important;
+}
+.cbt-runner .cbt-palette .ring-offset-slate-900 {
+  --tw-ring-offset-color: #fff !important;
+}
+
+.cbt-runner .num-box {
+  max-width: 400px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+}
+.cbt-runner .num-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 8px;
+}
+.cbt-runner .num-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cbt-runner .num-input {
+  width: 100%;
+  font-size: 18px;
+  font-family: monospace;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  outline: none;
+  background: #fff;
+  color: #0f172a;
+  box-sizing: border-box;
+}
+.cbt-runner .num-input:focus {
+  border-color: #6366f1;
+}
+.cbt-runner .num-key {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: #e2e8f0;
+  color: #334155;
+  white-space: nowrap;
+}
+.cbt-runner .num-help {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 8px;
+}
+
+.cbt-results {
+  color: #1e293b;
+}
+.cbt-results-card {
+  background: #fff !important;
+  border-color: #e2e8f0 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 8px rgba(15,23,42,.06) !important;
+}
+.cbt-results-card .border-b { border-color: #e2e8f0 !important; }
+.cbt-results-card .text-white { color: #0f172a !important; }
+.cbt-results-card .text-slate-400 { color: #475569 !important; }
+.cbt-results-card .bg-slate-950\/60,
+.cbt-results-card .bg-slate-950\/50 {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+.cbt-results-card .text-indigo-400 { color: #4f46e5 !important; }
+.cbt-results-card .text-emerald-400 { color: #059669 !important; }
+.cbt-results-card .text-rose-400 { color: #e11d48 !important; }
+
+.cbt-question-type-note {
+  padding: 10px 12px;
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@media (max-width: 767px) {
+  .cbt-runner {
+    background: #f1f5f9 !important;
+  }
+  .cbt-runner .cbt-status-bar {
+    border-radius: 10px !important;
+  }
+  .cbt-runner .cbt-subject-bar {
+    border-radius: 8px !important;
+  }
+  .cbt-runner .cbt-question-panel,
+  .cbt-runner .cbt-palette {
+    border-radius: 10px !important;
+  }
+}
