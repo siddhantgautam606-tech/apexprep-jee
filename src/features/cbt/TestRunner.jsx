@@ -204,8 +204,8 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
   // View Results Screen
   if (isSubmitted && examResult) {
     return (
-      <div className="max-w-4xl mx-auto py-8 px-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-2xl flex flex-col gap-6">
+      <div className="cbt-results max-w-4xl mx-auto py-8 px-4">
+        <div className="cbt-results-card bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-2xl flex flex-col gap-6">
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
             <div>
               <h2 className="text-2xl font-bold text-white">Test Completed!</h2>
