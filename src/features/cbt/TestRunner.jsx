@@ -301,130 +301,83 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
 
   // Active CBT Exam Runner
   return (
-    <div className="cbt-runner w-full max-w-7xl mx-auto py-3 px-4 flex flex-col gap-3">
-      {/* Top Status Bar */}
-      <div className="cbt-status-bar shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between shadow-lg">
-        <div className="cbt-status-left flex items-center gap-3 min-w-0">
-          <div className="brand-logo" aria-label="NTA">NTA</div>
-          <button
-            onClick={() => {
-              if (window.confirm('Are you sure you want to exit the exam? Your progress will be lost.')) {
-                onExit();
-              }
-            }}
-            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition"
-            title="Exit Exam"
-          >
-            <X className="w-4 h-4" />
-          </button>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <h2 className="text-sm font-bold text-white truncate">{test?.title || 'JEE CBT Examination'}</h2>
-              <span className="cbt-brand-name hidden sm:inline text-[10px] font-black tracking-wide text-slate-300">PrepXAI</span>
+    <div className="cbt-runner">
+      <header className="exam-header">
+        <div className="header-top">
+          <div className="brand-box">
+            <div className="brand-logo">NTA</div>
+            <div>
+              <div className="brand-title">{test?.title || (exam === 'NEET' ? 'NEET Mock Examination' : 'JEE (Main) Mock Examination')}</div>
+              <div className="brand-sub">{exam === 'NEET' ? 'Physics • Chemistry • Biology' : 'Physics • Chemistry • Mathematics'} • {questions.length} Questions</div>
             </div>
-            <span className="brand-sub truncate block">{exam === 'NEET' ? 'Physics • Chemistry • Biology' : 'Physics • Chemistry • Mathematics'} • {questions.length} Questions</span>
+          </div>
+          <div className="header-controls">
+            <div className="timer-container">
+              <span className="timer-label">Time Remaining</span>
+              <span className="timer-val">{formatTime(timeRemaining)}</span>
+            </div>
+            <button className="submit-btn" onClick={() => { if (window.confirm('Are you ready to submit your test?')) handleSubmitExam(); }}>Submit Exam</button>
           </div>
         </div>
 
-        <div className="header-controls cbt-status-actions flex items-center gap-3 shrink-0">
-          <div className="flex items-center gap-2 bg-slate-950 px-3.5 py-1.5 rounded-xl border border-slate-800">
-            <span className="timer-label">Time Remaining</span><Clock className="w-4 h-4 text-amber-400" /><span className="timer-val">
-              {formatTime(timeRemaining)}
-            </span>
-          </div>
-          <button
-            onClick={() => {
-              if (window.confirm('Are you ready to submit your test?')) {
-                handleSubmitExam();
-              }
-            }}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20"
-          >
-            <Send className="w-3.5 h-3.5" /><span className="cbt-submit-label">Submit Exam</span>
-          </button>
-        </div>
-      </div>
-
-      {subjectSections.length > 1 && (
-        <div className="cbt-subject-bar shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-lg">
-          <div className="flex items-center gap-2 overflow-x-auto">
-            {subjectSections.map((section) => (
-              <button
-                key={section.subject}
-                type="button"
-                onClick={() => jumpToSubject(section.subject)}
-                className={`flex-1 min-w-[130px] px-4 py-2.5 rounded-xl border text-xs font-bold transition ${activeSubject === section.subject ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'}`}
-              >
-                {section.subject}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Main Grid: Question Panel & Palette */}
-      <div className="cbt-main-grid flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left: Question Content */}
-        <div className="cbt-question-panel lg:col-span-8 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col justify-between overflow-hidden">
-          <div className="cbt-question-content min-h-0 flex-1 overflow-y-auto pr-2">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">
-                  Q {currentIdx + 1} / {questions.length}
-                </span>
-                <span className="cbt-section-badge">
-                  {["NUM", "INTEGER", "NUMERICAL", "NAT"].includes(currentQ?.type) ? "Section B" : "Section A"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                <span>Marking: <strong className="text-emerald-400">+4</strong> / <strong className="text-rose-400">-1</strong></span>
-              </div>
+        {subjectSections.length > 1 && (
+          <div className="tabs-bar">
+            <div className="tabs-container">
+              {subjectSections.map((section, i) => {
+                const next = subjectSections[i + 1];
+                const end = next ? next.firstIndex : questions.length;
+                const part = ['Physics','Chemistry','Mathematics','Biology'].indexOf(section.subject) + 1;
+                return (
+                  <button key={section.subject} onClick={() => jumpToSubject(section.subject)} className={`tab-btn ${activeSubject === section.subject ? 'active' : ''}`}>
+                    Part {part}: {section.subject} (Q{section.firstIndex + 1}–{end})
+                  </button>
+                );
+              })}
             </div>
+          </div>
+        )}
+      </header>
 
-            <div className="text-sm font-medium text-slate-100 leading-relaxed whitespace-pre-wrap mb-6">
-              {currentQ?.question}
+      <main className="exam-main">
+        <section className="panel-card question-panel">
+          <div className="panel-meta">
+            <div className="meta-left">
+              <span className="badge-q">Q. {currentIdx + 1}</span>
+              <span className="badge-sec">{['NUM','INTEGER','NUMERICAL','NAT'].includes(currentQ?.type) ? 'Section B' : 'Section A'}</span>
+              <span className="meta-info">{currentQ?.meta || ''}</span>
             </div>
+            <div className="meta-marks">
+              <span className="mark-pos">+4 Correct</span>
+              <span className="mark-neg">-1 Wrong</span>
+            </div>
+          </div>
 
-            {/* MCQ options / JEE numerical answer */}
-            {(['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(currentQ?.type)) ? (
+          <div className="q-body">
+            <div className="q-text" dangerouslySetInnerHTML={{__html: currentQ?.question || 'Loading question content...'}} />
+            {currentQ?.graphicSvg && <div className="q-graphic" dangerouslySetInnerHTML={{__html: currentQ.graphicSvg}} />}
+            
+            {['NUM','INTEGER','NUMERICAL','NAT'].includes(currentQ?.type) ? (
               <div className="num-box">
-                <label className="num-label">Enter Integer Answer:</label>
                 <div className="num-input-wrap">
                   <input
+                    className="num-input"
                     type="text"
                     inputMode="numeric"
-                    pattern="-?[0-9]*"
                     value={answers[currentIdx] ?? ''}
-                    placeholder="e.g. 5"
                     disabled={isSubmitted}
                     onChange={(e) => handleNumericAnswer(e.target.value)}
-                    className="num-input"
                     aria-label="Integer answer"
                   />
-                  {isSubmitted && <span className="num-key">Key: {currentQ?.correctAnswer}</span>}
                 </div>
-                <p className="num-help">Marking: +4 for correct, -1 for incorrect.</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="options-group">
                 {currentQ?.options?.map((opt, optIdx) => {
-                  const isSelected = answers[currentIdx] === optIdx;
+                  const selected = answers[currentIdx] === optIdx;
                   return (
-                    <button
-                      key={optIdx}
-                      onClick={() => handleSelectOption(optIdx)}
-                      className={`p-3.5 rounded-xl border text-xs text-left flex items-center gap-3 transition ${
-                        isSelected
-                          ? 'bg-indigo-600/20 border-indigo-500 text-white font-semibold'
-                          : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'
-                      }`}
-                    >
-                      <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 border ${
-                        isSelected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'
-                      }`}>
-                        {String.fromCharCode(65 + optIdx)}
-                      </span>
-                      <span className="flex-1">{opt}</span>
+                    <button key={optIdx} className={`option-item ${selected ? 'selected' : ''}`} onClick={() => handleSelectOption(optIdx)}>
+                      <span className="opt-circle">{String.fromCharCode(65 + optIdx)}</span>
+                      <span dangerouslySetInnerHTML={{__html: String(opt)}} />
                     </button>
                   );
                 })}
@@ -432,91 +385,63 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
             )}
           </div>
 
-          {/* Bottom Action Buttons */}
-          <div className="cbt-action-bar flex items-center justify-between border-t border-slate-800 pt-4 mt-6">
-            <button
-              onClick={handleToggleMarkReview}
-              className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition ${
-                markedForReview[currentIdx]
-                  ? 'bg-purple-600/20 border-purple-500 text-purple-300'
-                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              {markedForReview[currentIdx] ? 'Marked for Review' : 'Mark for Review'}
-            </button>
-
-            <button
-              onClick={handleClearResponse}
-              className="px-3.5 py-2 text-xs font-semibold text-slate-400 hover:text-rose-400 transition"
-            >
-              Clear Response
-            </button>
-
-            <div className="flex items-center gap-2">
-              <button
-                disabled={currentIdx === 0}
-                onClick={() => setCurrentIdx((prev) => Math.max(0, prev - 1))}
-                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 rounded-xl text-xs font-semibold text-white transition flex items-center gap-1"
-              >
-                <ChevronLeft className="w-4 h-4" /> Previous
-              </button>
-              <button
-                disabled={currentIdx === questions.length - 1}
-                onClick={() => setCurrentIdx((prev) => Math.min(questions.length - 1, prev + 1))}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 rounded-xl text-xs font-semibold text-white transition flex items-center gap-1"
-              >
-                Next <ChevronRight className="w-4 h-4" />
+          <div className="panel-footer">
+            <div className="footer-left">
+              <button className="btn-secondary" onClick={handleClearResponse}>Clear Response</button>
+              <button className={`btn-review ${markedForReview[currentIdx] ? 'active' : ''}`} onClick={handleToggleMarkReview}>
+                {markedForReview[currentIdx] ? 'Marked for Review' : 'Mark for Review'}
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* Right: Question Palette */}
-        <div className="cbt-palette lg:col-span-4 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-          <div className="palette-legend"><div className="legend-item"><span className="legend-pill answered">{Object.keys(answers).length}</span> Answered</div><div className="legend-item"><span className="legend-pill not-answered">{questions.length - Object.keys(answers).length}</span> Not Answered</div><div className="legend-item"><span className="legend-pill review-count">{Object.values(markedForReview).filter(Boolean).length}</span> Review</div><div className="legend-item"><span className="legend-pill not-visited">0</span> Not Visited</div></div><div className="palette-heading"><span>{activeSubject || 'Questions'}</span><span>{questions.length} Questions</span></div>
-          
-          <div className="cbt-question-number-list grid grid-cols-5 gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
-            {questions.map((_, idx) => {
-              const isAnswered = answers[idx] !== undefined;
-              const isMarked = markedForReview[idx];
-              const isCurrent = currentIdx === idx;
-
-              let style = 'bg-slate-950 border-slate-800 text-slate-400';
-              if (isMarked) {
-                style = 'bg-purple-600 text-white border-purple-500';
-              } else if (isAnswered) {
-                style = 'bg-emerald-600 text-white border-emerald-500';
-              } else if (isCurrent) {
-                style = 'bg-indigo-600 text-white border-indigo-400';
-              }
-
-              return (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentIdx(idx)}
-                  className={`pal-btn ${isMarked ? 'rev' : isAnswered ? 'ans' : isCurrent ? 'current' : ''}`}
-                >
-                  {idx + 1}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="border-t border-slate-800 pt-3 flex flex-col gap-2 text-[11px] text-slate-400">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded bg-emerald-600 shrink-0" />
-              <span>Answered</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded bg-purple-600 shrink-0" />
-              <span>Marked for Review</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded bg-slate-950 border border-slate-800 shrink-0" />
-              <span>Unattempted</span>
+            <div className="footer-right">
+              <button className="btn-nav-prev" disabled={currentIdx === 0} onClick={() => setCurrentIdx((p) => Math.max(0, p - 1))}>← Previous</button>
+              <button className="btn-nav-next" disabled={currentIdx === questions.length - 1} onClick={() => setCurrentIdx((p) => Math.min(questions.length - 1, p + 1))}>Save & Next →</button>
             </div>
           </div>
-        </div>
+        </section>
+
+        <aside className="palette-aside">
+          <div className="palette-box">
+            <div className="palette-legend">
+              <div className="legend-item"><span className="legend-pill answered">{Object.keys(answers).length}</span> Answered</div>
+              <div className="legend-item"><span className="legend-pill not-answered">{questions.length - Object.keys(answers).length}</span> Not Answered</div>
+              <div className="legend-item"><span className="legend-pill review-count">{Object.values(markedForReview).filter(Boolean).length}</span> Review</div>
+              <div className="legend-item"><span className="legend-pill not-visited">0</span> Not Visited</div>
+            </div>
+            <div className="palette-subject">
+              <span>{activeSubject || currentQ?.subject || 'Questions'}</span>
+              <span>{questions.length} Questions</span>
+            </div>
+            <div className="palette-grid">
+              {questions.map((_, idx) => {
+                const isAnswered = answers[idx] !== undefined;
+                const isMarked = markedForReview[idx];
+                const isCurrent = currentIdx === idx;
+                return (
+                  <button key={idx} onClick={() => setCurrentIdx(idx)} className={`pal-btn ${isMarked ? 'rev' : isAnswered ? 'ans' : ''} ${isCurrent ? 'current' : ''}`}>
+                    {idx + 1}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
+      </main>
+
+      <div className={`modal-overlay ${isSubmitted && examResult ? 'open' : ''}`}>
+        {examResult && (
+          <div className="modal-card">
+            <h2 className="modal-title">Examination Results</h2>
+            <p className="modal-subtitle">{exam === 'NEET' ? 'NEET Practice Test' : 'JEE Main Practice Test'} – {questions.length} Questions</p>
+            <div className="summary-grid">
+              <div className="score-tile"><span className="score-label">TOTAL SCORE</span><span className="score-big">{examResult.score}</span><span className="score-sub">/ {examResult.maxScore}</span></div>
+              <div className="score-tile"><span className="score-label accuracy">ACCURACY</span><span className="score-big">{examResult.accuracy}%</span><span className="score-sub">{examResult.correct} / {examResult.attempted}</span></div>
+              <div className="score-tile"><span className="score-label">ATTEMPTED</span><span className="score-big">{examResult.attempted}</span><span className="score-sub">/ {questions.length}</span></div>
+            </div>
+            <div className="result-actions">
+              <button className="submit-btn" onClick={onComplete || onExit}>Exit to Dashboard</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
