@@ -70,6 +70,8 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
   const [timeRemaining, setTimeRemaining] = useState((test?.durationMinutes || test?.duration_minutes || 60) * 60);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [examResult, setExamResult] = useState(null);
+  const [resultModalOpen, setResultModalOpen] = useState(false);
+  const [showSolutions, setShowSolutions] = useState(false);
 
   // Timer Countdown
   useEffect(() => {
@@ -167,6 +169,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
     const stats = computeExamStats(questions, answers, totalTimeTaken);
     setExamResult(stats);
     setIsSubmitted(true);
+    setResultModalOpen(true);
 
     if (currentUser?.id) { await saveTestAttempt({ userId: currentUser.id, testQuestions: questions, userAnswers: answers, examResults: stats, durationMinutes: Math.max(0, Math.round(totalTimeTaken / 60)) }); }
 
@@ -383,6 +386,12 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
                 })}
               </div>
             )}
+            {showSolutions && currentQ?.explanation && (
+              <div className="sol-card">
+                <div className="sol-header">• Solution & Key</div>
+                <div dangerouslySetInnerHTML={{__html: currentQ.explanation}} />
+              </div>
+            )}
           </div>
 
           <div className="panel-footer">
@@ -427,7 +436,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
         </aside>
       </main>
 
-      <div className={`modal-overlay ${isSubmitted && examResult ? 'open' : ''}`}>
+      <div className={`modal-overlay ${resultModalOpen && examResult ? 'open' : ''}`}>
         {examResult && (
           <div className="modal-card">
             <h2 className="modal-title">Examination Results</h2>
@@ -437,8 +446,20 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
               <div className="score-tile"><span className="score-label accuracy">ACCURACY</span><span className="score-big">{examResult.accuracy}%</span><span className="score-sub">{examResult.correct} / {examResult.attempted}</span></div>
               <div className="score-tile"><span className="score-label">ATTEMPTED</span><span className="score-big">{examResult.attempted}</span><span className="score-sub">/ {questions.length}</span></div>
             </div>
+            <table className="sub-table">
+              <thead><tr><th>Subject</th><th>Correct</th><th>Wrong</th><th>Unattempted</th><th>Marks</th></tr></thead>
+              <tbody>
+                {Object.entries(questions.reduce((acc,q,i)=>{
+                  const subject=q.subject||'General'; const a=acc[subject]||(acc[subject]={correct:0,wrong:0,unattempted:0,marks:0});
+                  const u=answers[i]; if(u===undefined){a.unattempted++;} else {
+                    const correct=String(u)===String(q.correctAnswer); if(correct){a.correct++;a.marks+=4;} else {a.wrong++;a.marks-=1;}
+                  } return acc;
+                },{})).map(([subject,v])=><tr key={subject}><td>{subject}</td><td style={{textAlign:'center'}}>{v.correct}</td><td style={{textAlign:'center'}}>{v.wrong}</td><td style={{textAlign:'center'}}>{v.unattempted}</td><td style={{textAlign:'right'}}>{v.marks}</td></tr>)}
+              </tbody>
+            </table>
             <div className="result-actions">
-              <button className="submit-btn" onClick={onComplete || onExit}>Exit to Dashboard</button>
+              <button className="submit-btn" style={{flex:1}} onClick={()=>{setResultModalOpen(false);setShowSolutions(true);}}>Review Solutions</button>
+              <button className="btn-secondary" onClick={onComplete || onExit}>Exit</button>
             </div>
           </div>
         )}
