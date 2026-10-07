@@ -1152,7 +1152,7 @@
 .cbt-runner .pal-btn{height:36px;border-radius:6px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-size:12px;font-weight:600;font-family:monospace;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .cbt-runner .pal-btn.current{outline:2px solid #0f172a;transform:scale(1.05)}
 .cbt-runner .pal-btn.ans{background:#059669;color:#fff;border-color:#059669}
-.cbt-runner .pal-btn.rev{background:#9333ea;color:#fff;border-color:#9333ea}
+.cbt-runner .pal-btn.rev{background:#9333ea;color:#fff;border-color:#9333ea}.cbt-runner .pal-btn.vis{background:#f43f5e;color:#fff;border-color:#f43f5e}
 .cbt-runner .modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.75);z-index:50;align-items:center;justify-content:center;padding:16px}
 .cbt-runner .modal-overlay.open{display:flex}
 .cbt-runner .modal-card{background:#fff;border-radius:12px;max-width:600px;width:100%;padding:24px;max-height:90vh;overflow-y:auto}
