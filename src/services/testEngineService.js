@@ -46,9 +46,17 @@ export function computeExamStats(questions = [], answers = {}, timeTakenSeconds 
       }
     }
 
-    if (userChoice === undefined || userChoice === null || userChoice === '') {
+    const isNumerical = ['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(
+      String(q.type || q.question_type || '').toUpperCase()
+    );
+    const normalizedUserChoice = isNumerical ? String(userChoice ?? '').trim() : userChoice;
+    const normalizedCorrectChoice = isNumerical ? String(correctChoice ?? '').trim() : correctChoice;
+
+    if (userChoice === undefined || userChoice === null || String(userChoice).trim() === '') {
       unattemptedCount += 1;
-    } else if (Number(userChoice) === Number(correctChoice)) {
+    } else if (isNumerical
+      ? normalizedUserChoice === normalizedCorrectChoice
+      : Number(normalizedUserChoice) === Number(normalizedCorrectChoice)) {
       correctCount += 1;
       subjectStats[sub].correct += 1;
       subjectStats[sub].score += 4;
