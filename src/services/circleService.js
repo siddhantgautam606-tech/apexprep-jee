@@ -274,7 +274,8 @@ function normalizeCircleQuestion(q, idx) {
     explanation: q.explanation || '',
     subject: q.subject,
     chapter: q.chapter,
-    yearTag: q.year_tag || q.yearTag
+    yearTag: q.year_tag || q.yearTag,
+    type: q.type || q.question_type || 'MCQ'
   };
 }
 
@@ -310,7 +311,9 @@ export async function fetchQuestionsForTest(subject, chapter, count, exam = 'JEE
       if (chapter && chapter !== 'All') query = query.eq('chapter', chapter);
       const { data, error } = await query.limit(Math.max(targetCount * 2, targetCount));
       if (error) throw error;
-      return (data || []).map(normalizeCircleQuestion);
+      return (data || [])
+        .map(normalizeCircleQuestion)
+        .filter((q) => normalizedExam !== 'NEET' || !['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(String(q?.type || '').toUpperCase()));
     } catch {
       return [];
     }
