@@ -67,6 +67,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState({});
   const [markedForReview, setMarkedForReview] = useState({});
+  const [visitedQuestions, setVisitedQuestions] = useState({ 0: true });
   const [timeRemaining, setTimeRemaining] = useState((test?.durationMinutes || test?.duration_minutes || 60) * 60);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [examResult, setExamResult] = useState(null);
@@ -126,6 +127,12 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
   };
 
   const currentQ = questions[currentIdx];
+
+  // Match the reference CBT behavior: opening a question marks it as visited,
+  // even when the student leaves it unanswered. This drives the palette state.
+  useEffect(() => {
+    setVisitedQuestions((prev) => (prev[currentIdx] ? prev : { ...prev, [currentIdx]: true }));
+  }, [currentIdx]);
 
   const handleSelectOption = (optIdx) => {
     if (isSubmitted || ['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(currentQ?.type)) return;
@@ -418,15 +425,23 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
             </div>
             <div className="palette-subject">
               <span>{activeSubject || currentQ?.subject || 'Questions'}</span>
-              <span>{questions.length} Questions</span>
+              <span>{(subjectSections.length > 1 && activeSubject
+                ? questions.filter((q) => q?.subject === activeSubject).length
+                : questions.length)} Questions</span>
             </div>
             <div className="palette-grid">
               {questions.map((_, idx) => {
-                const isAnswered = answers[idx] !== undefined;
-                const isMarked = markedForReview[idx];
+                const isAnswered = answers[idx] !== undefined && answers[idx] !== '';
+                const isMarked = Boolean(markedForReview[idx]);
+                const isVisited = Boolean(visitedQuestions[idx]);
                 const isCurrent = currentIdx === idx;
                 return (
-                  <button key={idx} onClick={() => setCurrentIdx(idx)} className={`pal-btn ${isMarked ? 'rev' : isAnswered ? 'ans' : ''} ${isCurrent ? 'current' : ''}`}>
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentIdx(idx)}
+                    className={`pal-btn ${isMarked ? 'rev' : isAnswered ? 'ans' : isVisited ? 'vis' : ''} ${isCurrent ? 'current' : ''}`}
+                    title={isMarked ? 'Marked for Review' : isAnswered ? 'Answered' : isVisited ? 'Visited — Not Answered' : 'Not Visited'}
+                  >
                     {idx + 1}
                   </button>
                 );
