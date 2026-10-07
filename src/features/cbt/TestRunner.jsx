@@ -305,9 +305,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
       {/* Top Status Bar */}
       <div className="cbt-status-bar shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between shadow-lg">
         <div className="cbt-status-left flex items-center gap-3 min-w-0">
-          <div className="cbt-logo-wrap shrink-0" aria-label="PrepXAI">
-            <img src="/icon-192.png" alt="PrepXAI logo" className="cbt-logo" />
-          </div>
+          <div className="brand-logo" aria-label="NTA">NTA</div>
           <button
             onClick={() => {
               if (window.confirm('Are you sure you want to exit the exam? Your progress will be lost.')) {
@@ -324,14 +322,13 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
               <h2 className="text-sm font-bold text-white truncate">{test?.title || 'JEE CBT Examination'}</h2>
               <span className="cbt-brand-name hidden sm:inline text-[10px] font-black tracking-wide text-slate-300">PrepXAI</span>
             </div>
-            <span className="text-[10px] text-indigo-400 font-semibold truncate block">{test?.subject || 'Practice'} • {test?.chapter || 'All'}</span>
+            <span className="brand-sub truncate block">{exam === 'NEET' ? 'Physics • Chemistry • Biology' : 'Physics • Chemistry • Mathematics'} • {questions.length} Questions</span>
           </div>
         </div>
 
-        <div className="cbt-status-actions flex items-center gap-3 shrink-0">
+        <div className="header-controls cbt-status-actions flex items-center gap-3 shrink-0">
           <div className="flex items-center gap-2 bg-slate-950 px-3.5 py-1.5 rounded-xl border border-slate-800">
-            <Clock className="w-4 h-4 text-amber-400" />
-            <span className="font-mono text-xs font-bold text-white tracking-wider">
+            <span className="timer-label">Time Remaining</span><Clock className="w-4 h-4 text-amber-400" /><span className="timer-val">
               {formatTime(timeRemaining)}
             </span>
           </div>
@@ -366,9 +363,9 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
       )}
 
       {/* Main Grid: Question Panel & Palette */}
-      <div className="cbt-main-grid flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-4 gap-3">
+      <div className="cbt-main-grid flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left: Question Content */}
-        <div className="cbt-question-panel lg:col-span-3 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col justify-between overflow-hidden">
+        <div className="cbt-question-panel lg:col-span-8 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col justify-between overflow-hidden">
           <div className="cbt-question-content min-h-0 flex-1 overflow-y-auto pr-2">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
               <div className="flex items-center gap-2">
@@ -475,8 +472,8 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
         </div>
 
         {/* Right: Question Palette */}
-        <div className="cbt-palette lg:col-span-1 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Question Palette</h3>
+        <div className="cbt-palette lg:col-span-4 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
+          <div className="palette-legend"><div className="legend-item"><span className="legend-pill answered">{Object.keys(answers).length}</span> Answered</div><div className="legend-item"><span className="legend-pill not-answered">{questions.length - Object.keys(answers).length}</span> Not Answered</div><div className="legend-item"><span className="legend-pill review-count">{Object.values(markedForReview).filter(Boolean).length}</span> Review</div><div className="legend-item"><span className="legend-pill not-visited">0</span> Not Visited</div></div><div className="palette-heading"><span>{activeSubject || 'Questions'}</span><span>{questions.length} Questions</span></div>
           
           <div className="cbt-question-number-list grid grid-cols-5 gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
             {questions.map((_, idx) => {
@@ -497,9 +494,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
                 <button
                   key={idx}
                   onClick={() => setCurrentIdx(idx)}
-                  className={`h-9 rounded-lg border text-xs font-bold transition flex items-center justify-center ${style} ${
-                    isCurrent ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-900' : ''
-                  }`}
+                  className={`pal-btn ${isMarked ? 'rev' : isAnswered ? 'ans' : isCurrent ? 'current' : ''}`}
                 >
                   {idx + 1}
                 </button>
