@@ -211,6 +211,10 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
     return `${h > 0 ? `${h}:` : ''}${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  const paletteQuestions = (subjectSections.length > 1 && activeSubject && questions.some((q) => q?.subject === activeSubject))
+    ? questions.map((q, idx) => ({ q, idx })).filter(({ q }) => q?.subject === activeSubject)
+    : questions.map((q, idx) => ({ q, idx }));
+
   // View Results Screen
   if (isSubmitted && examResult) {
     return (
@@ -430,7 +434,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
                 : questions.length)} Questions</span>
             </div>
             <div className="palette-grid">
-              {questions.map((_, idx) => {
+              {paletteQuestions.map(({ idx }) => {
                 const isAnswered = answers[idx] !== undefined && answers[idx] !== '';
                 const isMarked = Boolean(markedForReview[idx]);
                 const isVisited = Boolean(visitedQuestions[idx]);
