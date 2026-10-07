@@ -125,6 +125,11 @@ export default function TestOrganizer({ currentUser, feedExam }) {
         }));
       }
 
+      // JEE supports MCQ + numerical/integer questions; NEET is MCQ-only.
+      loadedQuestions = loadedQuestions
+        .filter((q) => exam !== 'NEET' || !['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(String(q?.type || q?.question_type || '').toUpperCase()))
+        .slice(0, safeCount);
+
       // Never pass more questions to the runner than the selected preset.
       loadedQuestions = loadedQuestions.slice(0, safeCount);
 
