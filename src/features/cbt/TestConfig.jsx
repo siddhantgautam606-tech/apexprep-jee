@@ -217,6 +217,12 @@ export default function TestConfig({ config, onChangeConfig, onStartTest, isSubm
           </div>
         </div>
 
+        {!isNeet && (
+          <div className="cbt-question-type-note">
+            JEE Main CBT supports MCQ and Integer/Numerical Answer questions.
+          </div>
+        )}
+
         <button
           type="submit"
           disabled={isSubmitting}
