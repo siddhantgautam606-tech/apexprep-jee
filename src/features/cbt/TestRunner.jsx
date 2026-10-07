@@ -371,9 +371,14 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
         <div className="cbt-question-panel lg:col-span-3 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col justify-between overflow-hidden">
           <div className="cbt-question-content min-h-0 flex-1 overflow-y-auto pr-2">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-              <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">
-                Q {currentIdx + 1} / {questions.length}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">
+                  Q {currentIdx + 1} / {questions.length}
+                </span>
+                <span className="cbt-section-badge">
+                  {["NUM", "INTEGER", "NUMERICAL", "NAT"].includes(currentQ?.type) ? "Section B" : "Section A"}
+                </span>
+              </div>
               <div className="flex items-center gap-2 text-[11px] text-slate-400">
                 <span>Marking: <strong className="text-emerald-400">+4</strong> / <strong className="text-rose-400">-1</strong></span>
               </div>
