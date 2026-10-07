@@ -33,9 +33,12 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
         : getStandardQuestions(sub === 'Full Syllabus' ? 'Physics' : sub, ch, count);
     }
 
-    return list.map((q, idx) => {
+    return list
+      .filter((q) => exam !== 'NEET' || !['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(String(q?.type || q?.question_type || '').toUpperCase()))
+      .map((q, idx) => {
       const base = {
         ...q,
+        type: String(q.type || q.question_type || 'MCQ').toUpperCase(),
         id: q.id || idx + 1,
         question: formatMathSymbols(q.question || q.question_text || q.text || `Question ${idx + 1}`),
         options: Array.isArray(q.options)
@@ -44,6 +47,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
         correctAnswer: q.correctAnswer !== undefined ? Number(q.correctAnswer) : q.correct_answer !== undefined ? Number(q.correct_answer) : 0,
         explanation: formatMathSymbols(q.explanation || q.solution || '')
       };
+      if (['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(base.type)) return base;
       const correctIndex = Number(base.correctAnswer);
       if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= base.options.length || base.options.length < 2) return base;
       const pairs = base.options.map((option, optionIndex) => ({ option, optionIndex }));
@@ -122,11 +126,22 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
   const currentQ = questions[currentIdx];
 
   const handleSelectOption = (optIdx) => {
-    if (isSubmitted) return;
+    if (isSubmitted || ['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(currentQ?.type)) return;
     setAnswers((prev) => ({
       ...prev,
       [currentIdx]: optIdx
     }));
+  };
+
+  const handleNumericAnswer = (value) => {
+    if (isSubmitted || !currentQ) return;
+    const cleaned = String(value ?? '').replace(/[^0-9-]/g, '');
+    setAnswers((prev) => {
+      const copy = { ...prev };
+      if (!cleaned.trim()) delete copy[currentIdx];
+      else copy[currentIdx] = cleaned.trim();
+      return copy;
+    });
   };
 
   const handleClearResponse = () => {
@@ -368,30 +383,51 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
               {currentQ?.question}
             </div>
 
-            {/* Options List */}
-            <div className="flex flex-col gap-3">
-              {currentQ?.options?.map((opt, optIdx) => {
-                const isSelected = answers[currentIdx] === optIdx;
-                return (
-                  <button
-                    key={optIdx}
-                    onClick={() => handleSelectOption(optIdx)}
-                    className={`p-3.5 rounded-xl border text-xs text-left flex items-center gap-3 transition ${
-                      isSelected
-                        ? 'bg-indigo-600/20 border-indigo-500 text-white font-semibold'
-                        : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'
-                    }`}
-                  >
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 border ${
-                      isSelected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'
-                    }`}>
-                      {String.fromCharCode(65 + optIdx)}
-                    </span>
-                    <span className="flex-1">{opt}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {/* MCQ options / JEE numerical answer */}
+            {(['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(currentQ?.type)) ? (
+              <div className="num-box">
+                <label className="num-label">Enter Integer Answer:</label>
+                <div className="num-input-wrap">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="-?[0-9]*"
+                    value={answers[currentIdx] ?? ''}
+                    placeholder="e.g. 5"
+                    disabled={isSubmitted}
+                    onChange={(e) => handleNumericAnswer(e.target.value)}
+                    className="num-input"
+                    aria-label="Integer answer"
+                  />
+                  {isSubmitted && <span className="num-key">Key: {currentQ?.correctAnswer}</span>}
+                </div>
+                <p className="num-help">Marking: +4 for correct, -1 for incorrect.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {currentQ?.options?.map((opt, optIdx) => {
+                  const isSelected = answers[currentIdx] === optIdx;
+                  return (
+                    <button
+                      key={optIdx}
+                      onClick={() => handleSelectOption(optIdx)}
+                      className={`p-3.5 rounded-xl border text-xs text-left flex items-center gap-3 transition ${
+                        isSelected
+                          ? 'bg-indigo-600/20 border-indigo-500 text-white font-semibold'
+                          : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'
+                      }`}
+                    >
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 border ${
+                        isSelected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'
+                      }`}>
+                        {String.fromCharCode(65 + optIdx)}
+                      </span>
+                      <span className="flex-1">{opt}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Bottom Action Buttons */}
