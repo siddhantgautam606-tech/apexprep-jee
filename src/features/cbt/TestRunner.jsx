@@ -443,7 +443,8 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
                   <button
                     key={idx}
                     onClick={() => setCurrentIdx(idx)}
-                    className={`pal-btn ${isMarked ? 'rev' : isAnswered ? 'ans' : isVisited ? 'vis' : ''} ${isCurrent ? 'current' : ''}`}
+                    data-state={isMarked ? 'review' : isAnswered ? 'answered' : isVisited ? 'visited' : 'unvisited'}
+                    className={`pal-btn ${isMarked ? 'rev' : isAnswered ? 'ans' : isVisited ? 'vis' : '' } ${isCurrent ? 'current' : ''}`}
                     title={isMarked ? 'Marked for Review' : isAnswered ? 'Answered' : isVisited ? 'Visited — Not Answered' : 'Not Visited'}
                   >
                     {idx + 1}
