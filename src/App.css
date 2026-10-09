@@ -1168,3 +1168,13 @@
 @media(max-width:640px){.cbt-runner .header-top{padding:10px}.cbt-runner .brand-title{font-size:14px}.cbt-runner .brand-sub{font-size:11px}.cbt-runner .header-controls{gap:7px}.cbt-runner .timer-container{padding:4px 8px}.cbt-runner .timer-val{font-size:16px}.cbt-runner .submit-btn{padding:8px 10px}.cbt-runner .exam-main{padding:10px;gap:12px}.cbt-runner .panel-footer{padding:10px}.cbt-runner .footer-left,.cbt-runner .footer-right{flex-wrap:wrap}.cbt-runner .summary-grid{grid-template-columns:1fr}}
 
 .cbt-runner .sol-card{margin-top:20px;background:#fffbeb;border:1px dashed #fcd34d;padding:14px;border-radius:8px;font-size:13.5px;line-height:1.5;color:#1e293b}.cbt-runner .sol-header{font-weight:700;font-size:12px;text-transform:uppercase;color:#78350f;margin-bottom:6px}.cbt-runner .sub-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;text-align:left}.cbt-runner .sub-table th,.cbt-runner .sub-table td{padding:8px 12px;border-bottom:1px solid #e2e8f0}.cbt-runner .sub-table th{background:#f8fafc;color:#475569}.cbt-runner .result-actions{display:flex;gap:10px}
+
+
+/* Final high-specificity CBT palette state mapping. The data-state attribute is set by TestRunner. */
+.cbt-runner .palette-box .palette-grid button.pal-btn[data-state="unvisited"]{background-color:#cbd5e1!important;color:#334155!important;border-color:#94a3b8!important}
+.cbt-runner .palette-box .palette-grid button.pal-btn[data-state="visited"]{background-color:#f43f5e!important;color:#fff!important;border-color:#f43f5e!important}
+.cbt-runner .palette-box .palette-grid button.pal-btn[data-state="answered"]{background-color:#059669!important;color:#fff!important;border-color:#059669!important}
+.cbt-runner .palette-box .palette-grid button.pal-btn[data-state="review"]{background-color:#9333ea!important;color:#fff!important;border-color:#9333ea!important}
+.cbt-runner .palette-box .palette-grid button.pal-btn[data-state="answered"].current,
+.cbt-runner .palette-box .palette-grid button.pal-btn[data-state="review"].current,
+.cbt-runner .palette-box .palette-grid button.pal-btn[data-state="visited"].current{outline:2px solid #0f172a!important;outline-offset:2px!important}
