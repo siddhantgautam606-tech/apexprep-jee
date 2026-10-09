@@ -1085,6 +1085,7 @@
 .cbt-runner .pal-btn.current{outline:2px solid #0f172a!important;transform:scale(1.05)}
 .cbt-runner .pal-btn.ans{background:#059669!important;color:#fff!important;border-color:#059669!important}
 .cbt-runner .pal-btn.rev{background:#9333ea!important;color:#fff!important;border-color:#9333ea!important}
+.cbt-runner .pal-btn.vis{background:#f43f5e!important;color:#fff!important;border-color:#f43f5e!important}
 .cbt-runner .palette-footer{margin-top:12px!important}
 @media(max-width:1023px){.cbt-runner .cbt-main-grid{grid-template-columns:1fr!important}.cbt-runner .cbt-palette{order:2}.cbt-runner .cbt-status-bar{border-radius:0!important}.cbt-runner .cbt-subject-bar{overflow-x:auto}}
 @media(max-width:640px){.cbt-runner .cbt-status-bar{padding:10px!important}.cbt-runner .brand-title{font-size:14px!important}.cbt-runner .timer-val{font-size:16px!important}.cbt-runner .cbt-main-grid{padding:10px!important;gap:12px!important}.cbt-runner .cbt-question-content{padding:0 14px 14px!important}.cbt-runner .cbt-question-panel .border-b:first-child{margin-left:-14px!important;margin-right:-14px!important}.cbt-runner .cbt-action-bar{padding:10px!important}}
