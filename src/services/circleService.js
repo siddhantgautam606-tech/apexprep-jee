@@ -266,16 +266,20 @@ export async function deleteCircleTest(testId) {
  * Question fetching helper for test scheduling
  */
 function normalizeCircleQuestion(q, idx) {
+  const type = String(q.question_type || q.type || 'MCQ').toUpperCase();
+  const isNumerical = ['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(type);
   return {
-    id: q.id || idx + 1,
+    id: q.source_id || q.id || idx + 1,
     question: q.question,
     options: Array.isArray(q.options) ? q.options : [],
-    correctAnswer: q.correctAnswer !== undefined ? q.correctAnswer : q.correct_answer,
+    correctAnswer: isNumerical
+      ? (q.correct_answer_text ?? q.correctAnswer ?? q.correct_answer)
+      : (q.correctAnswer !== undefined ? q.correctAnswer : q.correct_answer),
     explanation: q.explanation || '',
     subject: q.subject,
     chapter: q.chapter,
     yearTag: q.year_tag || q.yearTag,
-    type: q.type || q.question_type || 'MCQ'
+    type
   };
 }
 
