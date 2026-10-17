@@ -157,9 +157,13 @@ export async function fetchQuestionsForTest(subject = 'Physics', chapter = 'All'
     let pool = [];
     if (!error && Array.isArray(dbQuestions)) {
       pool = dbQuestions.map((q, idx) => ({
-        id: idx + 1, question: formatMathSymbols(q.question),
+        id: q.source_id || idx + 1, question: formatMathSymbols(q.question),
         options: Array.isArray(q.options) ? q.options.map(formatMathSymbols) : [],
-        correctAnswer: q.correct_answer, explanation: formatMathSymbols(q.explanation || ''),
+        type: q.question_type || 'MCQ',
+        correctAnswer: ['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(String(q.question_type || '').toUpperCase())
+          ? (q.correct_answer_text ?? q.correct_answer)
+          : q.correct_answer,
+        explanation: formatMathSymbols(q.explanation || ''),
         subject: q.subject, chapter: q.chapter, yearTag: q.year_tag || q.yearTag
       }));
     }
