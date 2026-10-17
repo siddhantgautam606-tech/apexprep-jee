@@ -114,15 +114,10 @@ export default function TestOrganizer({ currentUser, feedExam }) {
           .map((q) => ({ ...q, subject: q.subject || safeSubject }));
       }
 
-      // Absolute failsafe generator
+      // Never invent placeholder questions when the bank is empty.
       if (!Array.isArray(loadedQuestions) || loadedQuestions.length === 0) {
-        loadedQuestions = Array.from({ length: safeCount }, (_, i) => ({
-          id: i + 1,
-          question: `Sample Practice Question ${i + 1} (${safeSubject} - ${safeChapterLabel})`,
-          options: ['Option A', 'Option B', 'Option C', 'Option D'],
-          correctAnswer: 0,
-          explanation: `Standard ${exam} concept application.`
-        }));
+        alert('No questions are available yet. Add questions to the question pool before starting a test.');
+        return;
       }
 
       // JEE supports MCQ + numerical/integer questions; NEET is MCQ-only.
@@ -132,6 +127,10 @@ export default function TestOrganizer({ currentUser, feedExam }) {
 
       // Never pass more questions to the runner than the selected preset.
       loadedQuestions = loadedQuestions.slice(0, safeCount);
+      if (loadedQuestions.length === 0) {
+        alert('No compatible questions are available for this exam yet. Add questions to the pool before starting a test.');
+        return;
+      }
 
       setActiveTest({
         id: 'practice-' + Date.now(),
