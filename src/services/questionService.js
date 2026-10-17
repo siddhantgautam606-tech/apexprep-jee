@@ -79,6 +79,39 @@ export function getFilteredQuestions({ subject, chapter, difficulty, search, exa
 }
 
 /**
+ * Loads shared questions from Supabase for the visible question bank.
+ */
+export async function fetchQuestionBankFromDB(exam = 'JEE Main') {
+  const normalizedExam = normalizeExam(exam);
+  const { data, error } = await supabase
+    .from('custom_questions')
+    .select('*')
+    .eq('exam', normalizedExam)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map((q, idx) => {
+    const type = String(q.question_type || 'MCQ').toUpperCase();
+    const isNumerical = ['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(type);
+    return {
+      id: q.source_id || q.id || idx + 1,
+      sourceId: q.source_id || null,
+      subject: q.subject,
+      chapter: q.chapter || 'All',
+      question: formatMathSymbols(q.question || ''),
+      options: Array.isArray(q.options) ? q.options.map((option) => formatMathSymbols(option)) : [],
+      type,
+      question_type: type,
+      correctAnswer: isNumerical ? (q.correct_answer_text ?? q.correct_answer) : q.correct_answer,
+      correct_answer: q.correct_answer,
+      correct_answer_text: q.correct_answer_text,
+      explanation: formatMathSymbols(q.explanation || ''),
+      yearTag: q.year_tag || q.yearTag || '',
+      exam: q.exam || normalizedExam
+    };
+  });
+}
+
+/**
  * Appends question locally and attempts DB sync
  */
 export function appendQuestion(newQ) {
