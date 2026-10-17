@@ -315,6 +315,7 @@ function selectCircleQuestionMix(list, targetCount, exam) {
 
 export async function fetchQuestionsForTest(subject, chapter, count, exam = 'JEE Main') {
   const normalizedExam = normalizeExam(exam);
+  const databaseExam = normalizedExam === 'JEE' ? 'JEE Main' : normalizedExam;
   const requestedCount = Math.max(1, Number(count) || 10);
   const subjects = normalizedExam === 'NEET'
     ? ['Physics', 'Chemistry', 'Biology']
@@ -322,7 +323,7 @@ export async function fetchQuestionsForTest(subject, chapter, count, exam = 'JEE
 
   const buildForSubject = async (targetSubject, targetCount) => {
     try {
-      let query = supabase.from('custom_questions').select('*').eq('exam', normalizedExam);
+      let query = supabase.from('custom_questions').select('*').eq('exam', databaseExam);
       if (targetSubject && targetSubject !== 'All' && targetSubject !== 'Full Syllabus') {
         query = query.eq('subject', targetSubject);
       }
