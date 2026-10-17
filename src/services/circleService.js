@@ -299,6 +299,20 @@ function shuffleCircleQuestionOptions(question) {
   };
 }
 
+function selectCircleQuestionMix(list, targetCount, exam) {
+  const shuffle = (items) => [...items].sort(() => Math.random() - 0.5);
+  if (exam === 'NEET' || ![25, 75].includes(Number(targetCount))) {
+    return shuffle(list).slice(0, targetCount);
+  }
+  const isNumerical = (q) => ['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(String(q?.type || q?.question_type || '').toUpperCase());
+  const numericCount = Number(targetCount) === 25 ? 5 : 15;
+  const mcqCount = Number(targetCount) - numericCount;
+  return [
+    ...shuffle(list.filter((q) => !isNumerical(q))).slice(0, mcqCount),
+    ...shuffle(list.filter(isNumerical)).slice(0, numericCount)
+  ];
+}
+
 export async function fetchQuestionsForTest(subject, chapter, count, exam = 'JEE Main') {
   const normalizedExam = normalizeExam(exam);
   const requestedCount = Math.max(1, Number(count) || 10);
@@ -339,6 +353,7 @@ export async function fetchQuestionsForTest(subject, chapter, count, exam = 'JEE
             : getStandardQuestions(targetSubject, chapter, needed);
           list = [...list, ...fallback];
         }
+        list = selectCircleQuestionMix(list, targetCount, normalizedExam);
         combined.push(...list.slice(0, targetCount));
       }
       return combined.map(shuffleCircleQuestionOptions);
@@ -352,7 +367,8 @@ export async function fetchQuestionsForTest(subject, chapter, count, exam = 'JEE
         : getStandardQuestions(subject, chapter, needed);
       list = [...list, ...fallback];
     }
-    return list.slice(0, requestedCount).sort(() => 0.5 - Math.random()).map(shuffleCircleQuestionOptions);
+    list = selectCircleQuestionMix(list, requestedCount, normalizedExam);
+    return list.slice(0, requestedCount).map(shuffleCircleQuestionOptions);
   } catch (err) {
     console.warn('Questions table unavailable; using the exam-specific question bank:', err.message);
     const fallbackSubjects = subject === 'All' || subject === 'Full Syllabus' ? subjects : [subject];
