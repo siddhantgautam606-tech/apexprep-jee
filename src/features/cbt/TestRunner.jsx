@@ -385,6 +385,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
               <span className="badge-q">Q. {currentIdx + 1}</span>
               <span className="badge-sec">{['NUM','INTEGER','NUMERICAL','NAT'].includes(currentQ?.type) ? 'Section B' : 'Section A'}</span>
               <span className="meta-info">{currentQ?.meta || ''}</span>
+              {currentQ?.yearTag && <span className="meta-info">Year: {currentQ.yearTag}</span>}
             </div>
             <div className="meta-marks">
               <span className="mark-pos">+4 Correct</span>
@@ -406,7 +407,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
                     value={answers[currentIdx] ?? ''}
                     disabled={isSubmitted}
                     onChange={(e) => handleNumericAnswer(e.target.value)}
-                    aria-label="Integer answer"
+                    aria-label="Numerical answer"
                   />
                 </div>
               </div>
