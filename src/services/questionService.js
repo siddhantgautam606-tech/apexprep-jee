@@ -83,10 +83,11 @@ export function getFilteredQuestions({ subject, chapter, difficulty, search, exa
  */
 export async function fetchQuestionBankFromDB(exam = 'JEE Main') {
   const normalizedExam = normalizeExam(exam);
+  const databaseExam = normalizedExam === 'JEE' ? 'JEE Main' : normalizedExam;
   const { data, error } = await supabase
     .from('custom_questions')
     .select('*')
-    .eq('exam', normalizedExam)
+    .eq('exam', databaseExam)
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data || []).map((q, idx) => {
@@ -181,8 +182,9 @@ export async function addCustomQuestionToDB(questionData, userId) {
  */
 export async function fetchQuestionsForTest(subject = 'Physics', chapter = 'All', count = 5, exam = 'JEE Main') {
   const normalizedExam = normalizeExam(exam);
+  const databaseExam = normalizedExam === 'JEE' ? 'JEE Main' : normalizedExam;
   try {
-    let query = supabase.from('custom_questions').select('*').eq('exam', normalizedExam);
+    let query = supabase.from('custom_questions').select('*').eq('exam', databaseExam);
     if (subject && subject !== 'Full Syllabus' && subject !== 'All') query = query.eq('subject', subject);
     if (chapter && chapter !== 'All') query = query.eq('chapter', chapter);
 
