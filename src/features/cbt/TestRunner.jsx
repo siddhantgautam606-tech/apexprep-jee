@@ -144,7 +144,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
 
   const handleNumericAnswer = (value) => {
     if (isSubmitted || !currentQ) return;
-    const cleaned = String(value ?? '').replace(/[^0-9-]/g, '');
+    const cleaned = String(value ?? '').replace(/[^0-9.-]/g, '');
     setAnswers((prev) => {
       const copy = { ...prev };
       if (!cleaned.trim()) delete copy[currentIdx];
@@ -402,7 +402,7 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
                   <input
                     className="num-input"
                     type="text"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     value={answers[currentIdx] ?? ''}
                     disabled={isSubmitted}
                     onChange={(e) => handleNumericAnswer(e.target.value)}
