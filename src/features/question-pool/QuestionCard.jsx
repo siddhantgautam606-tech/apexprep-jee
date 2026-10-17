@@ -44,6 +44,8 @@ export default function QuestionCard({ question, index }) {
   const subject = qData.subject || question.subject;
   const chapter = qData.chapter || question.chapter;
   const difficulty = qData.difficulty || question.difficulty;
+  const yearTag = qData.yearTag || qData.year_tag || question.yearTag || question.year_tag;
+  const questionType = String(qData.type || qData.question_type || question.type || question.question_type || '').toUpperCase();
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 shadow-sm hover:border-slate-700 transition">
@@ -51,6 +53,8 @@ export default function QuestionCard({ question, index }) {
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded border border-indigo-500/20">Q{index !== undefined ? index + 1 : question.id || '•'}</span>
           {subject && <span className="text-[11px] font-semibold text-slate-300 bg-slate-800 px-2 py-0.5 rounded">{subject}</span>}
+          {yearTag && <span className="text-[10px] font-semibold text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded">{yearTag}</span>}
+          {['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(questionType) && <span className="text-[10px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">Integer</span>}
           {chapter && chapter !== 'All' && <span className="text-[11px] text-slate-400">{chapter}</span>}
         </div>
         {difficulty && <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${String(difficulty).toLowerCase() === 'easy' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : String(difficulty).toLowerCase() === 'hard' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>{difficulty}</span>}
@@ -64,6 +68,7 @@ export default function QuestionCard({ question, index }) {
           {isCorrect && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30 ml-auto shrink-0">Correct</span>}
         </div>;
       })}</div>}
+      {['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(questionType) && correctRaw !== undefined && correctRaw !== null && <div className="mt-1 rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-3 text-xs text-indigo-200"><span className="font-semibold block mb-0.5">Integer answer:</span>{String(correctRaw)}</div>}
       {qData.answerType === 'numeric' && qData.answerValue !== undefined && <div className="mt-1 rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-3 text-xs text-indigo-200"><span className="font-semibold block mb-0.5">Uploaded numerical answer (unverified):</span>{String(qData.answerValue)}</div>}
       {explanation && <div className="mt-2 bg-slate-950/80 border border-slate-800/80 rounded-lg p-3 text-xs text-slate-400"><span className="font-semibold text-slate-300 block mb-0.5">Explanation:</span>{explanation}</div>}
     </div>
