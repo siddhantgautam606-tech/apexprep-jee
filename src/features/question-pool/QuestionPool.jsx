@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, BookOpen, Plus, X, Play } from 'lucide-react';
 import QuestionCard from './QuestionCard';
-import { getFilteredQuestions, getAllSubjects, appendQuestion } from '../../services/questionService';
+import { getFilteredQuestions, getAllSubjects, appendQuestion, fetchQuestionBankFromDB } from '../../services/questionService';
 import { normalizeExam, getExamConfig } from '../../config/examConfig';
 
 export default function QuestionPool({ currentUser, feedExam, onStartPractice }) {
@@ -11,6 +11,7 @@ export default function QuestionPool({ currentUser, feedExam, onStartPractice })
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [dbQuestions, setDbQuestions] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const QUESTIONS_PER_PAGE = 10;
 
@@ -27,12 +28,30 @@ export default function QuestionPool({ currentUser, feedExam, onStartPractice })
 
   const subjects = useMemo(() => getAllSubjects(exam), [refreshTrigger, exam]);
 
-  const questions = useMemo(() => getFilteredQuestions({
-    subject: selectedSubject,
-    chapter: 'All',
-    search: searchQuery,
-    exam
-  }), [selectedSubject, searchQuery, refreshTrigger, exam]);
+  useEffect(() => {
+    let active = true;
+    fetchQuestionBankFromDB(exam)
+      .then((items) => { if (active) setDbQuestions(items); })
+      .catch((error) => console.error('Unable to load shared question bank:', error));
+    return () => { active = false; };
+  }, [exam, refreshTrigger]);
+
+  const questions = useMemo(() => {
+    const localQuestions = getFilteredQuestions({
+      subject: selectedSubject,
+      chapter: 'All',
+      search: searchQuery,
+      exam
+    });
+    const needle = searchQuery.trim().toLowerCase();
+    const sharedQuestions = dbQuestions.filter((q) => {
+      if (selectedSubject !== 'All' && q.subject !== selectedSubject) return false;
+      if (!needle) return true;
+      return [q.question, q.chapter, q.subject, q.yearTag, q.type]
+        .some((value) => String(value || '').toLowerCase().includes(needle));
+    });
+    return [...sharedQuestions, ...localQuestions];
+  }, [selectedSubject, searchQuery, refreshTrigger, exam, dbQuestions]);
 
   const totalPages = Math.max(1, Math.ceil(questions.length / QUESTIONS_PER_PAGE));
   const pageQuestions = questions.slice(
