@@ -167,7 +167,19 @@ export async function fetchQuestionsForTest(subject = 'Physics', chapter = 'All'
         subject: q.subject, chapter: q.chapter, yearTag: q.year_tag || q.yearTag
       }));
     }
-    const selected = pool.sort(() => 0.5 - Math.random()).slice(0, count);
+    const shuffle = (items) => [...items].sort(() => Math.random() - 0.5);
+    const isNumerical = (q) => ['NUM', 'INTEGER', 'NUMERICAL', 'NAT'].includes(String(q?.type || q?.question_type || '').toUpperCase());
+    let selected;
+    if (normalizedExam !== 'NEET' && [25, 75].includes(Number(count))) {
+      const numericCount = Number(count) === 25 ? 5 : 15;
+      const mcqCount = Number(count) - numericCount;
+      selected = [
+        ...shuffle(pool.filter((q) => !isNumerical(q))).slice(0, mcqCount),
+        ...shuffle(pool.filter(isNumerical)).slice(0, numericCount)
+      ];
+    } else {
+      selected = shuffle(pool).slice(0, count);
+    }
     if (selected.length < count) {
       const needed = count - selected.length;
       const fallback = normalizedExam === 'NEET'
