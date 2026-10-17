@@ -64,6 +64,7 @@ export default function QuestionCard({ question, index }) {
           {isCorrect && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30 ml-auto shrink-0">Correct</span>}
         </div>;
       })}</div>}
+      {qData.answerType === 'numeric' && qData.answerValue !== undefined && <div className="mt-1 rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-3 text-xs text-indigo-200"><span className="font-semibold block mb-0.5">Uploaded numerical answer (unverified):</span>{String(qData.answerValue)}</div>}
       {explanation && <div className="mt-2 bg-slate-950/80 border border-slate-800/80 rounded-lg p-3 text-xs text-slate-400"><span className="font-semibold text-slate-300 block mb-0.5">Explanation:</span>{explanation}</div>}
     </div>
   );
