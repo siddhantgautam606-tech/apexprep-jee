@@ -313,6 +313,32 @@ export default function TestRunner({ test, currentUser, onComplete, onExit }) {
     );
   }
 
+  // An empty bank should show a clear empty state instead of opening a broken test.
+  if (questions.length === 0) {
+    return (
+      <div className="cbt-runner">
+        <header className="exam-header">
+          <div className="header-top">
+            <div className="brand-box">
+              <div className="brand-logo">NTA</div>
+              <div>
+                <div className="brand-title">Practice Test</div>
+                <div className="brand-subtitle">Question bank is empty</div>
+              </div>
+            </div>
+          </div>
+        </header>
+        <main className="cbt-main">
+          <section className="question-card">
+            <h2>No questions available</h2>
+            <p>The question bank has been cleared. Add questions to the pool before starting a new test.</p>
+            <button className="submit-btn" onClick={() => (onExit || onComplete)?.()}>Return</button>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   // Active CBT Exam Runner
   return (
     <div className="cbt-runner">
