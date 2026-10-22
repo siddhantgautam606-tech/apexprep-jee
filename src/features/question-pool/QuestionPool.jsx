@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, BookOpen, Plus, X, Play } from 'lucide-react';
 import QuestionCard from './QuestionCard';
-import { getFilteredQuestions, getAllSubjects, appendQuestion, fetchQuestionBankFromDB } from '../../services/questionService';
+import { getFilteredQuestions, getAllSubjects, addCustomQuestionToDB, fetchQuestionBankFromDB } from '../../services/questionService';
+import QuestionImporter from './QuestionImporter';
 import { normalizeExam, getExamConfig } from '../../config/examConfig';
 
 export default function QuestionPool({ currentUser, feedExam, onStartPractice }) {
@@ -10,6 +11,7 @@ export default function QuestionPool({ currentUser, feedExam, onStartPractice })
   const [selectedSubject, setSelectedSubject] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [dbQuestions, setDbQuestions] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -70,14 +72,18 @@ export default function QuestionPool({ currentUser, feedExam, onStartPractice })
     setFormData({ ...formData, options: updated });
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!formData.question.trim() || formData.options.some((o) => !o.trim())) {
       alert('Please fill in the question and all 4 options.');
       return;
     }
 
-    appendQuestion(formData);
+    const { error } = await addCustomQuestionToDB({ ...formData, exam }, currentUser?.id);
+    if (error) {
+      alert(`Could not save question: ${error}`);
+      return;
+    }
     setShowAddModal(false);
     setRefreshTrigger((prev) => prev + 1);
     setCurrentPage(1);
@@ -126,12 +132,20 @@ export default function QuestionPool({ currentUser, feedExam, onStartPractice })
             <Play className="w-4 h-4" /> Start Session
           </button>
           {currentUser?.is_admin && (
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-3.5 py-2.5 rounded-xl transition shrink-0"
-            >
-              <Plus className="w-4 h-4" /> Add
-            </button>
+            <>
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-3.5 py-2.5 rounded-xl transition shrink-0"
+              >
+                <BookOpen className="w-4 h-4" /> Import JSON
+              </button>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-3.5 py-2.5 rounded-xl transition shrink-0"
+              >
+                <Plus className="w-4 h-4" /> Add
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -178,6 +192,18 @@ export default function QuestionPool({ currentUser, feedExam, onStartPractice })
           <span className="px-4 py-2 text-sm text-slate-400">Page {currentPage} / {totalPages}</span>
           <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:border-slate-700">Next</button>
         </div>
+      )}
+
+      {showImportModal && (
+        <QuestionImporter
+          exam={exam}
+          userId={currentUser?.id}
+          onClose={() => setShowImportModal(false)}
+          onImported={() => {
+            setRefreshTrigger((prev) => prev + 1);
+            setCurrentPage(1);
+          }}
+        />
       )}
 
       {showAddModal && (
