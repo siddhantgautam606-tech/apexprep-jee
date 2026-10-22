@@ -17,9 +17,15 @@ function normalizeQuestion(raw, fallbackExam, userId) {
     throw new Error(`Unsupported exam "${examInput}". Use JEE Main, JEE Advanced, or NEET.`);
   }
 
+  const subject = asText(raw.subject);
+  if (!subject) throw new Error('Every question needs a subject.');
+
   const typeInput = asText(raw.question_type || raw.questionType || raw.type || 'MCQ').toUpperCase();
-  const questionType = NUMERIC_TYPES.has(typeInput) ? 'INTEGER' : typeInput;
   const isNumeric = NUMERIC_TYPES.has(typeInput);
+  if (!isNumeric && !['MCQ', 'MULTIPLE_CHOICE', 'SINGLE_CORRECT'].includes(typeInput)) {
+    throw new Error(`Unsupported question_type "${typeInput}". Use MCQ or INTEGER.`);
+  }
+  const questionType = isNumeric ? 'INTEGER' : 'MCQ';
   const options = Array.isArray(raw.options)
     ? raw.options.map((option) => asText(typeof option === 'object' && option !== null
       ? (option.text ?? option.value ?? option.label ?? '')
@@ -54,7 +60,7 @@ function normalizeQuestion(raw, fallbackExam, userId) {
   }
 
   return {
-    subject: asText(raw.subject),
+    subject,
     chapter: asText(raw.chapter || raw.chapterId) || 'All',
     exam: databaseExam,
     year_tag: asText(raw.year_tag || raw.yearTag || raw.year || '') || null,
